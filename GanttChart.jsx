@@ -808,7 +808,7 @@ export default function GanttChart() {
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0.5rem 1.5rem',
-                        background: index % 2 === 0 ? '#ffffff' : 'transparent',
+                        background: '#ffffff',
                         borderBottom: '1px solid #e2e8f0',
                         animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                         transition: 'all 0.2s'
@@ -817,7 +817,7 @@ export default function GanttChart() {
                         e.currentTarget.style.background = '#f1f5f9';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : 'transparent';
+                        e.currentTarget.style.background = '#ffffff';
                       }}
                     >
                       <div style={{
@@ -936,7 +936,7 @@ export default function GanttChart() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           padding: '0.5rem 1rem',
-                          background: index % 2 === 0 ? '#ffffff' : 'transparent',
+                          background: '#ffffff',
                           borderBottom: '1px solid #e2e8f0',
                           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                           transition: 'all 0.2s',
@@ -949,7 +949,7 @@ export default function GanttChart() {
                           e.currentTarget.style.background = '#f1f5f9';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : 'transparent';
+                          e.currentTarget.style.background = '#ffffff';
                         }}
                       >
                         {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1094,7 +1094,7 @@ export default function GanttChart() {
                           position: 'relative',
                           width: '100%',
                           minHeight: '56px',
-                          background: index % 2 === 0 ? '#ffffff' : 'transparent',
+                          background: '#ffffff',
                           borderBottom: '1px solid #e2e8f0',
                           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                           display: 'flex',
