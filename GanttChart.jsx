@@ -886,23 +886,25 @@ export default function GanttChart() {
                 paddingLeft: '0'
               }}>
                 {monthMarkers.map((marker, idx) => {
+                  const nextMarker = monthMarkers[idx + 1];
+                  const nextPosition = nextMarker ? nextMarker.position : 100;
+                  const width = nextPosition - marker.position;
+
                   return (
                     <div
                       key={idx}
                       style={{
                         position: 'absolute',
                         left: `${marker.position}%`,
+                        width: `${width}%`,
                         top: 0,
                         bottom: 0,
-                        bottom: 0,
                         borderLeft: idx === 0 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-                        paddingLeft: '0.75rem',
-                        paddingRight: '0.75rem',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        minWidth: '80px'
+                        overflow: 'hidden'
                       }}
                     >
                       <div style={{
