@@ -10,16 +10,16 @@ export default function GanttChart() {
     {
       id: 1,
       name: 'Planning Phase',
-      startDate: '2024-03-01',
-      endDate: '2024-03-15',
+      startDate: '2026-03-01',
+      endDate: '2026-03-15',
       color: '#6366f1',
       expanded: true,
       subTasks: [
         {
           id: 101,
           name: 'Requirements Gathering',
-          startDate: '2024-03-01',
-          endDate: '2024-03-08',
+          startDate: '2026-03-01',
+          endDate: '2026-03-08',
           color: '#818cf8'
         }
       ]
@@ -27,8 +27,8 @@ export default function GanttChart() {
     {
       id: 2,
       name: 'Development',
-      startDate: '2024-03-10',
-      endDate: '2024-04-20',
+      startDate: '2026-03-10',
+      endDate: '2026-04-20',
       color: '#8b5cf6',
       expanded: true,
       subTasks: []
@@ -36,8 +36,8 @@ export default function GanttChart() {
     {
       id: 3,
       name: 'Testing',
-      startDate: '2024-04-15',
-      endDate: '2024-05-05',
+      startDate: '2026-04-15',
+      endDate: '2026-05-05',
       color: '#ec4899',
       expanded: true,
       subTasks: []
@@ -62,13 +62,13 @@ export default function GanttChart() {
   };
 
   const updateTask = (id, field, value) => {
-    setTasks(tasks.map(task => 
+    setTasks(tasks.map(task =>
       task.id === id ? { ...task, [field]: value } : task
     ));
   };
 
   const toggleExpanded = (id) => {
-    setTasks(tasks.map(task => 
+    setTasks(tasks.map(task =>
       task.id === id ? { ...task, expanded: !task.expanded } : task
     ));
   };
@@ -82,59 +82,59 @@ export default function GanttChart() {
       endDate: parent.endDate,
       color: parent.color + 'cc' // Slightly transparent
     };
-    
-    setTasks(tasks.map(task => 
-      task.id === parentId 
-        ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true } 
+
+    setTasks(tasks.map(task =>
+      task.id === parentId
+        ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
         : task
     ));
   };
 
   const removeSubTask = (parentId, subTaskId) => {
-    setTasks(tasks.map(task => 
-      task.id === parentId 
-        ? { ...task, subTasks: task.subTasks.filter(st => st.id !== subTaskId) } 
+    setTasks(tasks.map(task =>
+      task.id === parentId
+        ? { ...task, subTasks: task.subTasks.filter(st => st.id !== subTaskId) }
         : task
     ));
   };
 
   const updateSubTask = (parentId, subTaskId, field, value) => {
-    setTasks(tasks.map(task => 
-      task.id === parentId 
+    setTasks(tasks.map(task =>
+      task.id === parentId
         ? {
-            ...task,
-            subTasks: task.subTasks.map(st => 
-              st.id === subTaskId ? { ...st, [field]: value } : st
-            )
-          }
+          ...task,
+          subTasks: task.subTasks.map(st =>
+            st.id === subTaskId ? { ...st, [field]: value } : st
+          )
+        }
         : task
     ));
   };
 
   const downloadChart = async () => {
     if (!chartRef.current || isDownloading) return;
-    
+
     setIsDownloading(true);
-    
+
     try {
       // Try to load html2canvas from CDN
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-      
+
       await new Promise((resolve, reject) => {
         script.onload = resolve;
         script.onerror = () => reject(new Error('Failed to load html2canvas'));
         document.head.appendChild(script);
       });
-      
+
       // Wait a bit for script to be ready
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // Check if html2canvas is available
       if (typeof window.html2canvas === 'undefined') {
         throw new Error('html2canvas not loaded');
       }
-      
+
       // Capture the chart
       const canvas = await window.html2canvas(chartRef.current, {
         backgroundColor: '#ffffff',
@@ -143,7 +143,7 @@ export default function GanttChart() {
         useCORS: true,
         allowTaint: false
       });
-      
+
       // Convert to image and trigger download
       const dataUrl = canvas.toDataURL('image/png', 1.0);
       const link = document.createElement('a');
@@ -152,12 +152,12 @@ export default function GanttChart() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up script
       document.head.removeChild(script);
-      
+
       setIsDownloading(false);
-      
+
     } catch (error) {
       console.error('Download error:', error);
       alert(`Failed to download chart: ${error.message}. Please try again or check your browser console for details.`);
@@ -168,7 +168,7 @@ export default function GanttChart() {
   // Calculate timeline range
   const getTimelineRange = () => {
     if (tasks.length === 0) return { start: new Date(), end: new Date() };
-    
+
     const allDates = [];
     tasks.forEach(task => {
       allDates.push(new Date(task.startDate), new Date(task.endDate));
@@ -176,19 +176,19 @@ export default function GanttChart() {
         allDates.push(new Date(st.startDate), new Date(st.endDate));
       });
     });
-    
+
     const minDate = new Date(Math.min(...allDates));
     const maxDate = new Date(Math.max(...allDates));
-    
+
     // Set to start of month for min date
     minDate.setDate(1);
     minDate.setHours(0, 0, 0, 0);
-    
+
     // Set to end of month for max date
     maxDate.setMonth(maxDate.getMonth() + 1);
     maxDate.setDate(0);
     maxDate.setHours(23, 59, 59, 999);
-    
+
     return { start: minDate, end: maxDate };
   };
 
@@ -198,10 +198,10 @@ export default function GanttChart() {
   const getTaskPosition = (task) => {
     const taskStart = new Date(task.startDate);
     const taskEnd = new Date(task.endDate);
-    
+
     const startOffset = (taskStart - timelineStart) / (1000 * 60 * 60 * 24);
     const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
-    
+
     return {
       left: `${(startOffset / totalDays) * 100}%`,
       width: `${(duration / totalDays) * 100}%`
@@ -213,19 +213,19 @@ export default function GanttChart() {
     const markers = [];
     const current = new Date(timelineStart);
     current.setDate(1); // Start of month
-    
+
     while (current <= timelineEnd) {
       const offset = Math.ceil((current - timelineStart) / (1000 * 60 * 60 * 24));
       const position = (offset / totalDays) * 100;
-      
+
       markers.push({
         date: new Date(current),
         position: position
       });
-      
+
       current.setMonth(current.getMonth() + 1);
     }
-    
+
     return markers;
   };
 
@@ -239,7 +239,7 @@ export default function GanttChart() {
       fontFamily: '"Outfit", sans-serif'
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-      
+
       <div style={{
         maxWidth: '1400px',
         margin: '0 auto',
@@ -294,14 +294,14 @@ export default function GanttChart() {
               <Edit2 size={28} style={{ opacity: 0.5 }} />
             </h1>
           )}
-          
+
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button
               onClick={downloadChart}
               disabled={isDownloading}
               style={{
-                background: isDownloading 
-                  ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' 
+                background: isDownloading
+                  ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
                   : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
                 border: 'none',
@@ -314,8 +314,8 @@ export default function GanttChart() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 transition: 'all 0.2s',
-                boxShadow: isDownloading 
-                  ? '0 4px 20px rgba(107, 114, 128, 0.3)' 
+                boxShadow: isDownloading
+                  ? '0 4px 20px rgba(107, 114, 128, 0.3)'
                   : '0 4px 20px rgba(16, 185, 129, 0.3)',
                 opacity: isDownloading ? 0.7 : 1
               }}
@@ -335,7 +335,7 @@ export default function GanttChart() {
               <Download size={20} />
               {isDownloading ? 'Downloading...' : 'Download'}
             </button>
-            
+
             <button
               onClick={addTask}
               style={{
@@ -387,7 +387,7 @@ export default function GanttChart() {
           }}>
             Tasks
           </h2>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {tasks.map((task, index) => (
               <div key={task.id} style={{ animation: `slideIn 0.3s ease-out ${index * 0.05}s both` }}>
@@ -420,7 +420,7 @@ export default function GanttChart() {
                   >
                     {task.expanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                   </button>
-                  
+
                   <input
                     type="text"
                     value={task.name}
@@ -445,7 +445,7 @@ export default function GanttChart() {
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                     }}
                   />
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Calendar size={16} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
                     <input
@@ -465,7 +465,7 @@ export default function GanttChart() {
                       }}
                     />
                   </div>
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem' }}>→</span>
                     <input
@@ -485,7 +485,7 @@ export default function GanttChart() {
                       }}
                     />
                   </div>
-                  
+
                   <input
                     type="color"
                     value={task.color}
@@ -499,7 +499,7 @@ export default function GanttChart() {
                       background: task.color
                     }}
                   />
-                  
+
                   <button
                     onClick={() => removeTask(task.id)}
                     style={{
@@ -569,7 +569,7 @@ export default function GanttChart() {
                             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                           }}
                         />
-                        
+
                         <input
                           type="date"
                           value={subTask.startDate}
@@ -586,7 +586,7 @@ export default function GanttChart() {
                             colorScheme: 'dark'
                           }}
                         />
-                        
+
                         <input
                           type="date"
                           value={subTask.endDate}
@@ -603,7 +603,7 @@ export default function GanttChart() {
                             colorScheme: 'dark'
                           }}
                         />
-                        
+
                         <input
                           type="color"
                           value={subTask.color}
@@ -617,7 +617,7 @@ export default function GanttChart() {
                             background: subTask.color
                           }}
                         />
-                        
+
                         <button
                           onClick={() => removeSubTask(task.id, subTask.id)}
                           style={{
@@ -643,7 +643,7 @@ export default function GanttChart() {
                         </button>
                       </div>
                     ))}
-                    
+
                     <button
                       onClick={() => addSubTask(task.id)}
                       style={{
@@ -732,7 +732,7 @@ export default function GanttChart() {
               {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
             </div>
           </div>
-          
+
           {/* Grid Layout: Tasks Column + Timeline */}
           <div style={{
             display: 'grid',
@@ -770,7 +770,7 @@ export default function GanttChart() {
                   Tasks
                 </h3>
               </div>
-              
+
               {/* Task Names */}
               <div style={{
                 display: 'flex',
@@ -821,7 +821,7 @@ export default function GanttChart() {
                         {task.name}
                       </div>
                     </div>
-                    
+
                     {/* Sub-task Names */}
                     {task.expanded && task.subTasks.map((subTask, subIndex) => (
                       <div
@@ -870,7 +870,7 @@ export default function GanttChart() {
                 ))}
               </div>
             </div>
-            
+
             {/* Timeline Column */}
             <div style={{ position: 'relative', overflow: 'hidden' }}>
               {/* Timeline Header */}
@@ -925,7 +925,7 @@ export default function GanttChart() {
                   );
                 })}
               </div>
-              
+
               {/* Vertical Grid Lines */}
               <div style={{
                 position: 'absolute',
@@ -951,7 +951,7 @@ export default function GanttChart() {
                   );
                 })}
               </div>
-              
+
               {/* Gantt Bars */}
               <div style={{
                 display: 'flex',
@@ -963,7 +963,7 @@ export default function GanttChart() {
                 {tasks.map((task, index) => {
                   const position = getTaskPosition(task);
                   const duration = Math.ceil((new Date(task.endDate) - new Date(task.startDate)) / (1000 * 60 * 60 * 24));
-                  
+
                   return (
                     <div key={task.id}>
                       {/* Main Task Bar */}
@@ -1018,7 +1018,7 @@ export default function GanttChart() {
                             background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)',
                             borderRadius: '12px 12px 0 0'
                           }}></div>
-                          
+
                           <div style={{
                             color: '#fff',
                             fontSize: '0.8rem',
@@ -1037,12 +1037,12 @@ export default function GanttChart() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Sub-task Bars */}
                       {task.expanded && task.subTasks.map((subTask, subIndex) => {
                         const subPosition = getTaskPosition(subTask);
                         const subDuration = Math.ceil((new Date(subTask.endDate) - new Date(subTask.startDate)) / (1000 * 60 * 60 * 24));
-                        
+
                         return (
                           <div
                             key={subTask.id}
@@ -1096,7 +1096,7 @@ export default function GanttChart() {
                                 background: 'linear-gradient(to bottom, rgba(255,255,255,0.25), transparent)',
                                 borderRadius: '10px 10px 0 0'
                               }}></div>
-                              
+
                               <div style={{
                                 color: '#fff',
                                 fontSize: '0.75rem',
