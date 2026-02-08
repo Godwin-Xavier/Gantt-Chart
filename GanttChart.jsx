@@ -1,12 +1,36 @@
+
 import React, { useState, useRef } from 'react';
-import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
+
+  // Helper to calculate business days
+  const getBusinessDays = (start, end, holidays = []) => {
+    let count = 0;
+    const curDate = new Date(start);
+    const endDate = new Date(end);
+
+    while (curDate <= endDate) {
+      const dayOfWeek = curDate.getDay();
+      const dateString = curDate.toISOString().split('T')[0];
+
+      // 0 = Sunday, 6 = Saturday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateString)) {
+        count++;
+      }
+      curDate.setDate(curDate.getDate() + 1);
+    }
+    return count;
+  };
+
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDates, setShowDates] = useState(true);
+  const [showHolidayManager, setShowHolidayManager] = useState(false);
+  const [holidays, setHolidays] = useState([]);
+  const [newHoliday, setNewHoliday] = useState('');
   const chartRef = useRef(null);
   const [tasks, setTasks] = useState([
     {
@@ -73,6 +97,17 @@ export default function GanttChart() {
     setTasks(tasks.map(task =>
       task.id === id ? { ...task, expanded: !task.expanded } : task
     ));
+  };
+
+  const addHoliday = () => {
+    if (newHoliday && !holidays.includes(newHoliday)) {
+      setHolidays([...holidays, newHoliday].sort());
+      setNewHoliday('');
+    }
+  };
+
+  const removeHoliday = (date) => {
+    setHolidays(holidays.filter(h => h !== date));
   };
 
   const addSubTask = (parentId) => {
@@ -360,8 +395,8 @@ export default function GanttChart() {
             <button
               onClick={addTask}
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                color: '#fff',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
                 border: 'none',
                 padding: '0.875rem 1.75rem',
                 borderRadius: '12px',
@@ -371,22 +406,129 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)'
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 25px rgba(99, 102, 241, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.3)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(99, 102, 241, 0.3)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
               }}
             >
-              <Plus size={20} />
+              <Plus size={18} strokeWidth={2.5} />
               Add Task
             </button>
+
+            <button
+              onClick={() => setShowHolidayManager(!showHolidayManager)}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                padding: '0.875rem',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              title="Manage Holidays"
+            >
+              <Settings size={20} />
+            </button>
           </div>
+
+          {/* Holiday Manager Panel */}
+          {showHolidayManager && (
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              border: '1px solid #e2e8f0',
+              marginBottom: '2rem',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>Manage Holidays</h3>
+                <button onClick={() => setShowHolidayManager(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                <input
+                  type="date"
+                  value={newHoliday}
+                  onChange={(e) => setNewHoliday(e.target.value)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    outline: 'none',
+                    fontSize: '0.9rem',
+                    color: '#0f172a'
+                  }}
+                />
+                <button
+                  onClick={addHoliday}
+                  style={{
+                    background: '#0f172a',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Add Holiday
+                </button>
+              </div>
+
+              {holidays.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {holidays.map(date => (
+                    <div key={date} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      background: '#f1f5f9',
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      color: '#475569',
+                      fontWeight: '500'
+                    }}>
+                      {new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                      <button
+                        onClick={() => removeHoliday(date)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#94a3b8',
+                          padding: 0,
+                          display: 'flex'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {holidays.length === 0 && (
+                <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  No holidays added yet. Weekends are automatically excluded.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Task List */}
@@ -1084,7 +1226,7 @@ export default function GanttChart() {
               }}>
                 {tasks.map((task, index) => {
                   const position = getTaskPosition(task);
-                  const duration = Math.ceil((new Date(task.endDate) - new Date(task.startDate)) / (1000 * 60 * 60 * 24));
+                  const duration = getBusinessDays(task.startDate, task.endDate, holidays);
 
                   return (
                     <div key={task.id}>
@@ -1154,7 +1296,7 @@ export default function GanttChart() {
                       {/* Sub-task Bars */}
                       {task.expanded && task.subTasks.map((subTask, subIndex) => {
                         const subPosition = getTaskPosition(subTask);
-                        const subDuration = Math.ceil((new Date(subTask.endDate) - new Date(subTask.startDate)) / (1000 * 60 * 60 * 24));
+                        const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
 
                         return (
                           <div
