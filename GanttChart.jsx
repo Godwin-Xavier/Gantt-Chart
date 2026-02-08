@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function GanttChart() {
+  const currentYear = new Date().getFullYear();
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -10,16 +11,16 @@ export default function GanttChart() {
     {
       id: 1,
       name: 'Planning Phase',
-      startDate: '2026-03-01',
-      endDate: '2026-03-15',
+      startDate: `${currentYear}-03-01`,
+      endDate: `${currentYear}-03-15`,
       color: '#6366f1',
       expanded: true,
       subTasks: [
         {
           id: 101,
           name: 'Requirements Gathering',
-          startDate: '2026-03-01',
-          endDate: '2026-03-08',
+          startDate: `${currentYear}-03-01`,
+          endDate: `${currentYear}-03-08`,
           color: '#818cf8'
         }
       ]
@@ -27,8 +28,8 @@ export default function GanttChart() {
     {
       id: 2,
       name: 'Development',
-      startDate: '2026-03-10',
-      endDate: '2026-04-20',
+      startDate: `${currentYear}-03-10`,
+      endDate: `${currentYear}-04-20`,
       color: '#8b5cf6',
       expanded: true,
       subTasks: []
@@ -36,8 +37,8 @@ export default function GanttChart() {
     {
       id: 3,
       name: 'Testing',
-      startDate: '2026-04-15',
-      endDate: '2026-05-05',
+      startDate: `${currentYear}-04-15`,
+      endDate: `${currentYear}-05-05`,
       color: '#ec4899',
       expanded: true,
       subTasks: []
@@ -234,9 +235,10 @@ export default function GanttChart() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+      background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
       padding: '3rem 2rem',
-      fontFamily: '"Outfit", sans-serif'
+      fontFamily: '"Outfit", sans-serif',
+      color: '#e2e8f0'
     }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
@@ -370,13 +372,13 @@ export default function GanttChart() {
 
         {/* Task List */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '20px',
+          background: 'rgba(17, 25, 40, 0.75)',
+          backdropFilter: 'blur(16px) saturate(180%)',
+          borderRadius: '24px',
           padding: '2rem',
           marginBottom: '2rem',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          border: '1px solid rgba(255, 255, 255, 0.125)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.36)'
         }}>
           <h2 style={{
             fontSize: '1.25rem',
@@ -686,11 +688,11 @@ export default function GanttChart() {
           ref={chartRef}
           data-chart-export="true"
           style={{
-            background: 'linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)',
+            background: 'linear-gradient(to bottom, #1e293b 0%, #0f172a 100%)',
             borderRadius: '24px',
             padding: '2.5rem',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset'
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
           }}
         >
           <div style={{
@@ -706,7 +708,7 @@ export default function GanttChart() {
               <h2 style={{
                 fontSize: '1.75rem',
                 fontWeight: '800',
-                color: '#0f172a',
+                color: '#f8fafc',
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
@@ -721,13 +723,14 @@ export default function GanttChart() {
               </p>
             </div>
             <div style={{
-              background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+              background: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)',
               padding: '0.75rem 1.25rem',
               borderRadius: '12px',
               fontSize: '0.8rem',
               fontWeight: '600',
-              color: '#475569',
-              border: '1px solid #cbd5e1'
+              color: '#94a3b8',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
             }}>
               {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
             </div>
@@ -738,30 +741,30 @@ export default function GanttChart() {
             display: 'grid',
             gridTemplateColumns: '320px 1fr',
             gap: '0',
-            background: '#ffffff',
+            background: '#1e293b',
             borderRadius: '16px',
             overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
           }}>
             {/* Tasks Column */}
             <div style={{
-              background: 'linear-gradient(to bottom, #fafbfc 0%, #f8f9fa 100%)',
-              borderRight: '2px solid #e2e8f0'
+              background: '#1e293b',
+              borderRight: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{
                 height: '70px',
-                borderBottom: '2px solid #e2e8f0',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '0 1.5rem',
-                background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+                background: '#0f172a'
               }}>
                 <h3 style={{
                   fontSize: '0.85rem',
                   fontWeight: '800',
-                  color: '#0f172a',
+                  color: '#e2e8f0',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
                   margin: 0,
@@ -787,16 +790,16 @@ export default function GanttChart() {
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0.5rem 1.5rem',
-                        background: index % 2 === 0 ? 'rgba(248, 250, 252, 0.5)' : 'transparent',
-                        borderBottom: '1px solid #f1f5f9',
+                        background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                         animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f8fafc';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = index % 2 === 0 ? 'rgba(248, 250, 252, 0.5)' : 'transparent';
+                        e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
                       }}
                     >
                       <div style={{
@@ -812,7 +815,7 @@ export default function GanttChart() {
                       <div style={{
                         fontSize: '0.95rem',
                         fontWeight: '700',
-                        color: '#1e293b',
+                        color: '#f8fafc',
                         flex: 1,
                         wordWrap: 'break-word',
                         overflowWrap: 'break-word',
@@ -831,16 +834,16 @@ export default function GanttChart() {
                           display: 'flex',
                           alignItems: 'center',
                           padding: '0.5rem 1.5rem 0.5rem 3.5rem',
-                          background: 'rgba(241, 245, 249, 0.4)',
-                          borderBottom: '1px solid #f1f5f9',
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                           animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
                           transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#f1f5f9';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(241, 245, 249, 0.4)';
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
                         }}
                       >
                         <div style={{
@@ -856,7 +859,7 @@ export default function GanttChart() {
                         <div style={{
                           fontSize: '0.85rem',
                           fontWeight: '600',
-                          color: '#475569',
+                          color: '#cbd5e1',
                           flex: 1,
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word',
@@ -877,8 +880,8 @@ export default function GanttChart() {
               <div style={{
                 position: 'relative',
                 height: '70px',
-                borderBottom: '2px solid #e2e8f0',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#0f172a',
                 overflow: 'hidden',
                 paddingLeft: '0'
               }}>
@@ -891,7 +894,8 @@ export default function GanttChart() {
                         left: `${marker.position}%`,
                         top: 0,
                         bottom: 0,
-                        borderLeft: idx === 0 ? 'none' : '2px solid #cbd5e1',
+                        bottom: 0,
+                        borderLeft: idx === 0 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
                         paddingLeft: '0.75rem',
                         paddingRight: '0.75rem',
                         display: 'flex',
@@ -902,7 +906,7 @@ export default function GanttChart() {
                       }}
                     >
                       <div style={{
-                        color: '#0f172a',
+                        color: '#f8fafc',
                         fontSize: '0.8rem',
                         fontWeight: '800',
                         textTransform: 'uppercase',
@@ -912,7 +916,7 @@ export default function GanttChart() {
                         {marker.date.toLocaleDateString('en', { month: 'short' })}
                       </div>
                       <div style={{
-                        color: '#64748b',
+                        color: '#94a3b8',
                         fontSize: '0.85rem',
                         fontFamily: '"JetBrains Mono", monospace',
                         fontWeight: '600',
@@ -945,7 +949,7 @@ export default function GanttChart() {
                         left: `${marker.position}%`,
                         top: 0,
                         bottom: 0,
-                        borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0'
+                        borderLeft: idx === 0 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)'
                       }}
                     />
                   );
@@ -972,8 +976,8 @@ export default function GanttChart() {
                           position: 'relative',
                           width: '100%',
                           minHeight: '56px',
-                          background: index % 2 === 0 ? 'rgba(248, 250, 252, 0.3)' : 'transparent',
-                          borderBottom: '1px solid #f8fafc',
+                          background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                           animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                           display: 'flex',
                           alignItems: 'center'
