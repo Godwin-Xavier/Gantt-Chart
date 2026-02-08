@@ -240,7 +240,7 @@ export default function GanttChart() {
       fontFamily: '"Outfit", sans-serif',
       color: '#0f172a'
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
       <div style={{
         maxWidth: '1400px',
@@ -265,11 +265,11 @@ export default function GanttChart() {
               autoFocus
               style={{
                 fontSize: '2.5rem',
-                fontWeight: '700',
-                color: '#0f172a',
+                fontWeight: '800',
+                color: '#000000',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: '2px solid #cbd5e1',
+                borderBottom: '2px solid #000000',
                 outline: 'none',
                 padding: '0.5rem 0',
                 flex: 1
@@ -280,8 +280,8 @@ export default function GanttChart() {
               onClick={() => setIsEditingTitle(true)}
               style={{
                 fontSize: '2.5rem',
-                fontWeight: '700',
-                color: '#0f172a',
+                fontWeight: '800',
+                color: '#000000',
                 margin: 0,
                 cursor: 'pointer',
                 display: 'flex',
@@ -310,7 +310,7 @@ export default function GanttChart() {
                 padding: '0.875rem 1.75rem',
                 borderRadius: '12px',
                 fontSize: '1rem',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: isDownloading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -347,7 +347,7 @@ export default function GanttChart() {
                 padding: '0.875rem 1.75rem',
                 borderRadius: '12px',
                 fontSize: '1rem',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -381,8 +381,8 @@ export default function GanttChart() {
         }}>
           <h2 style={{
             fontSize: '1.25rem',
-            fontWeight: '600',
-            color: '#0f172a',
+            fontWeight: '700',
+            color: '#000000',
             marginBottom: '1.5rem',
             opacity: 1
           }}>
@@ -431,9 +431,9 @@ export default function GanttChart() {
                       border: '1px solid #cbd5e1',
                       borderRadius: '8px',
                       padding: '0.75rem 1rem',
-                      color: '#0f172a',
+                      color: '#000000',
                       fontSize: '1rem',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       outline: 'none',
                       transition: 'all 0.2s'
                     }}
@@ -557,7 +557,7 @@ export default function GanttChart() {
                             padding: '0.625rem 0.875rem',
                             color: '#0f172a',
                             fontSize: '0.9rem',
-                            fontWeight: '500',
+                            fontWeight: '600',
                             outline: 'none',
                             transition: 'all 0.2s'
                           }}
@@ -652,9 +652,9 @@ export default function GanttChart() {
                         border: '1px dashed rgba(99, 102, 241, 0.3)',
                         borderRadius: '8px',
                         padding: '0.75rem',
-                        color: '#818cf8',
+                        color: '#6366f1',
                         fontSize: '0.875rem',
-                        fontWeight: '500',
+                        fontWeight: '600',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -707,7 +707,7 @@ export default function GanttChart() {
               <h2 style={{
                 fontSize: '1.75rem',
                 fontWeight: '800',
-                color: '#0f172a',
+                color: '#000000',
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
@@ -715,8 +715,8 @@ export default function GanttChart() {
               </h2>
               <p style={{
                 fontSize: '0.9rem',
-                color: '#64748b',
-                fontWeight: '500'
+                color: '#0f172a',
+                fontWeight: '600'
               }}>
                 Timeline Visualization
               </p>
@@ -726,8 +726,8 @@ export default function GanttChart() {
               padding: '0.75rem 1.25rem',
               borderRadius: '12px',
               fontSize: '0.8rem',
-              fontWeight: '600',
-              color: '#475569',
+              fontWeight: '700',
+              color: '#0f172a',
               border: '1px solid #e2e8f0',
               boxShadow: 'none'
             }}>
@@ -763,7 +763,7 @@ export default function GanttChart() {
                 <h3 style={{
                   fontSize: '0.85rem',
                   fontWeight: '800',
-                  color: '#475569',
+                  color: '#000000',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
                   margin: 0,
@@ -813,8 +813,8 @@ export default function GanttChart() {
                       }}></div>
                       <div style={{
                         fontSize: '0.95rem',
-                        fontWeight: '700',
-                        color: '#0f172a',
+                        fontWeight: '800',
+                        color: '#000000',
                         flex: 1,
                         wordWrap: 'break-word',
                         overflowWrap: 'break-word',
@@ -857,8 +857,8 @@ export default function GanttChart() {
                         }}></div>
                         <div style={{
                           fontSize: '0.85rem',
-                          fontWeight: '600',
-                          color: '#475569',
+                          fontWeight: '700',
+                          color: '#0f172a',
                           flex: 1,
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word',
@@ -907,9 +907,9 @@ export default function GanttChart() {
                       }}
                     >
                       <div style={{
-                        color: '#0f172a',
-                        fontSize: '0.8rem',
-                        fontWeight: '800',
+                        color: '#000000',
+                        fontSize: '0.85rem',
+                        fontWeight: '900',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
                         textAlign: 'center'
@@ -917,10 +917,10 @@ export default function GanttChart() {
                         {marker.date.toLocaleDateString('en', { month: 'short' })}
                       </div>
                       <div style={{
-                        color: '#64748b',
-                        fontSize: '0.85rem',
+                        color: '#000000',
+                        fontSize: '0.9rem',
                         fontFamily: '"JetBrains Mono", monospace',
-                        fontWeight: '600',
+                        fontWeight: '800',
                         marginTop: '0.15rem',
                         textAlign: 'center'
                       }}>
