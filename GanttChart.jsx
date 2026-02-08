@@ -6,6 +6,7 @@ export default function GanttChart() {
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showDates, setShowDates] = useState(true);
   const chartRef = useRef(null);
   const [tasks, setTasks] = useState([
     {
@@ -337,6 +338,24 @@ export default function GanttChart() {
               <Download size={20} />
               {isDownloading ? 'Downloading...' : 'Download'}
             </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <input
+                type="checkbox"
+                id="showDates"
+                checked={showDates}
+                onChange={(e) => setShowDates(e.target.checked)}
+                style={{
+                  width: '1.25rem',
+                  height: '1.25rem',
+                  cursor: 'pointer',
+                  accentColor: '#6366f1'
+                }}
+              />
+              <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+                Show Dates
+              </label>
+            </div>
 
             <button
               onClick={addTask}
@@ -738,7 +757,7 @@ export default function GanttChart() {
           {/* Grid Layout: Tasks Column + Timeline */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '320px 1fr',
+            gridTemplateColumns: showDates ? '320px 200px 1fr' : '320px 1fr',
             gap: '0',
             background: '#f8fafc',
             borderRadius: '16px',
@@ -872,6 +891,104 @@ export default function GanttChart() {
                 ))}
               </div>
             </div>
+
+            {/* Dates Column */}
+            {showDates && (
+              <div style={{
+                background: '#f8fafc',
+                borderRight: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  height: '70px',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 1rem',
+                  background: '#f1f5f9'
+                }}>
+                  <h3 style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '800',
+                    color: '#000000',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    margin: 0,
+                    textAlign: 'center'
+                  }}>
+                    Dates
+                  </h3>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0',
+                  padding: '1rem 0'
+                }}>
+                  {tasks.map((task, index) => (
+                    <div key={task.id}>
+                      {/* Main Task Dates */}
+                      <div
+                        style={{
+                          minHeight: '56px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.5rem 1rem',
+                          background: index % 2 === 0 ? '#ffffff' : 'transparent',
+                          borderBottom: '1px solid #e2e8f0',
+                          animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                          transition: 'all 0.2s',
+                          fontSize: '0.85rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '600',
+                          color: '#0f172a'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#f1f5f9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : 'transparent';
+                        }}
+                      >
+                        {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+
+                      {/* Sub-task Dates */}
+                      {task.expanded && task.subTasks.map((subTask, subIndex) => (
+                        <div
+                          key={subTask.id}
+                          style={{
+                            minHeight: '44px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.5rem 1rem',
+                            background: '#f8fafc',
+                            borderBottom: '1px solid #e2e8f0',
+                            animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
+                            transition: 'all 0.2s',
+                            fontSize: '0.8rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontWeight: '500',
+                            color: '#475569'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f1f5f9';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f8fafc';
+                          }}
+                        >
+                          {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Timeline Column */}
             <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -1013,16 +1130,7 @@ export default function GanttChart() {
                             e.currentTarget.style.zIndex = '1';
                           }}
                         >
-                          {/* Shine effect */}
-                          <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '50%',
-                            background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)',
-                            borderRadius: '12px 12px 0 0'
-                          }}></div>
+
 
                           <div style={{
                             color: '#fff',
@@ -1055,8 +1163,8 @@ export default function GanttChart() {
                               position: 'relative',
                               width: '100%',
                               minHeight: '44px',
-                              background: 'rgba(241, 245, 249, 0.4)',
-                              borderBottom: '1px solid #f8fafc',
+                              background: '#f8fafc',
+                              borderBottom: '1px solid #e2e8f0',
                               animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
                               display: 'flex',
                               alignItems: 'center'
@@ -1091,16 +1199,7 @@ export default function GanttChart() {
                                 e.currentTarget.style.zIndex = '1';
                               }}
                             >
-                              {/* Shine effect */}
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: '50%',
-                                background: 'linear-gradient(to bottom, rgba(255,255,255,0.25), transparent)',
-                                borderRadius: '10px 10px 0 0'
-                              }}></div>
+
 
                               <div style={{
                                 color: '#fff',
