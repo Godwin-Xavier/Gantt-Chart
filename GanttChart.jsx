@@ -1171,8 +1171,33 @@ export default function GanttChart() {
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {tasks.map((task, index) => (
-              <div key={task.id} style={{ animation: `slideIn 0.3s ease-out ${index * 0.05}s both` }}>
+            {tasks.map((task, index) => {
+              const parentDays = getBusinessDays(task.startDate, task.endDate, holidays);
+              const parentCost = Number(task.cost) || 0;
+
+              let runningSubDays = 0;
+              let runningSubCost = 0;
+              const subTaskRollups = (task.subTasks || []).map((st) => {
+                const days = getBusinessDays(st.startDate, st.endDate, holidays);
+                const cost = Number(st.cost) || 0;
+                runningSubDays += days;
+                runningSubCost += cost;
+                return {
+                  days,
+                  cost,
+                  runningDays: runningSubDays,
+                  runningCost: runningSubCost
+                };
+              });
+
+              const totalSubDays = runningSubDays;
+              const totalSubCost = runningSubCost;
+              const daysOver = task.subTasks.length > 0 && totalSubDays > parentDays;
+              const costOver = task.subTasks.length > 0 && totalSubCost > parentCost;
+              const anyOver = daysOver || (showCost && costOver);
+
+              return (
+                <div key={task.id} style={{ animation: `slideIn 0.3s ease-out ${index * 0.05}s both` }}>
                 {/* Main Task */}
                 <div
                   style={{
@@ -1228,25 +1253,47 @@ export default function GanttChart() {
                     }}
                   />
 
-                  <input
-                    type="number"
-                    min="1"
-                    value={getBusinessDays(task.startDate, task.endDate, holidays)}
-                    onChange={(e) => updateTaskDuration(task.id, e.target.value)}
-                    style={{
-                      width: '60px',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '0.75rem',
-                      color: '#0f172a',
-                      fontSize: '0.875rem',
-                      textAlign: 'center',
-                      fontWeight: '600',
-                      outline: 'none'
-                    }}
-                    title="Duration (Days)"
-                  />
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    width: '80px'
+                  }}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={parentDays}
+                      onChange={(e) => updateTaskDuration(task.id, e.target.value)}
+                      style={{
+                        width: '60px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        color: '#0f172a',
+                        fontSize: '0.875rem',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        outline: 'none'
+                      }}
+                      title="Duration (Business Days)"
+                    />
+                    {task.subTasks.length > 0 && (
+                      <div
+                        title="Subtask days total"
+                        style={{
+                          fontSize: '0.7rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '700',
+                          color: daysOver ? '#ef4444' : '#64748b',
+                          lineHeight: 1
+                        }}
+                      >
+                        sum {totalSubDays}d
+                      </div>
+                    )}
+                  </div>
 
                   {showDates && (
                     <>
@@ -1293,26 +1340,42 @@ export default function GanttChart() {
                   )}
 
                   {showCost && (
-                    <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }}>{currency}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={task.cost || ''}
-                        onChange={(e) => updateTask(task.id, 'cost', e.target.value)}
-                        placeholder="Cost"
-                        style={{
-                          width: '100%',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '0.75rem 0.5rem 0.75rem 2rem',
-                          color: '#0f172a',
-                          fontSize: '0.875rem',
-                          outline: 'none',
-                          fontWeight: '600'
-                        }}
-                      />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }}>{currency}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={task.cost || ''}
+                          onChange={(e) => updateTask(task.id, 'cost', e.target.value)}
+                          placeholder="Cost"
+                          style={{
+                            width: '100%',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.75rem 0.5rem 0.75rem 2rem',
+                            color: '#0f172a',
+                            fontSize: '0.875rem',
+                            outline: 'none',
+                            fontWeight: '600'
+                          }}
+                        />
+                      </div>
+                      {task.subTasks.length > 0 && (
+                        <div
+                          title="Subtask cost total"
+                          style={{
+                            fontSize: '0.7rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontWeight: '700',
+                            color: costOver ? '#ef4444' : '#64748b',
+                            lineHeight: 1
+                          }}
+                        >
+                          sum {currency}{totalSubCost.toLocaleString()}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1358,23 +1421,31 @@ export default function GanttChart() {
                 {/* Sub-tasks */}
                 {task.expanded && (
                   <div style={{ marginTop: '0.5rem', marginLeft: '2.5rem' }}>
-                    {task.subTasks.map((subTask, subIndex) => (
-                      <div
-                        key={subTask.id}
-                        style={{
-                          background: '#f1f5f9',
-                          borderRadius: '10px',
-                          padding: '1rem',
-                          marginBottom: '0.5rem',
-                          display: 'grid',
-                          display: 'grid',
-                          gridTemplateColumns: `1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
-                          gap: '0.75rem',
-                          alignItems: 'center',
-                          border: '1px solid #e2e8f0',
-                          animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
-                        }}
-                      >
+                    {task.subTasks.map((subTask, subIndex) => {
+                      const rollup = subTaskRollups[subIndex] || {
+                        days: getBusinessDays(subTask.startDate, subTask.endDate, holidays),
+                        runningDays: 0,
+                        runningCost: 0
+                      };
+                      const runningDaysOver = rollup.runningDays > parentDays;
+                      const runningCostOver = rollup.runningCost > parentCost;
+
+                      return (
+                        <div
+                          key={subTask.id}
+                          style={{
+                            background: '#f1f5f9',
+                            borderRadius: '10px',
+                            padding: '1rem',
+                            marginBottom: '0.5rem',
+                            display: 'grid',
+                            gridTemplateColumns: `1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
+                            gap: '0.75rem',
+                            alignItems: 'center',
+                            border: '1px solid #e2e8f0',
+                            animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
+                          }}
+                        >
                         <input
                           type="text"
                           value={subTask.name}
@@ -1401,25 +1472,45 @@ export default function GanttChart() {
                           }}
                         />
 
-                        <input
-                          type="number"
-                          min="1"
-                          value={getBusinessDays(subTask.startDate, subTask.endDate, holidays)}
-                          onChange={(e) => updateSubTaskDuration(task.id, subTask.id, e.target.value)}
-                          style={{
-                            width: '60px',
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0.625rem',
-                            color: '#0f172a',
-                            fontSize: '0.8rem',
-                            textAlign: 'center',
-                            fontWeight: '600',
-                            outline: 'none'
-                          }}
-                          title="Duration (Days)"
-                        />
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          width: '80px'
+                        }}>
+                          <input
+                            type="number"
+                            min="1"
+                            value={rollup.days}
+                            onChange={(e) => updateSubTaskDuration(task.id, subTask.id, e.target.value)}
+                            style={{
+                              width: '60px',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '6px',
+                              padding: '0.625rem',
+                              color: '#0f172a',
+                              fontSize: '0.8rem',
+                              textAlign: 'center',
+                              fontWeight: '600',
+                              outline: 'none'
+                            }}
+                            title="Duration (Business Days)"
+                          />
+                          <div
+                            title="Running total (subtasks)"
+                            style={{
+                              fontSize: '0.68rem',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontWeight: '800',
+                              color: runningDaysOver ? '#ef4444' : '#64748b',
+                              lineHeight: 1
+                            }}
+                          >
+                            run {rollup.runningDays}d
+                          </div>
+                        </div>
 
                         {showDates && (
                           <>
@@ -1460,25 +1551,39 @@ export default function GanttChart() {
                         )}
 
                         {showCost && (
-                          <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.75rem' }}>{currency}</span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={subTask.cost || ''}
-                              onChange={(e) => updateSubTask(task.id, subTask.id, 'cost', e.target.value)}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ position: 'relative' }}>
+                              <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.75rem' }}>{currency}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={subTask.cost || ''}
+                                onChange={(e) => updateSubTask(task.id, subTask.id, 'cost', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  background: '#ffffff',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  padding: '0.625rem 0.5rem 0.625rem 1.5rem',
+                                  color: '#0f172a',
+                                  fontSize: '0.8rem',
+                                  outline: 'none',
+                                  fontWeight: '600'
+                                }}
+                              />
+                            </div>
+                            <div
+                              title="Running total (subtasks)"
                               style={{
-                                width: '100%',
-                                background: '#ffffff',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                padding: '0.625rem 0.5rem 0.625rem 1.5rem',
-                                color: '#0f172a',
-                                fontSize: '0.8rem',
-                                outline: 'none',
-                                fontWeight: '600'
+                                fontSize: '0.68rem',
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontWeight: '800',
+                                color: runningCostOver ? '#ef4444' : '#64748b',
+                                lineHeight: 1
                               }}
-                            />
+                            >
+                              run {currency}{rollup.runningCost.toLocaleString()}
+                            </div>
                           </div>
                         )}
 
@@ -1519,8 +1624,9 @@ export default function GanttChart() {
                         >
                           <X size={16} />
                         </button>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
 
                     {task.subTasks.length > 0 && (
                       <div style={{
@@ -1536,35 +1642,25 @@ export default function GanttChart() {
                         fontSize: '0.85rem',
                         fontWeight: '700'
                       }}>
-                        {(() => {
-                          const totalSubDays = task.subTasks.reduce((acc, st) => acc + getBusinessDays(st.startDate, st.endDate, holidays), 0);
-                          const totalSubCost = task.subTasks.reduce((acc, st) => acc + (Number(st.cost) || 0), 0);
-                          const parentDays = getBusinessDays(task.startDate, task.endDate, holidays);
-                          const parentCost = Number(task.cost) || 0;
-
-                          const daysOver = totalSubDays > parentDays;
-                          const costOver = totalSubCost > parentCost;
-
-                          return (
-                            <>
-                              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                                <div style={{ color: daysOver ? '#ef4444' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <Calendar size={14} />
-                                  <span>Subtasks Days: <span style={{ color: daysOver ? '#ef4444' : '#0f172a' }}>{totalSubDays} / {parentDays}</span></span>
-                                  {daysOver && <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Exceeded</span>}
-                                </div>
-                                <div style={{ color: costOver ? '#ef4444' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <DollarSign size={14} />
-                                  <span>Subtasks Cost: <span style={{ color: costOver ? '#ef4444' : '#0f172a' }}>{currency}{totalSubCost.toLocaleString()} / {currency}{parentCost.toLocaleString()}</span></span>
-                                  {costOver && <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Exceeded</span>}
-                                </div>
+                        <>
+                          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                            <div style={{ color: daysOver ? '#ef4444' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Calendar size={14} />
+                              <span>Subtasks Days: <span style={{ color: daysOver ? '#ef4444' : '#0f172a' }}>{totalSubDays} / {parentDays}</span></span>
+                              {daysOver && <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Exceeded</span>}
+                            </div>
+                            {showCost && (
+                              <div style={{ color: costOver ? '#ef4444' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <DollarSign size={14} />
+                                <span>Subtasks Cost: <span style={{ color: costOver ? '#ef4444' : '#0f172a' }}>{currency}{totalSubCost.toLocaleString()} / {currency}{parentCost.toLocaleString()}</span></span>
+                                {costOver && <span style={{ fontSize: '0.7rem', background: '#fee2e2', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Exceeded</span>}
                               </div>
-                              <div style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>
-                                {daysOver || costOver ? 'Limits exceeded' : 'Within budget'}
-                              </div>
-                            </>
-                          );
-                        })()}
+                            )}
+                          </div>
+                          <div style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                            {anyOver ? 'Limits exceeded' : 'Within plan'}
+                          </div>
+                        </>
                       </div>
                     )}
 
@@ -1601,7 +1697,8 @@ export default function GanttChart() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         <div
@@ -1734,7 +1831,7 @@ export default function GanttChart() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0',
-                padding: '1rem 0'
+                padding: '1rem 0 0 0'
               }}>
                 {tasks.map((task, index) => (
                   <div key={task.id}>
@@ -1863,7 +1960,7 @@ export default function GanttChart() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0',
-                  padding: '1rem 0'
+                  padding: '1rem 0 0 0'
                 }}>
                   {tasks.map((task, index) => (
                     <div key={task.id}>
@@ -1961,7 +2058,7 @@ export default function GanttChart() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0',
-                  padding: '1rem 0'
+                  padding: '1rem 0 0 0'
                 }}>
                   {tasks.map((task, index) => (
                     <div key={task.id}>
@@ -2304,23 +2401,25 @@ export default function GanttChart() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    {(() => {
-                      const allStarts = tasks.map(t => new Date(t.startDate).getTime());
-                      const allEnds = tasks.map(t => new Date(t.endDate).getTime());
-                      if (allStarts.length === 0) return '-';
+                {(() => {
+                      const allStarts = [];
+                      const allEnds = [];
 
-                      const minStart = new Date(Math.min(...allStarts));
-                      const maxEnd = new Date(Math.max(...allEnds));
+                      tasks.forEach((t) => {
+                        if (t.startDate) allStarts.push(t.startDate);
+                        if (t.endDate) allEnds.push(t.endDate);
+                        (t.subTasks || []).forEach((st) => {
+                          if (st.startDate) allStarts.push(st.startDate);
+                          if (st.endDate) allEnds.push(st.endDate);
+                        });
+                      });
 
-                      // Simple business day calc for range
-                      let count = 0;
-                      let cur = new Date(minStart);
-                      while (cur <= maxEnd) {
-                        const day = cur.getDay();
-                        if (day !== 0 && day !== 6) count++;
-                        cur.setDate(cur.getDate() + 1);
-                      }
-                      return `${count} Days`;
+                      if (allStarts.length === 0 || allEnds.length === 0) return '-';
+
+                      const minStart = allStarts.reduce((min, d) => (d < min ? d : min), allStarts[0]);
+                      const maxEnd = allEnds.reduce((max, d) => (d > max ? d : max), allEnds[0]);
+
+                      return `${getBusinessDays(minStart, maxEnd, holidays)} Days`;
                     })()}
                   </div>
                 )}
@@ -2395,7 +2494,8 @@ export default function GanttChart() {
             transform: translateX(0);
           }
         }
-      `}</style>
-      </div>
-      );
-}
+       `}</style>
+       </div>
+     </div>
+   );
+ }
