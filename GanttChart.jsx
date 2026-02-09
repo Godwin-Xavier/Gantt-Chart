@@ -5,60 +5,74 @@ import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
 
-  const getBusinessDays = (start, end, holidays = []) => {
-    let count = 0;
-    const curDate = new Date(start);
-    const endDate = new Date(end);
+  // Robust date helpers using Local Noon to avoid timezone/DST issues
+  const getDateAtNoon = (dateStr) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0);
+  };
 
-    while (curDate <= endDate) {
+  const formatDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const getBusinessDays = (start, end, holidays = []) => {
+    if (!start || !end) return 0;
+
+    const curDate = getDateAtNoon(start);
+    const endDate = getDateAtNoon(end);
+    let count = 0;
+
+    // Safety break for infinite loops if dates are way off
+    let safety = 0;
+    while (curDate <= endDate && safety < 3650) {
       const dayOfWeek = curDate.getDay();
-      const dateString = curDate.toISOString().split('T')[0];
+      const dateString = formatDate(curDate);
 
       // 0 = Sunday, 6 = Saturday
       if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateString)) {
         count++;
       }
       curDate.setDate(curDate.getDate() + 1);
+      safety++;
     }
     return count;
   };
 
   const addBusinessDays = (startDateStr, days, holidays = []) => {
-    let count = 0;
-    const curDate = new Date(startDateStr);
-    let lastValidDate = new Date(curDate);
-
-    // If initial date is a valid business day, it counts as day 1
-    // But usually duration 1 day means Start = End.
-    // So we iterate `days - 1` times to find the End Date.
-    // However, if days <= 0, we return startDate.
+    if (!startDateStr) return startDateStr;
+    // Standard Gantt: min 1 day duration. If 0 or less, arguably return start date.
     if (days <= 0) return startDateStr;
 
-    // Check if start date itself is a business day to count it?
-    // Convention: 1 day duration -> Start == End. 
-    // So we need to find (days - 1) *additional* business days.
+    let curDate = getDateAtNoon(startDateStr);
+    let remaining = days;
 
-    let daysToAdd = days - 1;
-    // But we must first check if the start date IS a business day. 
-    // If start is Sat, and duration is 1, maybe it should be Mon?
-    // For simplicity, let's assume we start counting from startDate.
+    const isBusinessDay = (d) => {
+      const day = d.getDay();
+      const str = formatDate(d);
+      return day !== 0 && day !== 6 && !holidays.includes(str);
+    };
 
-    while (daysToAdd > 0) {
-      curDate.setDate(curDate.getDate() + 1);
-      const dayOfWeek = curDate.getDay();
-      const dateString = curDate.toISOString().split('T')[0];
-
-      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateString)) {
-        daysToAdd--;
-      }
+    // If start date is a business day, it counts as 1.
+    if (isBusinessDay(curDate)) {
+      remaining--;
     }
 
-    // If the calculated end date lands on a weekend/holiday (unlikely if logic above is correct for >1 days),
-    // but for 1 day duration starting on Sat, we might need adjustment.
-    // Let's stick to simple logic: Input Start Date is assumed valid.
+    let safety = 0;
+    while (remaining > 0 && safety < 3650) {
+      curDate.setDate(curDate.getDate() + 1);
+      if (isBusinessDay(curDate)) {
+        remaining--;
+      }
+      safety++;
+    }
 
-    return curDate.toISOString().split('T')[0];
+    return formatDate(curDate);
   };
+
+
 
   // Internal ResizableImage Component
   const ResizableImage = ({ src, initialWidth, onResize, alt }) => {
@@ -1376,17 +1390,29 @@ export default function GanttChart() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: '1rem'
+            marginBottom: '1rem',
+            position: 'relative',
+            zIndex: 30
           }}>
-            <div style={{ width: '150px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <div style={{ minWidth: '150px', minHeight: '60px' }}>
               {customerLogo && (
-                <img src={customerLogo} alt="Customer Logo" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                <ResizableImage
+                  src={customerLogo}
+                  initialWidth={customerLogoWidth}
+                  onResize={setCustomerLogoWidth}
+                  alt="Customer Logo"
+                />
               )}
             </div>
 
-            <div style={{ width: '150px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <div style={{ minWidth: '150px', minHeight: '60px', display: 'flex', justifyContent: 'flex-end' }}>
               {companyLogo && (
-                <img src={companyLogo} alt="Company Logo" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                <ResizableImage
+                  src={companyLogo}
+                  initialWidth={companyLogoWidth}
+                  onResize={setCompanyLogoWidth}
+                  alt="Company Logo"
+                />
               )}
             </div>
           </div>
