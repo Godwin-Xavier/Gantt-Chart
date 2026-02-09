@@ -1,11 +1,10 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType } from 'lucide-react';
 
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
 
-  // Helper to calculate business days
   const getBusinessDays = (start, end, holidays = []) => {
     let count = 0;
     const curDate = new Date(start);
@@ -24,6 +23,117 @@ export default function GanttChart() {
     return count;
   };
 
+  const addBusinessDays = (startDateStr, days, holidays = []) => {
+    let count = 0;
+    const curDate = new Date(startDateStr);
+    let lastValidDate = new Date(curDate);
+
+    // If initial date is a valid business day, it counts as day 1
+    // But usually duration 1 day means Start = End.
+    // So we iterate `days - 1` times to find the End Date.
+    // However, if days <= 0, we return startDate.
+    if (days <= 0) return startDateStr;
+
+    // Check if start date itself is a business day to count it?
+    // Convention: 1 day duration -> Start == End. 
+    // So we need to find (days - 1) *additional* business days.
+
+    let daysToAdd = days - 1;
+    // But we must first check if the start date IS a business day. 
+    // If start is Sat, and duration is 1, maybe it should be Mon?
+    // For simplicity, let's assume we start counting from startDate.
+
+    while (daysToAdd > 0) {
+      curDate.setDate(curDate.getDate() + 1);
+      const dayOfWeek = curDate.getDay();
+      const dateString = curDate.toISOString().split('T')[0];
+
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateString)) {
+        daysToAdd--;
+      }
+    }
+
+    // If the calculated end date lands on a weekend/holiday (unlikely if logic above is correct for >1 days),
+    // but for 1 day duration starting on Sat, we might need adjustment.
+    // Let's stick to simple logic: Input Start Date is assumed valid.
+
+    return curDate.toISOString().split('T')[0];
+  };
+
+  // Internal ResizableImage Component
+  const ResizableImage = ({ src, initialWidth, onResize, alt }) => {
+    const [width, setWidth] = useState(initialWidth || 150);
+    const [isResizing, setIsResizing] = useState(false);
+    const imgRef = useRef(null);
+    const startXRef = useRef(0);
+    const startWidthRef = useRef(0);
+
+    useEffect(() => {
+      if (initialWidth) setWidth(initialWidth);
+    }, [initialWidth]);
+
+    const handleMouseDown = (e) => {
+      e.preventDefault();
+      setIsResizing(true);
+      startXRef.current = e.clientX;
+      startWidthRef.current = width;
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const dx = e.clientX - startXRef.current;
+      const newWidth = Math.max(50, Math.min(400, startWidthRef.current + dx)); // Min 50px, Max 400px
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (onResize) onResize(width); // Notify parent of final width
+    };
+
+    // We need to pass the current width to the mouse move handler, but it's captured in closure.
+    // So we use refs for drag logic, but we also update state for render.
+    // Ideally we should use a ref for the event listener to see the current values or just use the calculation based on start.
+    // The implementation above uses `startWidthRef.current` which is correct.
+
+    // Fix: render loop issue if onResize is called during render? No, it's called on mouseup.
+    // However, `width` state inside this component drives the view.
+
+    // Update parent when width changes? 
+    // Better to only update parent on MouseUp to avoid excessive re-renders of the whole chart.
+
+    return (
+      <div style={{ position: 'relative', display: 'inline-block', width: width }}>
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          style={{ width: '100%', display: 'block', userSelect: 'none' }}
+          draggable={false}
+        />
+        <div
+          onMouseDown={handleMouseDown}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            width: '10px',
+            height: '10px',
+            background: '#6366f1',
+            cursor: 'nwse-resize',
+            zIndex: 10,
+            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)'
+          }}
+          title="Drag to resize"
+        />
+      </div>
+    );
+  };
+
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -32,7 +142,9 @@ export default function GanttChart() {
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState('');
   const [customerLogo, setCustomerLogo] = useState(null);
+  const [customerLogoWidth, setCustomerLogoWidth] = useState(150);
   const [companyLogo, setCompanyLogo] = useState(null);
+  const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
@@ -92,9 +204,39 @@ export default function GanttChart() {
   };
 
   const updateTask = (id, field, value) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, [field]: value } : task
-    ));
+    setTasks(tasks.map(task => {
+      if (task.id !== id) return task;
+
+      let updates = { [field]: value };
+
+      // If start date changes, we might want to keep duration? 
+      // Or if end date changes, duration updates automatically by render logic.
+      // But if we want to support "Duration" Input, we need to handle it specifically.
+
+      return { ...task, ...updates };
+    }));
+  };
+
+  const updateTaskDuration = (id, duration) => {
+    setTasks(tasks.map(task => {
+      if (task.id !== id) return task;
+      const newEndDate = addBusinessDays(task.startDate, parseInt(duration) || 1, holidays);
+      return { ...task, endDate: newEndDate };
+    }));
+  };
+
+  const updateSubTaskDuration = (parentId, subTaskId, duration) => {
+    setTasks(tasks.map(task => {
+      if (task.id !== parentId) return task;
+      return {
+        ...task,
+        subTasks: task.subTasks.map(st => {
+          if (st.id !== subTaskId) return st;
+          const newEndDate = addBusinessDays(st.startDate, parseInt(duration) || 1, holidays);
+          return { ...st, endDate: newEndDate };
+        })
+      };
+    }));
   };
 
   const toggleExpanded = (id) => {
@@ -175,7 +317,9 @@ export default function GanttChart() {
           if (data.projectTitle) setProjectTitle(data.projectTitle);
           if (data.holidays) setHolidays(data.holidays);
           if (data.customerLogo) setCustomerLogo(data.customerLogo);
+          if (data.customerLogoWidth) setCustomerLogoWidth(data.customerLogoWidth);
           if (data.companyLogo) setCompanyLogo(data.companyLogo);
+          if (data.companyLogoWidth) setCompanyLogoWidth(data.companyLogoWidth);
           if (data.showDates !== undefined) setShowDates(data.showDates);
         } catch (error) {
           console.error('Error importing chart:', error);
@@ -199,7 +343,9 @@ export default function GanttChart() {
           tasks,
           holidays,
           customerLogo,
+          customerLogoWidth,
           companyLogo,
+          companyLogoWidth,
           showDates,
           exportedAt: new Date().toISOString()
         };
@@ -795,7 +941,7 @@ export default function GanttChart() {
                     borderRadius: '12px',
                     padding: '1.25rem',
                     display: 'grid',
-                    gridTemplateColumns: 'auto 1fr auto auto auto auto',
+                    gridTemplateColumns: 'auto 1fr 80px auto auto auto auto',
                     gap: '1rem',
                     alignItems: 'center',
                     border: '1px solid #e2e8f0'
@@ -841,6 +987,26 @@ export default function GanttChart() {
                       e.currentTarget.style.background = '#ffffff';
                       e.currentTarget.style.borderColor = '#cbd5e1';
                     }}
+                  />
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={getBusinessDays(task.startDate, task.endDate, holidays)}
+                    onChange={(e) => updateTaskDuration(task.id, e.target.value)}
+                    style={{
+                      width: '60px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      color: '#0f172a',
+                      fontSize: '0.875rem',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      outline: 'none'
+                    }}
+                    title="Duration (Days)"
                   />
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -934,7 +1100,7 @@ export default function GanttChart() {
                           padding: '1rem',
                           marginBottom: '0.5rem',
                           display: 'grid',
-                          gridTemplateColumns: '1fr auto auto auto auto',
+                          gridTemplateColumns: '1fr 80px auto auto auto auto',
                           gap: '0.75rem',
                           alignItems: 'center',
                           border: '1px solid #e2e8f0',
@@ -965,6 +1131,26 @@ export default function GanttChart() {
                             e.currentTarget.style.background = '#ffffff';
                             e.currentTarget.style.borderColor = '#cbd5e1';
                           }}
+                        />
+
+                        <input
+                          type="number"
+                          min="1"
+                          value={getBusinessDays(subTask.startDate, subTask.endDate, holidays)}
+                          onChange={(e) => updateSubTaskDuration(task.id, subTask.id, e.target.value)}
+                          style={{
+                            width: '60px',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '0.625rem',
+                            color: '#0f172a',
+                            fontSize: '0.8rem',
+                            textAlign: 'center',
+                            fontWeight: '600',
+                            outline: 'none'
+                          }}
+                          title="Duration (Days)"
                         />
 
                         <input
