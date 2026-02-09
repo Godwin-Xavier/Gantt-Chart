@@ -78,9 +78,12 @@ export default function GanttChart() {
   const ResizableImage = ({ src, initialWidth, onResize, alt }) => {
     const [width, setWidth] = useState(initialWidth || 150);
     const [isResizing, setIsResizing] = useState(false);
-    const [activeHandle, setActiveHandle] = useState(null);
+
+    // Use refs for values needed inside event listeners to avoid stale closures
+    const activeHandleRef = useRef(null);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
+    const isResizingRef = useRef(false);
 
     useEffect(() => {
       if (initialWidth) setWidth(initialWidth);
@@ -89,22 +92,25 @@ export default function GanttChart() {
     const handleMouseDown = (e, handle) => {
       e.stopPropagation();
       e.preventDefault();
+
       setIsResizing(true);
-      setActiveHandle(handle);
+      isResizingRef.current = true;
+      activeHandleRef.current = handle;
       startXRef.current = e.clientX;
       startWidthRef.current = width;
+
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     };
 
     const handleMouseMove = (e) => {
-      if (!isResizing || !activeHandle) return;
+      if (!isResizingRef.current || !activeHandleRef.current) return;
 
       const dx = e.clientX - startXRef.current;
       let change = 0;
 
       // Determine direction of resize based on handle
-      if (activeHandle.includes('w')) {
+      if (activeHandleRef.current.includes('w')) {
         // West: dragging left increases width
         change = -dx;
       } else {
@@ -118,9 +124,12 @@ export default function GanttChart() {
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      setActiveHandle(null);
+      isResizingRef.current = false;
+      activeHandleRef.current = null;
+
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+
       if (onResize) onResize(width);
     };
 
@@ -175,6 +184,8 @@ export default function GanttChart() {
       </div>
     );
   };
+
+
 
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
