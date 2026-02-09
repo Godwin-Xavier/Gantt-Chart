@@ -82,6 +82,7 @@ export default function GanttChart() {
     // Use refs for values needed inside event listeners to avoid stale closures
     const activeHandleRef = useRef(null);
     const startXRef = useRef(0);
+    const startYRef = useRef(0);
     const startWidthRef = useRef(0);
     const isResizingRef = useRef(false);
 
@@ -97,6 +98,7 @@ export default function GanttChart() {
       isResizingRef.current = true;
       activeHandleRef.current = handle;
       startXRef.current = e.clientX;
+      startYRef.current = e.clientY;
       startWidthRef.current = width;
 
       document.addEventListener('mousemove', handleMouseMove);
@@ -107,18 +109,23 @@ export default function GanttChart() {
       if (!isResizingRef.current || !activeHandleRef.current) return;
 
       const dx = e.clientX - startXRef.current;
+      const dy = e.clientY - startYRef.current;
       let change = 0;
 
-      // Determine direction of resize based on handle
-      if (activeHandleRef.current.includes('w')) {
-        // West: dragging left increases width
-        change = -dx;
-      } else {
-        // East: dragging right increases width
-        change = dx;
+      const handle = activeHandleRef.current;
+
+      // Calculate change based on handle direction (diagonal logic)
+      if (handle === 'se') {
+        change = dx + dy;
+      } else if (handle === 'sw') {
+        change = -dx + dy;
+      } else if (handle === 'ne') {
+        change = dx - dy;
+      } else if (handle === 'nw') {
+        change = -dx - dy;
       }
 
-      const newWidth = Math.max(50, Math.min(800, startWidthRef.current + change));
+      const newWidth = Math.max(50, Math.min(800, startWidthRef.current + (change * 0.7)));
       setWidth(newWidth);
     };
 
