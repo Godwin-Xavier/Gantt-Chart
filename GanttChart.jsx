@@ -213,6 +213,92 @@ export default function GanttChart() {
   const [tasks, setTasks] = useState([
     {
       id: 1,
+      name: 'Planning Phase',
+      startDate: `${currentYear}-03-27`,
+      endDate: `${currentYear}-04-02`,
+      color: '#6366f1',
+      cost: 1500,
+      expanded: true,
+      subTasks: [
+        {
+          id: 101,
+          name: 'Requirements Gathering',
+          startDate: `${currentYear}-03-01`,
+          endDate: `${currentYear}-03-08`,
+          color: '#818cf8',
+          cost: 0
+        },
+        {
+          id: 102,
+          name: 'BRD Preparation',
+          startDate: `${currentYear}-03-27`,
+          endDate: `${currentYear}-04-02`,
+          color: '#ec4899',
+          cost: 0
+        },
+        {
+          id: 103,
+          name: 'BRD Signoff',
+          startDate: `${currentYear}-03-27`,
+          endDate: `${currentYear}-04-02`,
+          color: '#3b82f6',
+          cost: 0
+        }
+      ]
+    },
+    {
+      id: 2,
+      name: 'Development',
+      startDate: `${currentYear}-03-10`,
+      endDate: `${currentYear}-04-20`,
+      color: '#8b5cf6',
+      cost: 5000,
+      expanded: true,
+      subTasks: [
+        {
+          id: 201,
+          name: 'Modules and fields configuration',
+          startDate: `${currentYear}-03-10`,
+          endDate: `${currentYear}-04-20`,
+          color: '#22d3ee',
+          cost: 0
+        },
+        {
+          id: 202,
+          name: 'Masters Set up',
+          startDate: `${currentYear}-03-10`,
+          endDate: `${currentYear}-04-20`,
+          color: '#22c55e',
+          cost: 0
+        },
+        {
+          id: 203,
+          name: 'Blueprints and automation configuration',
+          startDate: `${currentYear}-03-10`,
+          endDate: `${currentYear}-04-20`,
+          color: '#84cc16',
+          cost: 0
+        },
+        {
+          id: 204,
+          name: 'Notifications and SLA\'s',
+          startDate: `${currentYear}-03-10`,
+          endDate: `${currentYear}-04-20`,
+          color: '#d9f99d',
+          cost: 0
+        },
+        {
+          id: 205,
+          name: 'Reports & Dashboards',
+          startDate: `${currentYear}-03-10`,
+          endDate: `${currentYear}-04-20`,
+          color: '#3b82f6',
+          cost: 0
+        }
+      ]
+    },
+    {
+      id: 3,
       name: 'Testing',
       startDate: `${currentYear}-04-15`,
       endDate: `${currentYear}-05-05`,
@@ -221,7 +307,7 @@ export default function GanttChart() {
       expanded: true,
       subTasks: [
         {
-          id: 101,
+          id: 301,
           name: 'Code Review',
           startDate: `${currentYear}-04-15`,
           endDate: `${currentYear}-05-05`,
@@ -229,7 +315,7 @@ export default function GanttChart() {
           cost: 0
         },
         {
-          id: 102,
+          id: 302,
           name: 'Internal Testing and DEMO',
           startDate: `${currentYear}-04-15`,
           endDate: `${currentYear}-05-05`,
@@ -239,7 +325,7 @@ export default function GanttChart() {
       ]
     },
     {
-      id: 2,
+      id: 4,
       name: 'UAT',
       startDate: `${currentYear}-02-09`,
       endDate: `${currentYear}-02-16`,
@@ -249,7 +335,7 @@ export default function GanttChart() {
       subTasks: []
     },
     {
-      id: 3,
+      id: 5,
       name: 'GO-LIVE',
       startDate: `${currentYear}-02-09`,
       endDate: `${currentYear}-02-16`,
@@ -259,7 +345,7 @@ export default function GanttChart() {
       subTasks: []
     },
     {
-      id: 4,
+      id: 6,
       name: 'Hyper Care Support',
       startDate: `${currentYear}-02-09`,
       endDate: `${currentYear}-02-16`,
@@ -1432,110 +1518,243 @@ export default function GanttChart() {
                 )}
               </div>
             ))}
+                )}
+          </div>
+            ))}
+
+
+        </div>
+      </div>
+      <div
+        ref={chartRef}
+        data-chart-export="true"
+        style={{
+          background: '#ffffff',
+          borderRadius: '24px',
+          padding: '2.5rem',
+          padding: '2.5rem',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+          position: 'relative'
+        }}
+      >
+        {/* Logo Header Row */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '1rem',
+          position: 'relative',
+          zIndex: 30
+        }}>
+          <div style={{ minWidth: '150px', minHeight: '60px' }}>
+            {customerLogo && (
+              <ResizableImage
+                src={customerLogo}
+                initialWidth={customerLogoWidth}
+                onResize={setCustomerLogoWidth}
+                alt="Customer Logo"
+              />
+            )}
+          </div>
+
+          <div style={{ minWidth: '150px', minHeight: '60px', display: 'flex', justifyContent: 'flex-end' }}>
+            {companyLogo && (
+              <ResizableImage
+                src={companyLogo}
+                initialWidth={companyLogoWidth}
+                onResize={setCompanyLogoWidth}
+                alt="Company Logo"
+              />
+            )}
+          </div>
+        </div>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: '2.5rem',
+          flexDirection: 'column',
+          gap: '0.5rem',
+          textAlign: 'center',
+          marginTop: '-2rem' // Pull up slightly to sit between logos nicely
+        }}>
+          <div>
+            <h2 style={{
+              fontSize: '1.75rem',
+              fontWeight: '800',
+              color: '#000000',
+              marginBottom: '0.5rem',
+              letterSpacing: '-0.02em'
+            }}>
+              {projectTitle}
+            </h2>
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#0f172a',
+              fontWeight: '600'
+            }}>
+              Timeline Visualization
+            </p>
+          </div>
+          <div style={{
+            background: '#f1f5f9',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            color: '#0f172a',
+            border: '1px solid #e2e8f0',
+            boxShadow: 'none'
+          }}>
+            {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
           </div>
         </div>
 
-        {/* Gantt Chart */}
-        <div
-          ref={chartRef}
-          data-chart-export="true"
-          style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '2.5rem',
-            padding: '2.5rem',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
-            position: 'relative'
-          }}
-        >
-          {/* Logo Header Row */}
+        {/* Grid Layout: Tasks Column + Timeline */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: showDates
+            ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
+            : (showCost ? '320px 100px 1fr' : '320px 1fr'),
+          gap: '0',
+          background: '#f8fafc',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+        }}>
+          {/* Tasks Column */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '1rem',
-            position: 'relative',
-            zIndex: 30
+            background: '#f8fafc',
+            borderRight: '1px solid #e2e8f0'
           }}>
-            <div style={{ minWidth: '150px', minHeight: '60px' }}>
-              {customerLogo && (
-                <ResizableImage
-                  src={customerLogo}
-                  initialWidth={customerLogoWidth}
-                  onResize={setCustomerLogoWidth}
-                  alt="Customer Logo"
-                />
-              )}
-            </div>
-
-            <div style={{ minWidth: '150px', minHeight: '60px', display: 'flex', justifyContent: 'flex-end' }}>
-              {companyLogo && (
-                <ResizableImage
-                  src={companyLogo}
-                  initialWidth={companyLogoWidth}
-                  onResize={setCompanyLogoWidth}
-                  alt="Company Logo"
-                />
-              )}
-            </div>
-          </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: '2.5rem',
-            flexDirection: 'column',
-            gap: '0.5rem',
-            textAlign: 'center',
-            marginTop: '-2rem' // Pull up slightly to sit between logos nicely
-          }}>
-            <div>
-              <h2 style={{
-                fontSize: '1.75rem',
+            <div style={{
+              height: '70px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 1.5rem',
+              background: '#f1f5f9'
+            }}>
+              <h3 style={{
+                fontSize: '0.85rem',
                 fontWeight: '800',
                 color: '#000000',
-                marginBottom: '0.5rem',
-                letterSpacing: '-0.02em'
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                margin: 0,
+                textAlign: 'center'
               }}>
-                {projectTitle}
-              </h2>
-              <p style={{
-                fontSize: '0.9rem',
-                color: '#0f172a',
-                fontWeight: '600'
-              }}>
-                Timeline Visualization
-              </p>
+                Tasks
+              </h3>
             </div>
+
+            {/* Task Names */}
             <div style={{
-              background: '#f1f5f9',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px',
-              fontSize: '0.8rem',
-              fontWeight: '700',
-              color: '#0f172a',
-              border: '1px solid #e2e8f0',
-              boxShadow: 'none'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0',
+              padding: '1rem 0'
             }}>
-              {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
+              {tasks.map((task, index) => (
+                <div key={task.id}>
+                  {/* Main Task Name */}
+                  <div
+                    style={{
+                      minHeight: '56px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0.5rem 1.5rem',
+                      background: '#ffffff',
+                      borderBottom: '1px solid #e2e8f0',
+                      animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f1f5f9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#ffffff';
+                    }}
+                  >
+                    <div style={{
+                      width: '4px',
+                      minHeight: '24px',
+                      background: `linear-gradient(to bottom, ${task.color}, ${task.color}dd)`,
+                      borderRadius: '2px',
+                      marginRight: '1rem',
+                      boxShadow: `0 2px 8px ${task.color}40`,
+                      alignSelf: 'flex-start',
+                      marginTop: '0.25rem'
+                    }}></div>
+                    <div style={{
+                      fontSize: '0.95rem',
+                      fontWeight: '800',
+                      color: '#000000',
+                      flex: 1,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: '1.4'
+                    }}>
+                      {task.name}
+                    </div>
+                  </div>
+
+                  {/* Sub-task Names */}
+                  {task.expanded && task.subTasks.map((subTask, subIndex) => (
+                    <div
+                      key={subTask.id}
+                      style={{
+                        minHeight: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0.5rem 1.5rem 0.5rem 3.5rem',
+                        background: '#f8fafc',
+                        borderBottom: '1px solid #e2e8f0',
+                        animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f1f5f9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#f8fafc';
+                      }}
+                    >
+                      <div style={{
+                        width: '3px',
+                        minHeight: '18px',
+                        background: `linear-gradient(to bottom, ${subTask.color}, ${subTask.color}cc)`,
+                        borderRadius: '1.5px',
+                        marginRight: '0.75rem',
+                        opacity: 0.8,
+                        alignSelf: 'flex-start',
+                        marginTop: '0.25rem'
+                      }}></div>
+                      <div style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        flex: 1,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '1.4'
+                      }}>
+                        {subTask.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Grid Layout: Tasks Column + Timeline */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: showDates
-              ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
-              : (showCost ? '320px 100px 1fr' : '320px 1fr'),
-            gap: '0',
-            background: '#f8fafc',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-          }}>
-            {/* Tasks Column */}
+          {/* Dates Column */}
+          {showDates && (
             <div style={{
               background: '#f8fafc',
               borderRight: '1px solid #e2e8f0'
@@ -1546,7 +1765,7 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '0 1.5rem',
+                padding: '0 1rem',
                 background: '#f1f5f9'
               }}>
                 <h3 style={{
@@ -1558,11 +1777,10 @@ export default function GanttChart() {
                   margin: 0,
                   textAlign: 'center'
                 }}>
-                  Tasks
+                  Dates
                 </h3>
               </div>
 
-              {/* Task Names */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1571,17 +1789,22 @@ export default function GanttChart() {
               }}>
                 {tasks.map((task, index) => (
                   <div key={task.id}>
-                    {/* Main Task Name */}
+                    {/* Main Task Dates */}
                     <div
                       style={{
                         minHeight: '56px',
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '0.5rem 1.5rem',
+                        justifyContent: 'center',
+                        padding: '0.5rem 1rem',
                         background: '#ffffff',
                         borderBottom: '1px solid #e2e8f0',
                         animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        fontSize: '0.85rem',
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontWeight: '600',
+                        color: '#0f172a'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = '#f1f5f9';
@@ -1590,31 +1813,10 @@ export default function GanttChart() {
                         e.currentTarget.style.background = '#ffffff';
                       }}
                     >
-                      <div style={{
-                        width: '4px',
-                        minHeight: '24px',
-                        background: `linear-gradient(to bottom, ${task.color}, ${task.color}dd)`,
-                        borderRadius: '2px',
-                        marginRight: '1rem',
-                        boxShadow: `0 2px 8px ${task.color}40`,
-                        alignSelf: 'flex-start',
-                        marginTop: '0.25rem'
-                      }}></div>
-                      <div style={{
-                        fontSize: '0.95rem',
-                        fontWeight: '800',
-                        color: '#000000',
-                        flex: 1,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: '1.4'
-                      }}>
-                        {task.name}
-                      </div>
+                      {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
 
-                    {/* Sub-task Names */}
+                    {/* Sub-task Dates */}
                     {task.expanded && task.subTasks.map((subTask, subIndex) => (
                       <div
                         key={subTask.id}
@@ -1622,11 +1824,16 @@ export default function GanttChart() {
                           minHeight: '44px',
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '0.5rem 1.5rem 0.5rem 3.5rem',
+                          justifyContent: 'center',
+                          padding: '0.5rem 1rem',
                           background: '#f8fafc',
                           borderBottom: '1px solid #e2e8f0',
                           animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s',
+                          fontSize: '0.8rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '500',
+                          color: '#475569'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background = '#f1f5f9';
@@ -1635,486 +1842,453 @@ export default function GanttChart() {
                           e.currentTarget.style.background = '#f8fafc';
                         }}
                       >
-                        <div style={{
-                          width: '3px',
-                          minHeight: '18px',
-                          background: `linear-gradient(to bottom, ${subTask.color}, ${subTask.color}cc)`,
-                          borderRadius: '1.5px',
-                          marginRight: '0.75rem',
-                          opacity: 0.8,
-                          alignSelf: 'flex-start',
-                          marginTop: '0.25rem'
-                        }}></div>
-                        <div style={{
-                          fontSize: '0.85rem',
-                          fontWeight: '700',
-                          color: '#0f172a',
-                          flex: 1,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: '1.4'
-                        }}>
-                          {subTask.name}
-                        </div>
+                        {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                     ))}
                   </div>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Dates Column */}
-            {showDates && (
+          {/* Cost Column */}
+          {showCost && (
+            <div style={{
+              background: '#f8fafc',
+              borderRight: '1px solid #e2e8f0'
+            }}>
               <div style={{
-                background: '#f8fafc',
-                borderRight: '1px solid #e2e8f0'
-              }}>
-                <div style={{
-                  height: '70px',
-                  borderBottom: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 1rem',
-                  background: '#f1f5f9'
-                }}>
-                  <h3 style={{
-                    fontSize: '0.85rem',
-                    fontWeight: '800',
-                    color: '#000000',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    margin: 0,
-                    textAlign: 'center'
-                  }}>
-                    Dates
-                  </h3>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0',
-                  padding: '1rem 0'
-                }}>
-                  {tasks.map((task, index) => (
-                    <div key={task.id}>
-                      {/* Main Task Dates */}
-                      <div
-                        style={{
-                          minHeight: '56px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.5rem 1rem',
-                          background: '#ffffff',
-                          borderBottom: '1px solid #e2e8f0',
-                          animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                          transition: 'all 0.2s',
-                          fontSize: '0.85rem',
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontWeight: '600',
-                          color: '#0f172a'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#f1f5f9';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#ffffff';
-                        }}
-                      >
-                        {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-
-                      {/* Sub-task Dates */}
-                      {task.expanded && task.subTasks.map((subTask, subIndex) => (
-                        <div
-                          key={subTask.id}
-                          style={{
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0.5rem 1rem',
-                            background: '#f8fafc',
-                            borderBottom: '1px solid #e2e8f0',
-                            animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                            transition: 'all 0.2s',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontWeight: '500',
-                            color: '#475569'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#f8fafc';
-                          }}
-                        >
-                          {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Cost Column */}
-            {showCost && (
-              <div style={{
-                background: '#f8fafc',
-                borderRight: '1px solid #e2e8f0'
-              }}>
-                <div style={{
-                  height: '70px',
-                  borderBottom: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 1rem',
-                  background: '#f1f5f9'
-                }}>
-                  <h3 style={{
-                    fontSize: '0.85rem',
-                    fontWeight: '800',
-                    color: '#000000',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    margin: 0,
-                    textAlign: 'center'
-                  }}>
-                    Cost
-                  </h3>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0',
-                  padding: '1rem 0'
-                }}>
-                  {tasks.map((task, index) => (
-                    <div key={task.id}>
-                      {/* Main Task Cost */}
-                      <div
-                        style={{
-                          minHeight: '56px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.5rem 1rem',
-                          background: '#ffffff',
-                          borderBottom: '1px solid #e2e8f0',
-                          animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                          transition: 'all 0.2s',
-                          fontSize: '0.85rem',
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontWeight: '600',
-                          color: '#0f172a'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#f1f5f9';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#ffffff';
-                        }}
-                      >
-                        {task.cost > 0 ? `${currency}${Number(task.cost).toLocaleString()}` : '-'}
-                      </div>
-
-                      {/* Sub-task Cost */}
-                      {task.expanded && task.subTasks.map((subTask, subIndex) => (
-                        <div
-                          key={subTask.id}
-                          style={{
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0.5rem 1rem',
-                            background: '#f8fafc',
-                            borderBottom: '1px solid #e2e8f0',
-                            animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                            transition: 'all 0.2s',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontWeight: '500',
-                            color: '#475569'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#f8fafc';
-                          }}
-                        >
-                          {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Timeline Column */}
-            <div style={{ position: 'relative', overflow: 'hidden' }}>
-              {/* Timeline Header */}
-              <div style={{
-                position: 'relative',
                 height: '70px',
                 borderBottom: '1px solid #e2e8f0',
-                background: '#f1f5f9',
-                overflow: 'hidden',
-                paddingLeft: '0'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 1rem',
+                background: '#f1f5f9'
               }}>
-                {monthMarkers.map((marker, idx) => {
-                  const nextMarker = monthMarkers[idx + 1];
-                  const nextPosition = nextMarker ? nextMarker.position : 100;
-                  const width = nextPosition - marker.position;
-
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        position: 'absolute',
-                        left: `${marker.position}%`,
-                        width: `${width}%`,
-                        top: 0,
-                        bottom: 0,
-                        borderLeft: idx === 0 ? 'none' : '1px solid #cbd5e1',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <div style={{
-                        color: '#000000',
-                        fontSize: '0.85rem',
-                        fontWeight: '900',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                        textAlign: 'center'
-                      }}>
-                        {marker.date.toLocaleDateString('en', { month: 'short' })}
-                      </div>
-                      <div style={{
-                        color: '#000000',
-                        fontSize: '0.9rem',
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontWeight: '800',
-                        marginTop: '0.15rem',
-                        textAlign: 'center'
-                      }}>
-                        {marker.date.getFullYear()}
-                      </div>
-                    </div>
-                  );
-                })}
+                <h3 style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '800',
+                  color: '#000000',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  margin: 0,
+                  textAlign: 'center'
+                }}>
+                  Cost
+                </h3>
               </div>
 
-              {/* Vertical Grid Lines */}
-              <div style={{
-                position: 'absolute',
-                top: '70px',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                pointerEvents: 'none',
-                overflow: 'hidden'
-              }}>
-                {monthMarkers.map((marker, idx) => {
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        position: 'absolute',
-                        left: `${marker.position}%`,
-                        top: 0,
-                        bottom: 0,
-                        borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0'
-                      }}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Gantt Bars */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0',
-                padding: '1rem 0',
-                position: 'relative'
+                padding: '1rem 0'
               }}>
-                {tasks.map((task, index) => {
-                  const position = getTaskPosition(task);
-                  const duration = getBusinessDays(task.startDate, task.endDate, holidays);
+                {tasks.map((task, index) => (
+                  <div key={task.id}>
+                    {/* Main Task Cost */}
+                    <div
+                      style={{
+                        minHeight: '56px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.5rem 1rem',
+                        background: '#ffffff',
+                        borderBottom: '1px solid #e2e8f0',
+                        animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                        transition: 'all 0.2s',
+                        fontSize: '0.85rem',
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontWeight: '600',
+                        color: '#0f172a'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f1f5f9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                      }}
+                    >
+                      {task.cost > 0 ? `${currency}${Number(task.cost).toLocaleString()}` : '-'}
+                    </div>
 
-                  return (
-                    <div key={task.id}>
-                      {/* Main Task Bar */}
+                    {/* Sub-task Cost */}
+                    {task.expanded && task.subTasks.map((subTask, subIndex) => (
                       <div
+                        key={subTask.id}
                         style={{
-                          position: 'relative',
-                          width: '100%',
-                          minHeight: '56px',
-                          background: '#ffffff',
-                          borderBottom: '1px solid #e2e8f0',
-                          animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                          minHeight: '44px',
                           display: 'flex',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.5rem 1rem',
+                          background: '#f8fafc',
+                          borderBottom: '1px solid #e2e8f0',
+                          animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
+                          transition: 'all 0.2s',
+                          fontSize: '0.8rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '500',
+                          color: '#475569'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#f1f5f9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#f8fafc';
                         }}
                       >
-                        <div
-                          title={`${task.name} (${duration} days)`}
-                          style={{
-                            position: 'absolute',
-                            left: position.left,
-                            width: position.width,
-                            height: '36px',
-                            background: `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
-                            borderRadius: '12px',
-                            boxShadow: `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
-                            border: `1.5px solid ${task.color}`,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            cursor: 'default',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = `0 8px 24px ${task.color}45, 0 4px 8px ${task.color}30`;
-                            e.currentTarget.style.zIndex = '10';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`;
-                            e.currentTarget.style.zIndex = '1';
-                          }}
-                        >
-
-
-                          <div style={{
-                            color: '#fff',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontWeight: '800',
-                            background: 'rgba(0, 0, 0, 0.25)',
-                            padding: '0.4rem 0.75rem',
-                            borderRadius: '8px',
-                            textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
-                            backdropFilter: 'blur(4px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            position: 'relative',
-                            zIndex: 2
-                          }}>
-                            {duration}d
-                          </div>
-                        </div>
+                        {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
                       </div>
-
-                      {/* Sub-task Bars */}
-                      {task.expanded && task.subTasks.map((subTask, subIndex) => {
-                        const subPosition = getTaskPosition(subTask);
-                        const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
-
-                        return (
-                          <div
-                            key={subTask.id}
-                            style={{
-                              position: 'relative',
-                              width: '100%',
-                              minHeight: '44px',
-                              background: '#f8fafc',
-                              borderBottom: '1px solid #e2e8f0',
-                              animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                              display: 'flex',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <div
-                              title={`${subTask.name} (${subDuration} days)`}
-                              style={{
-                                position: 'absolute',
-                                left: subPosition.left,
-                                width: subPosition.width,
-                                height: '28px',
-                                background: `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
-                                borderRadius: '10px',
-                                boxShadow: `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
-                                border: `1.5px solid ${subTask.color}cc`,
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                cursor: 'default',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.08)';
-                                e.currentTarget.style.boxShadow = `0 6px 18px ${subTask.color}40, 0 2px 6px ${subTask.color}25`;
-                                e.currentTarget.style.zIndex = '10';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.boxShadow = `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`;
-                                e.currentTarget.style.zIndex = '1';
-                              }}
-                            >
-
-
-                              <div style={{
-                                color: '#fff',
-                                fontSize: '0.75rem',
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontWeight: '800',
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                padding: '0.3rem 0.6rem',
-                                borderRadius: '6px',
-                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
-                                backdropFilter: 'blur(4px)',
-                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                position: 'relative',
-                                zIndex: 2
-                              }}>
-                                {subDuration}d
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Footer Note */}
-          <div style={{
-            marginTop: '2rem',
-            textAlign: 'center',
-            borderTop: '1px solid #e2e8f0',
-            paddingTop: '1rem'
-          }}>
-            <p style={{
-              fontSize: '0.85rem',
-              color: '#94a3b8',
-              fontWeight: '500',
-              margin: 0
+          {/* Timeline Column */}
+          <div style={{ position: 'relative', overflow: 'hidden' }}>
+            {/* Timeline Header */}
+            <div style={{
+              position: 'relative',
+              height: '70px',
+              borderBottom: '1px solid #e2e8f0',
+              background: '#f1f5f9',
+              overflow: 'hidden',
+              paddingLeft: '0'
             }}>
-              Note: Prepared by Zoho SMBS Team
-            </p>
+              {monthMarkers.map((marker, idx) => {
+                const nextMarker = monthMarkers[idx + 1];
+                const nextPosition = nextMarker ? nextMarker.position : 100;
+                const width = nextPosition - marker.position;
+
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'absolute',
+                      left: `${marker.position}%`,
+                      width: `${width}%`,
+                      top: 0,
+                      bottom: 0,
+                      borderLeft: idx === 0 ? 'none' : '1px solid #cbd5e1',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{
+                      color: '#000000',
+                      fontSize: '0.85rem',
+                      fontWeight: '900',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      textAlign: 'center'
+                    }}>
+                      {marker.date.toLocaleDateString('en', { month: 'short' })}
+                    </div>
+                    <div style={{
+                      color: '#000000',
+                      fontSize: '0.9rem',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontWeight: '800',
+                      marginTop: '0.15rem',
+                      textAlign: 'center'
+                    }}>
+                      {marker.date.getFullYear()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Vertical Grid Lines */}
+            <div style={{
+              position: 'absolute',
+              top: '70px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: 'none',
+              overflow: 'hidden'
+            }}>
+              {monthMarkers.map((marker, idx) => {
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'absolute',
+                      left: `${marker.position}%`,
+                      top: 0,
+                      bottom: 0,
+                      borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0'
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Gantt Bars */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0',
+              padding: '1rem 0',
+              position: 'relative'
+            }}>
+              {tasks.map((task, index) => {
+                const position = getTaskPosition(task);
+                const duration = getBusinessDays(task.startDate, task.endDate, holidays);
+
+                return (
+                  <div key={task.id}>
+                    {/* Main Task Bar */}
+                    <div
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        minHeight: '56px',
+                        background: '#ffffff',
+                        borderBottom: '1px solid #e2e8f0',
+                        animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div
+                        title={`${task.name} (${duration} days)`}
+                        style={{
+                          position: 'absolute',
+                          left: position.left,
+                          width: position.width,
+                          height: '36px',
+                          background: `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
+                          borderRadius: '12px',
+                          boxShadow: `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
+                          border: `1.5px solid ${task.color}`,
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          cursor: 'default',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                          e.currentTarget.style.boxShadow = `0 8px 24px ${task.color}45, 0 4px 8px ${task.color}30`;
+                          e.currentTarget.style.zIndex = '10';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`;
+                          e.currentTarget.style.zIndex = '1';
+                        }}
+                      >
+
+
+                        <div style={{
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '800',
+                          background: 'rgba(0, 0, 0, 0.25)',
+                          padding: '0.4rem 0.75rem',
+                          borderRadius: '8px',
+                          textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+                          backdropFilter: 'blur(4px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          position: 'relative',
+                          zIndex: 2
+                        }}>
+                          {duration}d
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sub-task Bars */}
+                    {task.expanded && task.subTasks.map((subTask, subIndex) => {
+                      const subPosition = getTaskPosition(subTask);
+                      const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+
+                      return (
+                        <div
+                          key={subTask.id}
+                          style={{
+                            position: 'relative',
+                            width: '100%',
+                            minHeight: '44px',
+                            background: '#f8fafc',
+                            borderBottom: '1px solid #e2e8f0',
+                            animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div
+                            title={`${subTask.name} (${subDuration} days)`}
+                            style={{
+                              position: 'absolute',
+                              left: subPosition.left,
+                              width: subPosition.width,
+                              height: '28px',
+                              background: `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
+                              borderRadius: '10px',
+                              boxShadow: `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
+                              border: `1.5px solid ${subTask.color}cc`,
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'default',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.08)';
+                              e.currentTarget.style.boxShadow = `0 6px 18px ${subTask.color}40, 0 2px 6px ${subTask.color}25`;
+                              e.currentTarget.style.zIndex = '10';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`;
+                              e.currentTarget.style.zIndex = '1';
+                            }}
+                          >
+
+
+                            <div style={{
+                              color: '#fff',
+                              fontSize: '0.75rem',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontWeight: '800',
+                              background: 'rgba(0, 0, 0, 0.2)',
+                              padding: '0.3rem 0.6rem',
+                              borderRadius: '6px',
+                              textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+                              backdropFilter: 'blur(4px)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              position: 'relative',
+                              zIndex: 2
+                            }}>
+                              {subDuration}d
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
+
+        {/* Footer Note */}
+        <div style={{
+          marginTop: '2rem',
+          textAlign: 'center',
+          borderTop: '1px solid #e2e8f0',
+          paddingTop: '1rem'
+        }}>
+          <p style={{
+            fontSize: '0.85rem',
+            color: '#94a3b8',
+            fontWeight: '500',
+            margin: 0
+          }}>
+            Note: Prepared by Zoho SMBS Team
+          </p>
+        </div>
+      </div>
+
+      {/* Totals Footer Row - Spanning all columns */}
+      <div style={{
+        gridColumn: '1 / -1',
+        display: 'flex',
+        background: '#ffffff',
+        borderTop: '2px solid #e2e8f0',
+        fontWeight: '800',
+        zIndex: 50,
+        position: 'relative'
+      }}>
+        {/* Label Column - Matches Task Column Width (320px) */}
+        <div style={{
+          flex: '0 0 320px',
+          padding: '1rem 1.5rem',
+          color: '#0f172a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start', // Align left like tasks
+          borderRight: '1px solid #e2e8f0',
+          background: '#f8fafc',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }}>
+          Totals
+        </div>
+
+        {/* Duration Column - Matches Date Column Width (200px) */}
+        {showDates && (
+          <div style={{
+            flex: '0 0 200px',
+            padding: '1rem',
+            textAlign: 'center',
+            color: '#64748b',
+            borderRight: '1px solid #e2e8f0',
+            fontSize: '0.9rem',
+            background: '#f8fafc',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {(() => {
+              const allStarts = tasks.map(t => new Date(t.startDate).getTime());
+              const allEnds = tasks.map(t => new Date(t.endDate).getTime());
+              if (allStarts.length === 0) return '-';
+
+              const minStart = new Date(Math.min(...allStarts));
+              const maxEnd = new Date(Math.max(...allEnds));
+
+              // Simple business day calc for range
+              let count = 0;
+              let cur = new Date(minStart);
+              while (cur <= maxEnd) {
+                const day = cur.getDay();
+                if (day !== 0 && day !== 6) count++;
+                cur.setDate(cur.getDate() + 1);
+              }
+              return `${count} Days`;
+            })()}
+          </div>
+        )}
+
+        {/* Cost Column - Matches Cost Column Width (100px) */}
+        {showCost && (
+          <div style={{
+            flex: '0 0 100px',
+            padding: '1rem',
+            textAlign: 'center',
+            color: '#0f172a',
+            borderRight: '1px solid #e2e8f0',
+            background: '#f8fafc',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {currency}
+            {tasks.reduce((acc, t) => {
+              const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
+              return acc + (Number(t.cost) || 0) + subCost;
+            }, 0).toLocaleString()}
+          </div>
+        )}
+
+        {/* Spacer for Timeline */}
+        <div style={{ flex: 1, background: '#f8fafc' }}></div>
       </div>
 
       <style>{`
@@ -2140,6 +2314,6 @@ export default function GanttChart() {
           }
         }
       `}</style>
-    </div>
+    </div >
   );
 }
