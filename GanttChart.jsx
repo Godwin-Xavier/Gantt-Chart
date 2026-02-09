@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType } from 'lucide-react';
 
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
@@ -31,6 +31,10 @@ export default function GanttChart() {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState('');
+  const [customerLogo, setCustomerLogo] = useState(null);
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const [tasks, setTasks] = useState([
     {
@@ -148,56 +152,144 @@ export default function GanttChart() {
     ));
   };
 
-  const downloadChart = async () => {
+  const handleLogoUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (type === 'customer') setCustomerLogo(e.target.result);
+        if (type === 'company') setCompanyLogo(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const importChart = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.tasks) setTasks(data.tasks);
+          if (data.projectTitle) setProjectTitle(data.projectTitle);
+          if (data.holidays) setHolidays(data.holidays);
+          if (data.customerLogo) setCustomerLogo(data.customerLogo);
+          if (data.companyLogo) setCompanyLogo(data.companyLogo);
+          if (data.showDates !== undefined) setShowDates(data.showDates);
+        } catch (error) {
+          console.error('Error importing chart:', error);
+          alert('Failed to import chart. Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const exportChart = async (format) => {
     if (!chartRef.current || isDownloading) return;
 
     setIsDownloading(true);
+    setShowExportMenu(false);
 
     try {
-      // Try to load html2canvas from CDN
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      if (format === 'json') {
+        const data = {
+          projectTitle,
+          tasks,
+          holidays,
+          customerLogo,
+          companyLogo,
+          showDates,
+          exportedAt: new Date().toISOString()
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+        const link = document.createElement('a');
+        link.download = `${projectTitle.replace(/\s+/g, '_')}_gantt_data.json`;
+        link.href = dataStr;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setIsDownloading(false);
+        return;
+      }
+
+      // Load html2canvas
+      const canvasScript = document.createElement('script');
+      canvasScript.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
 
       await new Promise((resolve, reject) => {
-        script.onload = resolve;
-        script.onerror = () => reject(new Error('Failed to load html2canvas'));
-        document.head.appendChild(script);
+        canvasScript.onload = resolve;
+        canvasScript.onerror = () => reject(new Error('Failed to load html2canvas'));
+        document.head.appendChild(canvasScript);
       });
 
-      // Wait a bit for script to be ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Check if html2canvas is available
       if (typeof window.html2canvas === 'undefined') {
         throw new Error('html2canvas not loaded');
       }
 
-      // Capture the chart
       const canvas = await window.html2canvas(chartRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
-        logging: true,
+        logging: false,
         useCORS: true,
-        allowTaint: false
+        allowTaint: true
       });
 
-      // Convert to image and trigger download
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      const link = document.createElement('a');
-      link.download = `${projectTitle.replace(/\s+/g, '_')}_gantt_chart.png`;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (format === 'pdf') {
+        // Load jsPDF
+        const pdfScript = document.createElement('script');
+        pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
-      // Clean up script
-      document.head.removeChild(script);
+        await new Promise((resolve, reject) => {
+          pdfScript.onload = resolve;
+          pdfScript.onerror = () => reject(new Error('Failed to load jsPDF'));
+          document.head.appendChild(pdfScript);
+        });
 
+        const { jsPDF } = window.jspdf;
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 295; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+
+        const doc = new jsPDF('p', 'mm');
+        let position = 0;
+
+        doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          doc.addPage();
+          doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
+        doc.save(`${projectTitle.replace(/\s+/g, '_')}_gantt_chart.pdf`);
+        document.head.removeChild(pdfScript);
+
+      } else {
+        // PNG or JPEG
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const dataUrl = canvas.toDataURL(mimeType, 1.0);
+        const link = document.createElement('a');
+        link.download = `${projectTitle.replace(/\s+/g, '_')}_gantt_chart.${format}`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      document.head.removeChild(canvasScript);
       setIsDownloading(false);
 
     } catch (error) {
-      console.error('Download error:', error);
-      alert(`Failed to download chart: ${error.message}. Please try again or check your browser console for details.`);
+      console.error('Export error:', error);
+      alert(`Failed to export chart: ${error.message}`);
       setIsDownloading(false);
     }
   };
@@ -334,45 +426,122 @@ export default function GanttChart() {
           )}
 
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button
-              onClick={downloadChart}
-              disabled={isDownloading}
-              style={{
-                background: isDownloading
-                  ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
-                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#fff',
-                border: 'none',
-                padding: '0.875rem 1.75rem',
-                borderRadius: '12px',
-                fontSize: '1rem',
-                fontWeight: '700',
-                cursor: isDownloading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: isDownloading
-                  ? '0 4px 20px rgba(107, 114, 128, 0.3)'
-                  : '0 4px 20px rgba(16, 185, 129, 0.3)',
-                opacity: isDownloading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!isDownloading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(16, 185, 129, 0.4)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isDownloading) {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.3)';
-                }
-              }}
-            >
-              <Download size={20} />
-              {isDownloading ? 'Downloading...' : 'Download'}
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={isDownloading}
+                style={{
+                  background: isDownloading
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.875rem 1.75rem',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  fontWeight: '700',
+                  cursor: isDownloading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s',
+                  boxShadow: isDownloading
+                    ? '0 4px 20px rgba(107, 114, 128, 0.3)'
+                    : '0 4px 20px rgba(16, 185, 129, 0.3)',
+                  opacity: isDownloading ? 0.7 : 1
+                }}
+              >
+                <Download size={20} />
+                {isDownloading ? '... ' : 'Export / Import'}
+                <ChevronDown size={16} />
+              </button>
+
+              {showExportMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '110%',
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                  padding: '0.5rem',
+                  minWidth: '200px',
+                  border: '1px solid #e2e8f0',
+                  zIndex: 50,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase' }}>
+                    Export As
+                  </div>
+                  {[
+                    { type: 'png', label: 'Image (PNG)', icon: <ImageIcon size={16} /> },
+                    { type: 'jpeg', label: 'Image (JPEG)', icon: <ImageIcon size={16} /> },
+                    { type: 'pdf', label: 'Document (PDF)', icon: <FileType size={16} /> },
+                    { type: 'json', label: 'Data (JSON)', icon: <FileJson size={16} /> }
+                  ].map(option => (
+                    <button
+                      key={option.type}
+                      onClick={() => exportChart(option.type)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: 'none',
+                        background: 'transparent',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        color: '#0f172a',
+                        fontWeight: '500',
+                        fontSize: '0.9rem',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {option.icon}
+                      {option.label}
+                    </button>
+                  ))}
+
+                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
+
+                  <button
+                    onClick={() => fileInputRef.current.click()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: 'none',
+                      background: 'transparent',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      color: '#4f46e5',
+                      fontWeight: '600',
+                      fontSize: '0.9rem',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#eef2ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <Upload size={16} />
+                    Import JSON
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={importChart}
+                    accept=".json"
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              )}
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <input
@@ -436,7 +605,7 @@ export default function GanttChart() {
                 justifyContent: 'center',
                 transition: 'all 0.2s'
               }}
-              title="Manage Holidays"
+              title="Settings & Branding"
             >
               <Settings size={20} />
             </button>
@@ -452,12 +621,78 @@ export default function GanttChart() {
               marginBottom: '2rem',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>Manage Holidays</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Settings & Branding</h3>
                 <button onClick={() => setShowHolidayManager(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
                   <X size={18} />
                 </button>
               </div>
+
+              <div style={{ marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '1rem' }}>Logos</h4>
+                <div style={{ display: 'flex', gap: '2rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Customer Logo</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <label style={{
+                        flex: 1,
+                        cursor: 'pointer',
+                        background: '#f1f5f9',
+                        border: '1px dashed #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        color: '#64748b',
+                        fontSize: '0.85rem'
+                      }}>
+                        <Upload size={16} />
+                        {customerLogo ? 'Change Logo' : 'Upload'}
+                        <input type="file" onChange={(e) => handleLogoUpload(e, 'customer')} accept="image/*" style={{ display: 'none' }} />
+                      </label>
+                      {customerLogo && (
+                        <button onClick={() => setCustomerLogo(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Remove">
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Company Logo</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <label style={{
+                        flex: 1,
+                        cursor: 'pointer',
+                        background: '#f1f5f9',
+                        border: '1px dashed #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        color: '#64748b',
+                        fontSize: '0.85rem'
+                      }}>
+                        <Upload size={16} />
+                        {companyLogo ? 'Change Logo' : 'Upload'}
+                        <input type="file" onChange={(e) => handleLogoUpload(e, 'company')} accept="image/*" style={{ display: 'none' }} />
+                      </label>
+                      {companyLogo && (
+                        <button onClick={() => setCompanyLogo(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Remove">
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ height: '1px', background: '#e2e8f0', margin: '2rem 0' }} />
+
+              <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '1rem' }}>Holidays</h4>
 
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                 <input
@@ -851,10 +1086,31 @@ export default function GanttChart() {
             background: '#ffffff',
             borderRadius: '24px',
             padding: '2.5rem',
+            padding: '2.5rem',
             border: '1px solid #e2e8f0',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+            position: 'relative'
           }}
         >
+          {/* Logo Header Row */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: '1rem'
+          }}>
+            <div style={{ width: '150px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+              {customerLogo && (
+                <img src={customerLogo} alt="Customer Logo" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+              )}
+            </div>
+
+            <div style={{ width: '150px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              {companyLogo && (
+                <img src={companyLogo} alt="Company Logo" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+              )}
+            </div>
+          </div>
           <div style={{
             display: 'flex',
             justifyContent: 'center',
@@ -862,7 +1118,8 @@ export default function GanttChart() {
             marginBottom: '2.5rem',
             flexDirection: 'column',
             gap: '0.5rem',
-            textAlign: 'center'
+            textAlign: 'center',
+            marginTop: '-2rem' // Pull up slightly to sit between logos nicely
           }}>
             <div>
               <h2 style={{
@@ -1368,6 +1625,23 @@ export default function GanttChart() {
                 })}
               </div>
             </div>
+          </div>
+
+          {/* Footer Note */}
+          <div style={{
+            marginTop: '2rem',
+            textAlign: 'center',
+            borderTop: '1px solid #e2e8f0',
+            paddingTop: '1rem'
+          }}>
+            <p style={{
+              fontSize: '0.85rem',
+              color: '#94a3b8',
+              fontWeight: '500',
+              margin: 0
+            }}>
+              Note: Prepared by Zoho SMBS Team
+            </p>
           </div>
         </div>
       </div>
