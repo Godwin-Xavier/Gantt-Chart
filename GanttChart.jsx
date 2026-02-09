@@ -160,21 +160,25 @@ export default function GanttChart() {
 
         {/* Handles */}
         <div
+          data-html2canvas-ignore="true"
           onMouseDown={(e) => handleMouseDown(e, 'nw')}
           style={{ ...handleStyle, top: -6, left: -6, cursor: 'nw-resize' }}
           title="Resize"
         />
         <div
+          data-html2canvas-ignore="true"
           onMouseDown={(e) => handleMouseDown(e, 'ne')}
           style={{ ...handleStyle, top: -6, right: -6, cursor: 'ne-resize' }}
           title="Resize"
         />
         <div
+          data-html2canvas-ignore="true"
           onMouseDown={(e) => handleMouseDown(e, 'sw')}
           style={{ ...handleStyle, bottom: -6, left: -6, cursor: 'sw-resize' }}
           title="Resize"
         />
         <div
+          data-html2canvas-ignore="true"
           onMouseDown={(e) => handleMouseDown(e, 'se')}
           style={{ ...handleStyle, bottom: -6, right: -6, cursor: 'se-resize' }}
           title="Resize"
