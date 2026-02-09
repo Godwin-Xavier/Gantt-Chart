@@ -2401,25 +2401,11 @@ export default function GanttChart() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                {(() => {
-                      const allStarts = [];
-                      const allEnds = [];
-
-                      tasks.forEach((t) => {
-                        if (t.startDate) allStarts.push(t.startDate);
-                        if (t.endDate) allEnds.push(t.endDate);
-                        (t.subTasks || []).forEach((st) => {
-                          if (st.startDate) allStarts.push(st.startDate);
-                          if (st.endDate) allEnds.push(st.endDate);
-                        });
-                      });
-
-                      if (allStarts.length === 0 || allEnds.length === 0) return '-';
-
-                      const minStart = allStarts.reduce((min, d) => (d < min ? d : min), allStarts[0]);
-                      const maxEnd = allEnds.reduce((max, d) => (d > max ? d : max), allEnds[0]);
-
-                      return `${getBusinessDays(minStart, maxEnd, holidays)} Days`;
+                    {(() => {
+                      if (tasks.length === 0) return '-';
+                      // Sum of top-level task durations only (subtasks excluded)
+                      const totalTaskDays = tasks.reduce((acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays), 0);
+                      return `${totalTaskDays} Days`;
                     })()}
                   </div>
                 )}
@@ -2438,10 +2424,7 @@ export default function GanttChart() {
                     justifyContent: 'center'
                   }}>
                     {currency}
-                    {tasks.reduce((acc, t) => {
-                      const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
-                      return acc + (Number(t.cost) || 0) + subCost;
-                    }, 0).toLocaleString()}
+                    {tasks.reduce((acc, t) => acc + (Number(t.cost) || 0), 0).toLocaleString()}
                   </div>
                 )}
 
