@@ -193,6 +193,18 @@ export default function GanttChart() {
   };
 
 
+  const DEFAULT_PALETTE = [
+    '#6366f1', // Indigo
+    '#ec4899', // Pink
+    '#8b5cf6', // Purple
+    '#06b6d4', // Cyan
+    '#10b981', // Emerald
+    '#f59e0b', // Amber
+    '#ef4444', // Red
+    '#84cc16', // Lime
+    '#3b82f6', // Blue
+    '#f97316'  // Orange
+  ];
 
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -358,12 +370,13 @@ export default function GanttChart() {
   ]);
 
   const addTask = () => {
+    const nextColor = DEFAULT_PALETTE[tasks.length % DEFAULT_PALETTE.length];
     const newTask = {
       id: Date.now(),
       name: 'New Task',
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      color: '#6366f1',
+      color: nextColor,
       cost: 0,
       expanded: true,
       subTasks: []
@@ -430,12 +443,14 @@ export default function GanttChart() {
 
   const addSubTask = (parentId) => {
     const parent = tasks.find(t => t.id === parentId);
+    const subTaskColor = DEFAULT_PALETTE[(parent.subTasks.length + 1) % DEFAULT_PALETTE.length];
+
     const newSubTask = {
       id: Date.now(),
       name: 'New Sub-task',
       startDate: parent.startDate,
       endDate: parent.endDate,
-      color: parent.color + 'cc', // Slightly transparent
+      color: subTaskColor,
       cost: 0
     };
 
