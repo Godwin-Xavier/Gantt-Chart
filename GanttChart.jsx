@@ -199,6 +199,7 @@ export default function GanttChart() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDates, setShowDates] = useState(true);
   const [showCost, setShowCost] = useState(false);
+  const [showTotals, setShowTotals] = useState(true);
   const [currency, setCurrency] = useState('$');
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [holidays, setHolidays] = useState([]);
@@ -905,6 +906,24 @@ export default function GanttChart() {
               />
               <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                 Show Dates
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <input
+                type="checkbox"
+                id="showTotals"
+                checked={showTotals}
+                onChange={(e) => setShowTotals(e.target.checked)}
+                style={{
+                  width: '1.25rem',
+                  height: '1.25rem',
+                  cursor: 'pointer',
+                  accentColor: '#6366f1'
+                }}
+              />
+              <label htmlFor="showTotals" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+                Show Totals
               </label>
             </div>
 
@@ -2197,7 +2216,7 @@ export default function GanttChart() {
           <p style={{
             fontSize: '0.85rem',
             color: '#94a3b8',
-            fontWeight: '500',
+            fontWeight: '700',
             margin: 0
           }}>
             Note: Prepared by Zoho SMBS Team
@@ -2206,90 +2225,92 @@ export default function GanttChart() {
       </div>
 
       {/* Totals Footer Row - Spanning all columns */}
-      <div style={{
-        gridColumn: '1 / -1',
-        display: 'flex',
-        background: '#ffffff',
-        borderTop: '2px solid #e2e8f0',
-        fontWeight: '800',
-        zIndex: 50,
-        position: 'relative'
-      }}>
-        {/* Label Column - Matches Task Column Width (320px) */}
+      {showTotals && (
         <div style={{
-          flex: '0 0 320px',
-          padding: '1rem 1.5rem',
-          color: '#0f172a',
+          gridColumn: '1 / -1',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start', // Align left like tasks
-          borderRight: '1px solid #e2e8f0',
-          background: '#f8fafc',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em'
+          background: '#ffffff',
+          borderTop: '2px solid #e2e8f0',
+          fontWeight: '800',
+          zIndex: 50,
+          position: 'relative'
         }}>
-          Totals
-        </div>
-
-        {/* Duration Column - Matches Date Column Width (200px) */}
-        {showDates && (
+          {/* Label Column - Matches Task Column Width (320px) */}
           <div style={{
-            flex: '0 0 200px',
-            padding: '1rem',
-            textAlign: 'center',
-            color: '#64748b',
-            borderRight: '1px solid #e2e8f0',
-            fontSize: '0.9rem',
-            background: '#f8fafc',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {(() => {
-              const allStarts = tasks.map(t => new Date(t.startDate).getTime());
-              const allEnds = tasks.map(t => new Date(t.endDate).getTime());
-              if (allStarts.length === 0) return '-';
-
-              const minStart = new Date(Math.min(...allStarts));
-              const maxEnd = new Date(Math.max(...allEnds));
-
-              // Simple business day calc for range
-              let count = 0;
-              let cur = new Date(minStart);
-              while (cur <= maxEnd) {
-                const day = cur.getDay();
-                if (day !== 0 && day !== 6) count++;
-                cur.setDate(cur.getDate() + 1);
-              }
-              return `${count} Days`;
-            })()}
-          </div>
-        )}
-
-        {/* Cost Column - Matches Cost Column Width (100px) */}
-        {showCost && (
-          <div style={{
-            flex: '0 0 100px',
-            padding: '1rem',
-            textAlign: 'center',
+            flex: '0 0 320px',
+            padding: '1rem 1.5rem',
             color: '#0f172a',
-            borderRight: '1px solid #e2e8f0',
-            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'flex-start', // Align left like tasks
+            borderRight: '1px solid #e2e8f0',
+            background: '#f8fafc',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
           }}>
-            {currency}
-            {tasks.reduce((acc, t) => {
-              const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
-              return acc + (Number(t.cost) || 0) + subCost;
-            }, 0).toLocaleString()}
+            Total
           </div>
-        )}
 
-        {/* Spacer for Timeline */}
-        <div style={{ flex: 1, background: '#f8fafc' }}></div>
-      </div>
+          {/* Duration Column - Matches Date Column Width (200px) */}
+          {showDates && (
+            <div style={{
+              flex: '0 0 200px',
+              padding: '1rem',
+              textAlign: 'center',
+              color: '#64748b',
+              borderRight: '1px solid #e2e8f0',
+              fontSize: '0.9rem',
+              background: '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {(() => {
+                const allStarts = tasks.map(t => new Date(t.startDate).getTime());
+                const allEnds = tasks.map(t => new Date(t.endDate).getTime());
+                if (allStarts.length === 0) return '-';
+
+                const minStart = new Date(Math.min(...allStarts));
+                const maxEnd = new Date(Math.max(...allEnds));
+
+                // Simple business day calc for range
+                let count = 0;
+                let cur = new Date(minStart);
+                while (cur <= maxEnd) {
+                  const day = cur.getDay();
+                  if (day !== 0 && day !== 6) count++;
+                  cur.setDate(cur.getDate() + 1);
+                }
+                return `${count} Days`;
+              })()}
+            </div>
+          )}
+
+          {/* Cost Column - Matches Cost Column Width (100px) */}
+          {showCost && (
+            <div style={{
+              flex: '0 0 100px',
+              padding: '1rem',
+              textAlign: 'center',
+              color: '#0f172a',
+              borderRight: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {currency}
+              {tasks.reduce((acc, t) => {
+                const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
+                return acc + (Number(t.cost) || 0) + subCost;
+              }, 0).toLocaleString()}
+            </div>
+          )}
+
+          {/* Spacer for Timeline */}
+          <div style={{ flex: 1, background: '#f8fafc' }}></div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {
