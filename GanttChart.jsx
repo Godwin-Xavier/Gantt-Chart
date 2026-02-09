@@ -78,7 +78,7 @@ export default function GanttChart() {
   const ResizableImage = ({ src, initialWidth, onResize, alt }) => {
     const [width, setWidth] = useState(initialWidth || 150);
     const [isResizing, setIsResizing] = useState(false);
-    const imgRef = useRef(null);
+    const [activeHandle, setActiveHandle] = useState(null);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
 
@@ -86,9 +86,11 @@ export default function GanttChart() {
       if (initialWidth) setWidth(initialWidth);
     }, [initialWidth]);
 
-    const handleMouseDown = (e) => {
+    const handleMouseDown = (e, handle) => {
+      e.stopPropagation();
       e.preventDefault();
       setIsResizing(true);
+      setActiveHandle(handle);
       startXRef.current = e.clientX;
       startWidthRef.current = width;
       document.addEventListener('mousemove', handleMouseMove);
@@ -96,54 +98,80 @@ export default function GanttChart() {
     };
 
     const handleMouseMove = (e) => {
-      if (!isResizing) return;
+      if (!isResizing || !activeHandle) return;
+
       const dx = e.clientX - startXRef.current;
-      const newWidth = Math.max(50, Math.min(400, startWidthRef.current + dx)); // Min 50px, Max 400px
+      let change = 0;
+
+      // Determine direction of resize based on handle
+      if (activeHandle.includes('w')) {
+        // West: dragging left increases width
+        change = -dx;
+      } else {
+        // East: dragging right increases width
+        change = dx;
+      }
+
+      const newWidth = Math.max(50, Math.min(800, startWidthRef.current + change));
       setWidth(newWidth);
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      setActiveHandle(null);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      if (onResize) onResize(width); // Notify parent of final width
+      if (onResize) onResize(width);
     };
 
-    // We need to pass the current width to the mouse move handler, but it's captured in closure.
-    // So we use refs for drag logic, but we also update state for render.
-    // Ideally we should use a ref for the event listener to see the current values or just use the calculation based on start.
-    // The implementation above uses `startWidthRef.current` which is correct.
-
-    // Fix: render loop issue if onResize is called during render? No, it's called on mouseup.
-    // However, `width` state inside this component drives the view.
-
-    // Update parent when width changes? 
-    // Better to only update parent on MouseUp to avoid excessive re-renders of the whole chart.
+    const handleStyle = {
+      position: 'absolute',
+      width: '12px',
+      height: '12px',
+      background: 'rgba(99, 102, 241, 0.8)',
+      zIndex: 20,
+      borderRadius: '50%',
+      border: '1px solid white'
+    };
 
     return (
-      <div style={{ position: 'relative', display: 'inline-block', width: width, zIndex: 10 }}>
+      <div style={{ position: 'relative', display: 'inline-block', width: width, zIndex: 10, lineHeight: 0 }}>
         <img
-          ref={imgRef}
           src={src}
           alt={alt}
           style={{ width: '100%', display: 'block', userSelect: 'none', pointerEvents: 'none' }}
         />
+
+        {/* Handles */}
         <div
-          onMouseDown={handleMouseDown}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: '15px',
-            height: '15px',
-            background: 'rgba(99, 102, 241, 0.8)',
-            cursor: 'ew-resize',
-            zIndex: 20,
-            borderTopLeftRadius: '4px',
-            borderBottomRightRadius: '4px' // Little handle
-          }}
-          title="Drag to resize"
+          onMouseDown={(e) => handleMouseDown(e, 'nw')}
+          style={{ ...handleStyle, top: -6, left: -6, cursor: 'nw-resize' }}
+          title="Resize"
         />
+        <div
+          onMouseDown={(e) => handleMouseDown(e, 'ne')}
+          style={{ ...handleStyle, top: -6, right: -6, cursor: 'ne-resize' }}
+          title="Resize"
+        />
+        <div
+          onMouseDown={(e) => handleMouseDown(e, 'sw')}
+          style={{ ...handleStyle, bottom: -6, left: -6, cursor: 'sw-resize' }}
+          title="Resize"
+        />
+        <div
+          onMouseDown={(e) => handleMouseDown(e, 'se')}
+          style={{ ...handleStyle, bottom: -6, right: -6, cursor: 'se-resize' }}
+          title="Resize"
+        />
+
+        {isResizing && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            border: '1px dashed rgba(99, 102, 241, 0.5)',
+            pointerEvents: 'none'
+          }} />
+        )}
       </div>
     );
   };
