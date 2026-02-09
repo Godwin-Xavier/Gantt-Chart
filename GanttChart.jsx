@@ -2204,113 +2204,116 @@ export default function GanttChart() {
               })}
             </div>
           </div>
-        </div>
 
-        {/* Footer Note */}
-        <div style={{
-          marginTop: '2rem',
-          textAlign: 'center',
-          borderTop: '1px solid #e2e8f0',
-          paddingTop: '1rem'
-        }}>
-          <p style={{
-            fontSize: '0.85rem',
-            color: '#94a3b8',
-            fontWeight: '700',
-            margin: 0
+          {/* Totals Footer Row - Inside the grid container */}
+          {showTotals && (
+            <div style={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              background: '#ffffff',
+              borderTop: '2px solid #e2e8f0',
+              fontWeight: '800',
+              zIndex: 50,
+              position: 'relative'
+            }}>
+              {/* Label Column - Matches Task Column Width (320px) */}
+              <div style={{
+                flex: '0 0 320px',
+                padding: '1rem 1.5rem',
+                color: '#0f172a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start', // Align left like tasks
+                borderRight: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Total
+              </div>
+
+              {/* Duration Column - Matches Date Column Width (200px) */}
+              {showDates && (
+                <div style={{
+                  flex: '0 0 200px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  borderRight: '1px solid #e2e8f0',
+                  fontSize: '0.9rem',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {(() => {
+                    const allStarts = tasks.map(t => new Date(t.startDate).getTime());
+                    const allEnds = tasks.map(t => new Date(t.endDate).getTime());
+                    if (allStarts.length === 0) return '-';
+
+                    const minStart = new Date(Math.min(...allStarts));
+                    const maxEnd = new Date(Math.max(...allEnds));
+
+                    // Simple business day calc for range
+                    let count = 0;
+                    let cur = new Date(minStart);
+                    while (cur <= maxEnd) {
+                      const day = cur.getDay();
+                      if (day !== 0 && day !== 6) count++;
+                      cur.setDate(cur.getDate() + 1);
+                    }
+                    return `${count} Days`;
+                  })()}
+                </div>
+              )}
+
+              {/* Cost Column - Matches Cost Column Width (100px) */}
+              {showCost && (
+                <div style={{
+                  flex: '0 0 100px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: '#0f172a',
+                  borderRight: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {currency}
+                  {tasks.reduce((acc, t) => {
+                    const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
+                    return acc + (Number(t.cost) || 0) + subCost;
+                  }, 0).toLocaleString()}
+                </div>
+              )}
+
+              {/* Spacer for Timeline */}
+              <div style={{ flex: 1, background: '#f8fafc' }}></div>
+            </div>
+          )}
+
+          {/* Footer Note - Now inside the grid at the very bottom */}
+          <div style={{
+            gridColumn: '1 / -1',
+            textAlign: 'center',
+            borderTop: '1px solid #e2e8f0',
+            padding: '1rem',
+            background: '#ffffff'
           }}>
-            Note: Prepared by Zoho SMBS Team
-          </p>
+            <p style={{
+              fontSize: '0.85rem',
+              color: '#94a3b8',
+              fontWeight: '800',
+              margin: 0
+            }}>
+              Note: Prepared by Zoho SMBS Team
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Totals Footer Row - Spanning all columns */}
-      {showTotals && (
-        <div style={{
-          gridColumn: '1 / -1',
-          display: 'flex',
-          background: '#ffffff',
-          borderTop: '2px solid #e2e8f0',
-          fontWeight: '800',
-          zIndex: 50,
-          position: 'relative'
-        }}>
-          {/* Label Column - Matches Task Column Width (320px) */}
-          <div style={{
-            flex: '0 0 320px',
-            padding: '1rem 1.5rem',
-            color: '#0f172a',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start', // Align left like tasks
-            borderRight: '1px solid #e2e8f0',
-            background: '#f8fafc',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            Total
-          </div>
 
-          {/* Duration Column - Matches Date Column Width (200px) */}
-          {showDates && (
-            <div style={{
-              flex: '0 0 200px',
-              padding: '1rem',
-              textAlign: 'center',
-              color: '#64748b',
-              borderRight: '1px solid #e2e8f0',
-              fontSize: '0.9rem',
-              background: '#f8fafc',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {(() => {
-                const allStarts = tasks.map(t => new Date(t.startDate).getTime());
-                const allEnds = tasks.map(t => new Date(t.endDate).getTime());
-                if (allStarts.length === 0) return '-';
-
-                const minStart = new Date(Math.min(...allStarts));
-                const maxEnd = new Date(Math.max(...allEnds));
-
-                // Simple business day calc for range
-                let count = 0;
-                let cur = new Date(minStart);
-                while (cur <= maxEnd) {
-                  const day = cur.getDay();
-                  if (day !== 0 && day !== 6) count++;
-                  cur.setDate(cur.getDate() + 1);
-                }
-                return `${count} Days`;
-              })()}
-            </div>
-          )}
-
-          {/* Cost Column - Matches Cost Column Width (100px) */}
-          {showCost && (
-            <div style={{
-              flex: '0 0 100px',
-              padding: '1rem',
-              textAlign: 'center',
-              color: '#0f172a',
-              borderRight: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {currency}
-              {tasks.reduce((acc, t) => {
-                const subCost = t.subTasks ? t.subTasks.reduce((sAcc, s) => sAcc + (Number(s.cost) || 0), 0) : 0;
-                return acc + (Number(t.cost) || 0) + subCost;
-              }, 0).toLocaleString()}
-            </div>
-          )}
-
-          {/* Spacer for Timeline */}
-          <div style={{ flex: 1, background: '#f8fafc' }}></div>
-        </div>
-      )}
 
       <style>{`
         @keyframes fadeIn {
