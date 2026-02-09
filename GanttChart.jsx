@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign } from 'lucide-react';
 
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
@@ -107,247 +107,297 @@ export default function GanttChart() {
     // Better to only update parent on MouseUp to avoid excessive re-renders of the whole chart.
 
     return (
-      <div style={{ position: 'relative', display: 'inline-block', width: width }}>
-        <img
-          ref={imgRef}
-          src={src}
-          alt={alt}
-          style={{ width: '100%', display: 'block', userSelect: 'none' }}
-          draggable={false}
-        />
-        <div
-          onMouseDown={handleMouseDown}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: '10px',
-            height: '10px',
-            background: '#6366f1',
-            cursor: 'nwse-resize',
-            zIndex: 10,
-            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)'
-          }}
-          title="Drag to resize"
-        />
-      </div>
-    );
-  };
+  // Internal ResizableImage Component
+  const ResizableImage = ({ src, initialWidth, onResize, alt }) => {
+        const [width, setWidth] = useState(initialWidth || 150);
+        const [isResizing, setIsResizing] = useState(false);
+        const imgRef = useRef(null);
+        const startXRef = useRef(0);
+        const startWidthRef = useRef(0);
 
-  const [projectTitle, setProjectTitle] = useState('My Project Timeline');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [showDates, setShowDates] = useState(true);
-  const [showHolidayManager, setShowHolidayManager] = useState(false);
-  const [holidays, setHolidays] = useState([]);
-  const [newHoliday, setNewHoliday] = useState('');
-  const [customerLogo, setCustomerLogo] = useState(null);
-  const [customerLogoWidth, setCustomerLogoWidth] = useState(150);
-  const [companyLogo, setCompanyLogo] = useState(null);
-  const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const fileInputRef = useRef(null);
-  const chartRef = useRef(null);
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: 'Planning Phase',
-      startDate: `${currentYear}-03-01`,
-      endDate: `${currentYear}-03-15`,
-      color: '#6366f1',
-      expanded: true,
-      subTasks: [
-        {
-          id: 101,
-          name: 'Requirements Gathering',
-          startDate: `${currentYear}-03-01`,
-          endDate: `${currentYear}-03-08`,
-          color: '#818cf8'
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Development',
-      startDate: `${currentYear}-03-10`,
-      endDate: `${currentYear}-04-20`,
-      color: '#8b5cf6',
-      expanded: true,
-      subTasks: []
-    },
-    {
-      id: 3,
-      name: 'Testing',
-      startDate: `${currentYear}-04-15`,
-      endDate: `${currentYear}-05-05`,
-      color: '#ec4899',
-      expanded: true,
-      subTasks: []
-    }
-  ]);
+        useEffect(() => {
+          if (initialWidth) setWidth(initialWidth);
+        }, [initialWidth]);
 
-  const addTask = () => {
-    const newTask = {
-      id: Date.now(),
-      name: 'New Task',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      color: '#6366f1',
-      expanded: true,
-      subTasks: []
-    };
-    setTasks([...tasks, newTask]);
-  };
+        const handleMouseDown = (e) => {
+          e.stopPropagation(); // Stop bubbling
+          e.preventDefault();
+          setIsResizing(true);
+          startXRef.current = e.clientX;
+          startWidthRef.current = width;
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+        };
 
-  const removeTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
-  };
+        const handleMouseMove = (e) => {
+          if (!isResizing) return;
+          const dx = e.clientX - startXRef.current;
+          const newWidth = Math.max(50, Math.min(400, startWidthRef.current + dx));
+          setWidth(newWidth);
+        };
 
-  const updateTask = (id, field, value) => {
-    setTasks(tasks.map(task => {
-      if (task.id !== id) return task;
+        const handleMouseUp = () => {
+          setIsResizing(false);
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+          if (onResize) onResize(width);
+        };
 
-      let updates = { [field]: value };
-
-      // If start date changes, we might want to keep duration? 
-      // Or if end date changes, duration updates automatically by render logic.
-      // But if we want to support "Duration" Input, we need to handle it specifically.
-
-      return { ...task, ...updates };
-    }));
-  };
-
-  const updateTaskDuration = (id, duration) => {
-    setTasks(tasks.map(task => {
-      if (task.id !== id) return task;
-      const newEndDate = addBusinessDays(task.startDate, parseInt(duration) || 1, holidays);
-      return { ...task, endDate: newEndDate };
-    }));
-  };
-
-  const updateSubTaskDuration = (parentId, subTaskId, duration) => {
-    setTasks(tasks.map(task => {
-      if (task.id !== parentId) return task;
-      return {
-        ...task,
-        subTasks: task.subTasks.map(st => {
-          if (st.id !== subTaskId) return st;
-          const newEndDate = addBusinessDays(st.startDate, parseInt(duration) || 1, holidays);
-          return { ...st, endDate: newEndDate };
-        })
+        return (
+          <div style={{ position: 'relative', display: 'inline-block', width: width, zIndex: 10 }}>
+            <img
+              ref={imgRef}
+              src={src}
+              alt={alt}
+              style={{ width: '100%', display: 'block', userSelect: 'none', pointerEvents: 'none' }}
+            />
+            <div
+              onMouseDown={handleMouseDown}
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: '15px',
+                height: '15px',
+                background: 'rgba(99, 102, 241, 0.8)',
+                cursor: 'ew-resize',
+                zIndex: 20,
+                borderTopLeftRadius: '4px',
+                borderBottomRightRadius: '4px' // Little handle
+              }}
+              title="Drag to resize"
+            />
+          </div>
+        );
       };
-    }));
-  };
 
-  const toggleExpanded = (id) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, expanded: !task.expanded } : task
-    ));
-  };
+    const [projectTitle, setProjectTitle] = useState('My Project Timeline');
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [showDates, setShowDates] = useState(true);
+    const [showCost, setShowCost] = useState(false);
+    const [currency, setCurrency] = useState('$');
+    const [showHolidayManager, setShowHolidayManager] = useState(false);
+    const [holidays, setHolidays] = useState([]);
+    const [newHoliday, setNewHoliday] = useState('');
+    const [customerLogo, setCustomerLogo] = useState(null);
+    const [customerLogoWidth, setCustomerLogoWidth] = useState(150);
+    const [companyLogo, setCompanyLogo] = useState(null);
+    const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const fileInputRef = useRef(null);
+    const chartRef = useRef(null);
+    const [tasks, setTasks] = useState([
+      {
+        id: 1,
+        name: 'Planning Phase',
+        startDate: `${currentYear}-03-01`,
+        endDate: `${currentYear}-03-15`,
+        color: '#6366f1',
+        cost: 1000,
+        expanded: true,
+        subTasks: [
+          {
+            id: 101,
+            name: 'Requirements Gathering',
+            startDate: `${currentYear}-03-01`,
+            endDate: `${currentYear}-03-08`,
+            color: '#818cf8',
+            cost: 500
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Development',
+        startDate: `${currentYear}-03-10`,
+        endDate: `${currentYear}-04-20`,
+        color: '#8b5cf6',
+        cost: 5000,
+        expanded: true,
+        subTasks: []
+      },
+      {
+        id: 3,
+        name: 'Testing',
+        startDate: `${currentYear}-04-15`,
+        endDate: `${currentYear}-05-05`,
+        color: '#ec4899',
+        cost: 2000,
+        expanded: true,
+        subTasks: []
+      }
+    ]);
 
-  const addHoliday = () => {
-    if (newHoliday && !holidays.includes(newHoliday)) {
-      setHolidays([...holidays, newHoliday].sort());
-      setNewHoliday('');
-    }
-  };
-
-  const removeHoliday = (date) => {
-    setHolidays(holidays.filter(h => h !== date));
-  };
-
-  const addSubTask = (parentId) => {
-    const parent = tasks.find(t => t.id === parentId);
-    const newSubTask = {
-      id: Date.now(),
-      name: 'New Sub-task',
-      startDate: parent.startDate,
-      endDate: parent.endDate,
-      color: parent.color + 'cc' // Slightly transparent
+    const addTask = () => {
+      const newTask = {
+        id: Date.now(),
+        name: 'New Task',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        color: '#6366f1',
+        cost: 0,
+        expanded: true,
+        subTasks: []
+      };
+      setTasks([...tasks, newTask]);
     };
 
-    setTasks(tasks.map(task =>
-      task.id === parentId
-        ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
-        : task
-    ));
-  };
+    const removeTask = (id) => {
+      setTasks(tasks.filter(task => task.id !== id));
+    };
 
-  const removeSubTask = (parentId, subTaskId) => {
-    setTasks(tasks.map(task =>
-      task.id === parentId
-        ? { ...task, subTasks: task.subTasks.filter(st => st.id !== subTaskId) }
-        : task
-    ));
-  };
+    const updateTask = (id, field, value) => {
+      setTasks(tasks.map(task => {
+        if (task.id !== id) return task;
 
-  const updateSubTask = (parentId, subTaskId, field, value) => {
-    setTasks(tasks.map(task =>
-      task.id === parentId
-        ? {
+        let updates = { [field]: value };
+
+        // If start date changes, we might want to keep duration? 
+        // Or if end date changes, duration updates automatically by render logic.
+        // But if we want to support "Duration" Input, we need to handle it specifically.
+
+        return { ...task, ...updates };
+      }));
+    };
+
+    const updateTaskDuration = (id, duration) => {
+      setTasks(tasks.map(task => {
+        if (task.id !== id) return task;
+        const newEndDate = addBusinessDays(task.startDate, parseInt(duration) || 1, holidays);
+        return { ...task, endDate: newEndDate };
+      }));
+    };
+
+    const updateSubTaskDuration = (parentId, subTaskId, duration) => {
+      setTasks(tasks.map(task => {
+        if (task.id !== parentId) return task;
+        return {
           ...task,
-          subTasks: task.subTasks.map(st =>
-            st.id === subTaskId ? { ...st, [field]: value } : st
-          )
-        }
-        : task
-    ));
-  };
+          subTasks: task.subTasks.map(st => {
+            if (st.id !== subTaskId) return st;
+            const newEndDate = addBusinessDays(st.startDate, parseInt(duration) || 1, holidays);
+            return { ...st, endDate: newEndDate };
+          })
+        };
+      }));
+    };
 
-  const handleLogoUpload = (e, type) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (type === 'customer') setCustomerLogo(e.target.result);
-        if (type === 'company') setCompanyLogo(e.target.result);
+    const toggleExpanded = (id) => {
+      setTasks(tasks.map(task =>
+        task.id === id ? { ...task, expanded: !task.expanded } : task
+      ));
+    };
+
+    const addHoliday = () => {
+      if (newHoliday && !holidays.includes(newHoliday)) {
+        setHolidays([...holidays, newHoliday].sort());
+        setNewHoliday('');
+      }
+    };
+
+    const removeHoliday = (date) => {
+      setHolidays(holidays.filter(h => h !== date));
+    };
+
+    const addSubTask = (parentId) => {
+      const parent = tasks.find(t => t.id === parentId);
+      const newSubTask = {
+        id: Date.now(),
+        name: 'New Sub-task',
+        startDate: parent.startDate,
+        endDate: parent.endDate,
+        color: parent.color + 'cc', // Slightly transparent
+        cost: 0
       };
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const importChart = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (data.tasks) setTasks(data.tasks);
-          if (data.projectTitle) setProjectTitle(data.projectTitle);
-          if (data.holidays) setHolidays(data.holidays);
-          if (data.customerLogo) setCustomerLogo(data.customerLogo);
-          if (data.customerLogoWidth) setCustomerLogoWidth(data.customerLogoWidth);
-          if (data.companyLogo) setCompanyLogo(data.companyLogo);
-          if (data.companyLogoWidth) setCompanyLogoWidth(data.companyLogoWidth);
-          if (data.showDates !== undefined) setShowDates(data.showDates);
-        } catch (error) {
-          console.error('Error importing chart:', error);
-          alert('Failed to import chart. Invalid JSON file.');
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
+      setTasks(tasks.map(task =>
+        task.id === parentId
+          ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
+          : task
+      ));
+    };
 
-  const exportChart = async (format) => {
-    if (!chartRef.current || isDownloading) return;
+    const removeSubTask = (parentId, subTaskId) => {
+      setTasks(tasks.map(task =>
+        task.id === parentId
+          ? { ...task, subTasks: task.subTasks.filter(st => st.id !== subTaskId) }
+          : task
+      ));
+    };
 
-    setIsDownloading(true);
-    setShowExportMenu(false);
+    const updateSubTask = (parentId, subTaskId, field, value) => {
+      setTasks(tasks.map(task =>
+        task.id === parentId
+          ? {
+            ...task,
+            subTasks: task.subTasks.map(st =>
+              st.id === subTaskId ? { ...st, [field]: value } : st
+            )
+          }
+          : task
+      ));
+    };
 
-    try {
-      if (format === 'json') {
-        const data = {
-          projectTitle,
-          tasks,
-          holidays,
-          customerLogo,
-          customerLogoWidth,
-          companyLogo,
-          companyLogoWidth,
-          showDates,
-          exportedAt: new Date().toISOString()
+    const handleLogoUpload = (e, type) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (type === 'customer') setCustomerLogo(e.target.result);
+          if (type === 'company') setCompanyLogo(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const importChart = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (data.tasks) setTasks(data.tasks);
+            if (data.projectTitle) setProjectTitle(data.projectTitle);
+            if (data.holidays) setHolidays(data.holidays);
+            if (data.customerLogo) setCustomerLogo(data.customerLogo);
+            if (data.customerLogoWidth) setCustomerLogoWidth(data.customerLogoWidth);
+            if (data.companyLogo) setCompanyLogo(data.companyLogo);
+            if (data.companyLogoWidth) setCompanyLogoWidth(data.companyLogoWidth);
+            if (data.showDates !== undefined) setShowDates(data.showDates);
+            if (data.showCost !== undefined) setShowCost(data.showCost);
+            if (data.currency) setCurrency(data.currency);
+          } catch (error) {
+            console.error('Error importing chart:', error);
+            alert('Failed to import chart. Invalid JSON file.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+
+    const exportChart = async (format) => {
+      if (!chartRef.current || isDownloading) return;
+
+      setIsDownloading(true);
+      setShowExportMenu(false);
+
+      try {
+        if (format === 'json') {
+          const data = {
+            projectTitle,
+            tasks,
+            holidays,
+            customerLogo,
+            customerLogoWidth,
+            companyLogo,
+            companyLogoWidth,
+            showDates,
+            showCost,
+            currency,
+            exportedAt: new Date().toISOString()
+          };
         };
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
         const link = document.createElement('a');
@@ -692,6 +742,31 @@ export default function GanttChart() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <input
                 type="checkbox"
+                id="showCost"
+                checked={showCost}
+                onChange={(e) => setShowCost(e.target.checked)}
+                style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer', accentColor: '#6366f1' }}
+              />
+              <label htmlFor="showCost" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+                Add Cost
+              </label>
+              {showCost && (
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                >
+                  <option value="$">Dollars ($)</option>
+                  <option value="₹">Rupees (₹)</option>
+                  <option value="€">Euros (€)</option>
+                  <option value="£">Pounds (£)</option>
+                </select>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <input
+                type="checkbox"
                 id="showDates"
                 checked={showDates}
                 onChange={(e) => setShowDates(e.target.checked)}
@@ -941,7 +1016,7 @@ export default function GanttChart() {
                     borderRadius: '12px',
                     padding: '1.25rem',
                     display: 'grid',
-                    gridTemplateColumns: 'auto 1fr 80px auto auto auto auto',
+                    gridTemplateColumns: `auto 1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
                     gap: '1rem',
                     alignItems: 'center',
                     border: '1px solid #e2e8f0'
@@ -1009,45 +1084,73 @@ export default function GanttChart() {
                     title="Duration (Days)"
                   />
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Calendar size={16} style={{ color: '#64748b' }} />
-                    <input
-                      type="date"
-                      value={task.startDate}
-                      onChange={(e) => updateTask(task.id, 'startDate', e.target.value)}
-                      style={{
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        padding: '0.75rem',
-                        color: '#0f172a',
-                        fontSize: '0.875rem',
-                        fontFamily: '"JetBrains Mono", monospace',
-                        outline: 'none',
-                        colorScheme: 'light'
-                      }}
-                    />
-                  </div>
+                  {showDates && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Calendar size={16} style={{ color: '#64748b' }} />
+                        <input
+                          type="date"
+                          value={task.startDate}
+                          onChange={(e) => updateTask(task.id, 'startDate', e.target.value)}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.75rem',
+                            color: '#0f172a',
+                            fontSize: '0.875rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            outline: 'none',
+                            colorScheme: 'light'
+                          }}
+                        />
+                      </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: '#64748b', fontSize: '0.875rem' }}>→</span>
-                    <input
-                      type="date"
-                      value={task.endDate}
-                      onChange={(e) => updateTask(task.id, 'endDate', e.target.value)}
-                      style={{
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        padding: '0.75rem',
-                        color: '#0f172a',
-                        fontSize: '0.875rem',
-                        fontFamily: '"JetBrains Mono", monospace',
-                        outline: 'none',
-                        colorScheme: 'light'
-                      }}
-                    />
-                  </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: '#64748b', fontSize: '0.875rem' }}>→</span>
+                        <input
+                          type="date"
+                          value={task.endDate}
+                          onChange={(e) => updateTask(task.id, 'endDate', e.target.value)}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.75rem',
+                            color: '#0f172a',
+                            fontSize: '0.875rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            outline: 'none',
+                            colorScheme: 'light'
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {showCost && (
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }}>{currency}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={task.cost || ''}
+                        onChange={(e) => updateTask(task.id, 'cost', e.target.value)}
+                        placeholder="Cost"
+                        style={{
+                          width: '100%',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '0.75rem 0.5rem 0.75rem 2rem',
+                          color: '#0f172a',
+                          fontSize: '0.875rem',
+                          outline: 'none',
+                          fontWeight: '600'
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <input
                     type="color"
@@ -1100,7 +1203,8 @@ export default function GanttChart() {
                           padding: '1rem',
                           marginBottom: '0.5rem',
                           display: 'grid',
-                          gridTemplateColumns: '1fr 80px auto auto auto auto',
+                          display: 'grid',
+                          gridTemplateColumns: `1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
                           gap: '0.75rem',
                           alignItems: 'center',
                           border: '1px solid #e2e8f0',
@@ -1153,39 +1257,66 @@ export default function GanttChart() {
                           title="Duration (Days)"
                         />
 
-                        <input
-                          type="date"
-                          value={subTask.startDate}
-                          onChange={(e) => updateSubTask(task.id, subTask.id, 'startDate', e.target.value)}
-                          style={{
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0.625rem',
-                            color: '#0f172a',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            outline: 'none',
-                            colorScheme: 'light'
-                          }}
-                        />
+                        {showDates && (
+                          <>
+                            <input
+                              type="date"
+                              value={subTask.startDate}
+                              onChange={(e) => updateSubTask(task.id, subTask.id, 'startDate', e.target.value)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                padding: '0.625rem',
+                                color: '#0f172a',
+                                fontSize: '0.8rem',
+                                fontFamily: '"JetBrains Mono", monospace',
+                                outline: 'none',
+                                colorScheme: 'light'
+                              }}
+                            />
 
-                        <input
-                          type="date"
-                          value={subTask.endDate}
-                          onChange={(e) => updateSubTask(task.id, subTask.id, 'endDate', e.target.value)}
-                          style={{
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0.625rem',
-                            color: '#0f172a',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            outline: 'none',
-                            colorScheme: 'light'
-                          }}
-                        />
+                            <input
+                              type="date"
+                              value={subTask.endDate}
+                              onChange={(e) => updateSubTask(task.id, subTask.id, 'endDate', e.target.value)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                padding: '0.625rem',
+                                color: '#0f172a',
+                                fontSize: '0.8rem',
+                                fontFamily: '"JetBrains Mono", monospace',
+                                outline: 'none',
+                                colorScheme: 'light'
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {showCost && (
+                          <div style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.75rem' }}>{currency}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={subTask.cost || ''}
+                              onChange={(e) => updateSubTask(task.id, subTask.id, 'cost', e.target.value)}
+                              style={{
+                                width: '100%',
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                padding: '0.625rem 0.5rem 0.625rem 1.5rem',
+                                color: '#0f172a',
+                                fontSize: '0.8rem',
+                                outline: 'none',
+                                fontWeight: '600'
+                              }}
+                            />
+                          </div>
+                        )}
 
                         <input
                           type="color"
@@ -1342,7 +1473,9 @@ export default function GanttChart() {
           {/* Grid Layout: Tasks Column + Timeline */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: showDates ? '320px 200px 1fr' : '320px 1fr',
+            gridTemplateColumns: showDates
+              ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
+              : (showCost ? '320px 100px 1fr' : '320px 1fr'),
             gap: '0',
             background: '#f8fafc',
             borderRadius: '16px',
@@ -1567,6 +1700,104 @@ export default function GanttChart() {
                           }}
                         >
                           {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cost Column */}
+            {showCost && (
+              <div style={{
+                background: '#f8fafc',
+                borderRight: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  height: '70px',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 1rem',
+                  background: '#f1f5f9'
+                }}>
+                  <h3 style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '800',
+                    color: '#000000',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    margin: 0,
+                    textAlign: 'center'
+                  }}>
+                    Cost
+                  </h3>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0',
+                  padding: '1rem 0'
+                }}>
+                  {tasks.map((task, index) => (
+                    <div key={task.id}>
+                      {/* Main Task Cost */}
+                      <div
+                        style={{
+                          minHeight: '56px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.5rem 1rem',
+                          background: '#ffffff',
+                          borderBottom: '1px solid #e2e8f0',
+                          animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
+                          transition: 'all 0.2s',
+                          fontSize: '0.85rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontWeight: '600',
+                          color: '#0f172a'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#f1f5f9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#ffffff';
+                        }}
+                      >
+                        {task.cost > 0 ? `${currency}${Number(task.cost).toLocaleString()}` : '-'}
+                      </div>
+
+                      {/* Sub-task Cost */}
+                      {task.expanded && task.subTasks.map((subTask, subIndex) => (
+                        <div
+                          key={subTask.id}
+                          style={{
+                            minHeight: '44px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.5rem 1rem',
+                            background: '#f8fafc',
+                            borderBottom: '1px solid #e2e8f0',
+                            animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
+                            transition: 'all 0.2s',
+                            fontSize: '0.8rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontWeight: '500',
+                            color: '#475569'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f1f5f9';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f8fafc';
+                          }}
+                        >
+                          {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
                         </div>
                       ))}
                     </div>
