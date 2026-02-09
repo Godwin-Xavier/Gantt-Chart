@@ -213,40 +213,58 @@ export default function GanttChart() {
   const [tasks, setTasks] = useState([
     {
       id: 1,
-      name: 'Planning Phase',
-      startDate: `${currentYear}-03-01`,
-      endDate: `${currentYear}-03-15`,
-      color: '#6366f1',
-      cost: 1000,
-      expanded: true,
-      subTasks: [
-        {
-          id: 101,
-          name: 'Requirements Gathering',
-          startDate: `${currentYear}-03-01`,
-          endDate: `${currentYear}-03-08`,
-          color: '#818cf8',
-          cost: 500
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Development',
-      startDate: `${currentYear}-03-10`,
-      endDate: `${currentYear}-04-20`,
-      color: '#8b5cf6',
-      cost: 5000,
-      expanded: true,
-      subTasks: []
-    },
-    {
-      id: 3,
       name: 'Testing',
       startDate: `${currentYear}-04-15`,
       endDate: `${currentYear}-05-05`,
       color: '#ec4899',
       cost: 2000,
+      expanded: true,
+      subTasks: [
+        {
+          id: 101,
+          name: 'Code Review',
+          startDate: `${currentYear}-04-15`,
+          endDate: `${currentYear}-05-05`,
+          color: '#fda4af',
+          cost: 0
+        },
+        {
+          id: 102,
+          name: 'Internal Testing and DEMO',
+          startDate: `${currentYear}-04-15`,
+          endDate: `${currentYear}-05-05`,
+          color: '#fdba74',
+          cost: 0
+        }
+      ]
+    },
+    {
+      id: 2,
+      name: 'UAT',
+      startDate: `${currentYear}-02-09`,
+      endDate: `${currentYear}-02-16`,
+      color: '#6366f1',
+      cost: 500,
+      expanded: true,
+      subTasks: []
+    },
+    {
+      id: 3,
+      name: 'GO-LIVE',
+      startDate: `${currentYear}-02-09`,
+      endDate: `${currentYear}-02-16`,
+      color: '#4338ca',
+      cost: 500,
+      expanded: true,
+      subTasks: []
+    },
+    {
+      id: 4,
+      name: 'Hyper Care Support',
+      startDate: `${currentYear}-02-09`,
+      endDate: `${currentYear}-02-16`,
+      color: '#06b6d4',
+      cost: 500,
       expanded: true,
       subTasks: []
     }
@@ -1587,8 +1605,9 @@ export default function GanttChart() {
                         fontWeight: '800',
                         color: '#000000',
                         flex: 1,
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         lineHeight: '1.4'
                       }}>
                         {task.name}
@@ -1631,8 +1650,9 @@ export default function GanttChart() {
                           fontWeight: '700',
                           color: '#0f172a',
                           flex: 1,
-                          wordWrap: 'break-word',
-                          overflowWrap: 'break-word',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                           lineHeight: '1.4'
                         }}>
                           {subTask.name}
