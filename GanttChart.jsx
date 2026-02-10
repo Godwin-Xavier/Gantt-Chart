@@ -214,6 +214,7 @@ export default function GanttChart() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDates, setShowDates] = useState(true);
+  const [showQuarters, setShowQuarters] = useState(false);
   const [showCost, setShowCost] = useState(false);
   const [showTotals, setShowTotals] = useState(true);
   const [currency, setCurrency] = useState('$');
@@ -227,8 +228,6 @@ export default function GanttChart() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
-  const timelineColRef = useRef(null);
-  const [timelineColWidth, setTimelineColWidth] = useState(0);
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -515,7 +514,9 @@ export default function GanttChart() {
           if (data.companyLogo) setCompanyLogo(data.companyLogo);
           if (data.companyLogoWidth) setCompanyLogoWidth(data.companyLogoWidth);
           if (data.showDates !== undefined) setShowDates(data.showDates);
+          if (data.showQuarters !== undefined) setShowQuarters(data.showQuarters);
           if (data.showCost !== undefined) setShowCost(data.showCost);
+          if (data.showTotals !== undefined) setShowTotals(data.showTotals);
           if (data.currency) setCurrency(data.currency);
         } catch (error) {
           console.error('Error importing chart:', error);
@@ -543,7 +544,9 @@ export default function GanttChart() {
           companyLogo,
           companyLogoWidth,
           showDates,
+          showQuarters,
           showCost,
+          showTotals,
           currency,
           exportedAt: new Date().toISOString()
         };
@@ -675,14 +678,9 @@ export default function GanttChart() {
     const startOffset = (taskStart - timelineStart) / (1000 * 60 * 60 * 24);
     const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
 
-    const leftPct = (startOffset / totalDays) * 100;
-    const widthPct = (duration / totalDays) * 100;
-
     return {
-      left: `${leftPct}%`,
-      width: `${widthPct}%`,
-      leftPct,
-      widthPct
+      left: `${(startOffset / totalDays) * 100}%`,
+      width: `${(duration / totalDays) * 100}%`
     };
   };
 
@@ -707,67 +705,52 @@ export default function GanttChart() {
     return markers;
   };
 
-  const monthMarkers = generateMonthMarkers();
+  const generateQuarterMarkers = () => {
+    const markers = [];
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    const getNextQuarterStart = (d) => {
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const quarterStartMonth = Math.floor(m / 3) * 3;
+      const nextStartMonth = quarterStartMonth + 3;
+      return nextStartMonth >= 12 ? new Date(y + 1, 0, 1) : new Date(y, nextStartMonth, 1);
+    };
+
+    const startMarker = new Date(timelineStart);
+    startMarker.setHours(0, 0, 0, 0);
+    markers.push({
+      date: new Date(startMarker),
+      position: 0
+    });
+
+    let current = getNextQuarterStart(startMarker);
+    current.setHours(0, 0, 0, 0);
+
+    while (current <= timelineEnd) {
+      const offset = Math.ceil((current - timelineStart) / msPerDay);
+      const position = (offset / totalDays) * 100;
+
+      markers.push({
+        date: new Date(current),
+        position
+      });
+
+      current.setMonth(current.getMonth() + 3);
+      current.setDate(1);
+      current.setHours(0, 0, 0, 0);
+    }
+
+    return markers;
+  };
+
+  const timelineMarkers = showQuarters ? generateQuarterMarkers() : generateMonthMarkers();
 
   const totalTopLevelTaskDays = tasks.reduce(
     (acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays),
     0
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
-
-  useEffect(() => {
-    const el = timelineColRef.current;
-    if (!el) return;
-
-    const update = () => {
-      const nextWidth = el.getBoundingClientRect().width;
-      setTimelineColWidth((prev) => (Math.abs(prev - nextWidth) < 0.5 ? prev : nextWidth));
-    };
-
-    update();
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(() => update());
-      ro.observe(el);
-      return () => ro.disconnect();
-    }
-
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, [showDates, showCost]);
-
-  const getDurationBadgePlacement = (leftPct, widthPct, options = {}) => {
-    const {
-      minInsidePx = 56,
-      estimatedBadgePx = 60,
-      gapPx = 8
-    } = options;
-
-    const safeWidth = timelineColWidth;
-    const endPct = leftPct + widthPct;
-
-    const canFitInside = safeWidth > 0
-      ? ((widthPct / 100) * safeWidth) >= minInsidePx
-      : widthPct >= 7;
-
-    if (canFitInside) {
-      return { inside: true, side: 'inside' };
-    }
-
-    // Prefer placing the badge to the right unless it would clip.
-    if (safeWidth <= 0) {
-      return { inside: false, side: endPct <= 85 ? 'right' : 'left' };
-    }
-
-    const endPx = (endPct / 100) * safeWidth;
-    const startPx = (leftPct / 100) * safeWidth;
-
-    const canFitRight = (endPx + gapPx + estimatedBadgePx) <= safeWidth;
-    const canFitLeft = (startPx - gapPx - estimatedBadgePx) >= 0;
-
-    if (canFitRight || !canFitLeft) return { inside: false, side: 'right' };
-    return { inside: false, side: 'left' };
-  };
 
   return (
     <div style={{
@@ -992,6 +975,24 @@ export default function GanttChart() {
               />
               <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                 Show Dates
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <input
+                type="checkbox"
+                id="showQuarters"
+                checked={showQuarters}
+                onChange={(e) => setShowQuarters(e.target.checked)}
+                style={{
+                  width: '1.25rem',
+                  height: '1.25rem',
+                  cursor: 'pointer',
+                  accentColor: '#6366f1'
+                }}
+              />
+              <label htmlFor="showQuarters" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+                Show in Quarters
               </label>
             </div>
 
@@ -2192,7 +2193,7 @@ export default function GanttChart() {
             )}
 
             {/* Timeline Column */}
-            <div ref={timelineColRef} style={{ position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', overflow: 'hidden' }}>
               {/* Timeline Header */}
               <div style={{
                 position: 'relative',
@@ -2202,8 +2203,8 @@ export default function GanttChart() {
                 overflow: 'hidden',
                 paddingLeft: '0'
               }}>
-                {monthMarkers.map((marker, idx) => {
-                  const nextMarker = monthMarkers[idx + 1];
+                {timelineMarkers.map((marker, idx) => {
+                  const nextMarker = timelineMarkers[idx + 1];
                   const nextPosition = nextMarker ? nextMarker.position : 100;
                   const width = nextPosition - marker.position;
 
@@ -2232,7 +2233,7 @@ export default function GanttChart() {
                         letterSpacing: '0.08em',
                         textAlign: 'center'
                       }}>
-                        {marker.date.toLocaleDateString('en', { month: 'short' })}
+                        {showQuarters ? `Q${Math.floor(marker.date.getMonth() / 3) + 1}` : marker.date.toLocaleDateString('en', { month: 'short' })}
                       </div>
                       <div style={{
                         color: '#000000',
@@ -2259,7 +2260,7 @@ export default function GanttChart() {
                 pointerEvents: 'none',
                 overflow: 'hidden'
               }}>
-                {monthMarkers.map((marker, idx) => {
+                {timelineMarkers.map((marker, idx) => {
                   return (
                     <div
                       key={idx}
@@ -2286,13 +2287,6 @@ export default function GanttChart() {
                 {tasks.map((task, index) => {
                   const position = getTaskPosition(task);
                   const duration = getBusinessDays(task.startDate, task.endDate, holidays);
-
-                  const badgePlacement = getDurationBadgePlacement(position.leftPct, position.widthPct, {
-                    minInsidePx: 64,
-                    estimatedBadgePx: 64,
-                    gapPx: 8
-                  });
-                  const badgeOutside = !badgePlacement.inside;
 
                   return (
                     <div key={task.id}>
@@ -2325,7 +2319,7 @@ export default function GanttChart() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            overflow: badgeOutside ? 'visible' : 'hidden'
+                            overflow: 'visible'
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'scale(1.05)';
@@ -2339,28 +2333,25 @@ export default function GanttChart() {
                           }}
                         >
 
-
                           <div style={{
                             color: '#fff',
                             fontSize: '0.8rem',
                             fontFamily: '"JetBrains Mono", monospace',
                             fontWeight: '800',
-                            background: badgeOutside ? 'rgba(15, 23, 42, 0.92)' : 'rgba(0, 0, 0, 0.25)',
-                            padding: badgeOutside ? '0.35rem 0.6rem' : '0.4rem 0.75rem',
+                            background: 'rgba(15, 23, 42, 0.85)',
+                            padding: '0.35rem 0.65rem',
                             borderRadius: '8px',
-                            textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
-                            backdropFilter: badgeOutside ? 'none' : 'blur(4px)',
-                            border: badgeOutside ? '1px solid rgba(15, 23, 42, 0.25)' : '1px solid rgba(255, 255, 255, 0.2)',
-                            position: badgeOutside ? 'absolute' : 'relative',
-                            top: badgeOutside ? '50%' : undefined,
-                            transform: badgeOutside ? 'translateY(-50%)' : undefined,
-                            left: badgeOutside && badgePlacement.side === 'right' ? '100%' : undefined,
-                            marginLeft: badgeOutside && badgePlacement.side === 'right' ? '8px' : undefined,
-                            right: badgeOutside && badgePlacement.side === 'left' ? '100%' : undefined,
-                            marginRight: badgeOutside && badgePlacement.side === 'left' ? '8px' : undefined,
-                            boxShadow: badgeOutside ? '0 4px 16px rgba(15, 23, 42, 0.18)' : undefined,
+                            textShadow: '0 1px 3px rgba(0, 0, 0, 0.45)',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.18)',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
                             whiteSpace: 'nowrap',
-                            zIndex: badgeOutside ? 20 : 2
+                            pointerEvents: 'none',
+                            zIndex: 2
                           }}>
                             {duration}d
                           </div>
@@ -2371,13 +2362,6 @@ export default function GanttChart() {
                       {task.expanded && task.subTasks.map((subTask, subIndex) => {
                         const subPosition = getTaskPosition(subTask);
                         const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
-
-                        const subBadgePlacement = getDurationBadgePlacement(subPosition.leftPct, subPosition.widthPct, {
-                          minInsidePx: 52,
-                          estimatedBadgePx: 56,
-                          gapPx: 8
-                        });
-                        const subBadgeOutside = !subBadgePlacement.inside;
 
                         return (
                           <div
@@ -2409,7 +2393,7 @@ export default function GanttChart() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                overflow: subBadgeOutside ? 'visible' : 'hidden'
+                                overflow: 'visible'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = 'scale(1.08)';
@@ -2423,28 +2407,25 @@ export default function GanttChart() {
                               }}
                             >
 
-
                               <div style={{
                                 color: '#fff',
                                 fontSize: '0.75rem',
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontWeight: '800',
-                                background: subBadgeOutside ? 'rgba(15, 23, 42, 0.92)' : 'rgba(0, 0, 0, 0.2)',
-                                padding: subBadgeOutside ? '0.25rem 0.5rem' : '0.3rem 0.6rem',
+                                background: 'rgba(15, 23, 42, 0.82)',
+                                padding: '0.25rem 0.55rem',
                                 borderRadius: '6px',
-                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
-                                backdropFilter: subBadgeOutside ? 'none' : 'blur(4px)',
-                                border: subBadgeOutside ? '1px solid rgba(15, 23, 42, 0.25)' : '1px solid rgba(255, 255, 255, 0.15)',
-                                position: subBadgeOutside ? 'absolute' : 'relative',
-                                top: subBadgeOutside ? '50%' : undefined,
-                                transform: subBadgeOutside ? 'translateY(-50%)' : undefined,
-                                left: subBadgeOutside && subBadgePlacement.side === 'right' ? '100%' : undefined,
-                                marginLeft: subBadgeOutside && subBadgePlacement.side === 'right' ? '8px' : undefined,
-                                right: subBadgeOutside && subBadgePlacement.side === 'left' ? '100%' : undefined,
-                                marginRight: subBadgeOutside && subBadgePlacement.side === 'left' ? '8px' : undefined,
-                                boxShadow: subBadgeOutside ? '0 4px 14px rgba(15, 23, 42, 0.16)' : undefined,
+                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.45)',
+                                backdropFilter: 'blur(4px)',
+                                border: '1px solid rgba(255, 255, 255, 0.16)',
+                                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.16)',
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
                                 whiteSpace: 'nowrap',
-                                zIndex: subBadgeOutside ? 20 : 2
+                                pointerEvents: 'none',
+                                zIndex: 2
                               }}>
                                 {subDuration}d
                               </div>
