@@ -304,6 +304,48 @@ export default function GanttChart() {
   const [showModifyMenu, setShowModifyMenu] = useState(false);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
+  const modifyMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showHolidayManager) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowHolidayManager(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showHolidayManager]);
+
+  useEffect(() => {
+    if (!showModifyMenu) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowModifyMenu(false);
+    };
+
+    const onMouseDown = (e) => {
+      const el = modifyMenuRef.current;
+      if (!el) return;
+      if (el.contains(e.target)) return;
+      setShowModifyMenu(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onMouseDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onMouseDown);
+    };
+  }, [showModifyMenu]);
+
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -855,11 +897,21 @@ export default function GanttChart() {
       }}>
         {/* Header */}
         <div style={{
-          marginBottom: '3rem',
+          marginBottom: '2.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '2rem'
+          gap: '1.5rem',
+          position: 'sticky',
+          top: '1.25rem',
+          zIndex: 70,
+          padding: '1.1rem 1.25rem',
+          borderRadius: '22px',
+          background: 'rgba(255, 255, 255, 0.78)',
+          border: '1px solid rgba(226, 232, 240, 0.95)',
+          boxShadow: '0 18px 40px rgba(15, 23, 42, 0.08)',
+          backdropFilter: 'blur(12px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(12px) saturate(1.2)'
         }}>
           {isEditingTitle ? (
             <input
@@ -914,9 +966,14 @@ export default function GanttChart() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
+              gap: '0.5rem',
               flexWrap: 'nowrap',
-              padding: '0.25rem 0'
+              padding: '0.4rem',
+              borderRadius: '18px',
+              background: 'rgba(248, 250, 252, 0.92)',
+              border: '1px solid rgba(226, 232, 240, 0.95)',
+              boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
+              flex: '0 0 auto'
             }}
           >
             <button
@@ -928,25 +985,27 @@ export default function GanttChart() {
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
                 border: 'none',
-                padding: '0.875rem 1.4rem',
-                borderRadius: '12px',
-                fontSize: '1rem',
-                fontWeight: '700',
+                height: '46px',
+                padding: '0 1.15rem',
+                borderRadius: '14px',
+                fontSize: '0.98rem',
+                fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.55rem',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 20px rgba(16, 185, 129, 0.28)',
+                letterSpacing: '0.01em',
+                boxShadow: '0 10px 22px rgba(16, 185, 129, 0.22)',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 24px rgba(16, 185, 129, 0.34)';
+                e.currentTarget.style.boxShadow = '0 14px 28px rgba(16, 185, 129, 0.26)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.28)';
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(16, 185, 129, 0.22)';
               }}
               title="Import JSON"
             >
@@ -954,31 +1013,37 @@ export default function GanttChart() {
               Import
             </button>
 
-            <div style={{ position: 'relative', flex: '0 0 auto' }}>
+            <div ref={modifyMenuRef} style={{ position: 'relative', flex: '0 0 auto' }}>
               <button
-                onClick={() => setShowModifyMenu(!showModifyMenu)}
+                onClick={() => {
+                  setShowHolidayManager(false);
+                  setShowModifyMenu(!showModifyMenu);
+                }}
                 style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  background: showModifyMenu ? '#eef2ff' : '#f8fafc',
+                  border: `1px solid ${showModifyMenu ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0'}`,
                   color: '#0f172a',
-                  padding: '0.875rem 1.25rem',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
+                  height: '46px',
+                  padding: '0 1.05rem',
+                  borderRadius: '14px',
+                  fontSize: '0.98rem',
                   fontWeight: '800',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.55rem',
                   whiteSpace: 'nowrap',
+                  letterSpacing: '0.01em',
+                  boxShadow: showModifyMenu ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.background = showModifyMenu ? '#eef2ff' : '#f1f5f9';
+                  e.currentTarget.style.borderColor = showModifyMenu ? 'rgba(99, 102, 241, 0.55)' : '#cbd5e1';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f8fafc';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.background = showModifyMenu ? '#eef2ff' : '#f8fafc';
+                  e.currentTarget.style.borderColor = showModifyMenu ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0';
                 }}
                 aria-expanded={showModifyMenu}
               >
@@ -1001,7 +1066,9 @@ export default function GanttChart() {
                   zIndex: 60,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.35rem'
+                  gap: '0.35rem',
+                  transformOrigin: 'top right',
+                  animation: 'popIn 0.16s ease-out both'
                 }}>
                   <div style={{
                     padding: '0.5rem 0.75rem',
@@ -1185,25 +1252,27 @@ export default function GanttChart() {
                 background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 color: 'white',
                 border: 'none',
-                padding: '0.875rem 1.55rem',
-                borderRadius: '12px',
-                fontSize: '1rem',
+                height: '46px',
+                padding: '0 1.2rem',
+                borderRadius: '14px',
+                fontSize: '0.98rem',
                 fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.55rem',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                letterSpacing: '0.01em',
+                boxShadow: '0 10px 22px rgba(37, 99, 235, 0.18)',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.3)';
+                e.currentTarget.style.boxShadow = '0 14px 28px rgba(37, 99, 235, 0.22)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(37, 99, 235, 0.18)';
               }}
               title="Add Task"
               >
@@ -1217,26 +1286,29 @@ export default function GanttChart() {
                 setShowHolidayManager((prev) => !prev);
               }}
               style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                padding: '0.875rem',
-                borderRadius: '12px',
+                background: showHolidayManager ? '#eef2ff' : '#f8fafc',
+                border: `1px solid ${showHolidayManager ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0'}`,
+                height: '46px',
+                width: '46px',
+                padding: 0,
+                borderRadius: '14px',
                 cursor: 'pointer',
-                color: '#64748b',
+                color: showHolidayManager ? '#4f46e5' : '#64748b',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: showHolidayManager ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f1f5f9';
-                e.currentTarget.style.borderColor = '#cbd5e1';
-                e.currentTarget.style.color = '#334155';
+                e.currentTarget.style.background = showHolidayManager ? '#eef2ff' : '#f1f5f9';
+                e.currentTarget.style.borderColor = showHolidayManager ? 'rgba(99, 102, 241, 0.55)' : '#cbd5e1';
+                e.currentTarget.style.color = showHolidayManager ? '#4f46e5' : '#334155';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#f8fafc';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.color = '#64748b';
+                e.currentTarget.style.background = showHolidayManager ? '#eef2ff' : '#f8fafc';
+                e.currentTarget.style.borderColor = showHolidayManager ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0';
+                e.currentTarget.style.color = showHolidayManager ? '#4f46e5' : '#64748b';
               }}
               title="Settings & Branding"
               aria-label="Settings & Branding"
@@ -1252,161 +1324,396 @@ export default function GanttChart() {
               style={{ display: 'none' }}
             />
           </div>
+        </div>
 
-          {/* Holiday Manager Panel */}
-          {showHolidayManager && (
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              border: '1px solid #e2e8f0',
-              marginBottom: '2rem',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>Settings & Branding</h3>
-                <button onClick={() => setShowHolidayManager(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
-                  <X size={18} />
-                </button>
-              </div>
+        {/* Settings & Branding Drawer */}
+        {showHolidayManager && (
+            <div
+              className="settings-overlay"
+              onClick={() => setShowHolidayManager(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.42)',
+                backdropFilter: 'blur(6px) saturate(1.1)',
+                WebkitBackdropFilter: 'blur(6px) saturate(1.1)',
+                zIndex: 80,
+                padding: '1.25rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'stretch',
+                animation: 'overlayFade 0.18s ease-out both'
+              }}
+            >
+              <div
+                className="settings-panel"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: '24px',
+                  padding: '1.25rem',
+                  border: '1px solid rgba(226, 232, 240, 0.95)',
+                  boxShadow: '0 35px 80px rgba(15, 23, 42, 0.22)',
+                  width: '480px',
+                  maxWidth: 'calc(100vw - 2.5rem)',
+                  height: 'calc(100vh - 2.5rem)',
+                  overflowY: 'auto',
+                  animation: 'drawerIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both'
+                }}
+              >
+                <div style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.90) 100%)',
+                  backdropFilter: 'blur(10px) saturate(1.1)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(1.1)',
+                  margin: '-1.25rem -1.25rem 1rem -1.25rem',
+                  padding: '1.1rem 1.25rem 0.9rem 1.25rem',
+                  borderBottom: '1px solid rgba(226, 232, 240, 0.9)',
+                  borderTopLeftRadius: '24px',
+                  borderTopRightRadius: '24px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.01em' }}>
+                        Settings & Branding
+                      </h3>
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+                        Logos, holidays, and export options
+                      </div>
+                    </div>
 
-              <div style={{ marginBottom: '2rem' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '1rem' }}>Logos</h4>
-                <div style={{ display: 'flex', gap: '2rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Customer Logo</label>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <label style={{
-                        flex: 1,
-                        cursor: 'pointer',
+                    <button
+                      onClick={() => setShowHolidayManager(false)}
+                      style={{
                         background: '#f1f5f9',
-                        border: '1px dashed #cbd5e1',
-                        borderRadius: '8px',
-                        padding: '0.75rem',
+                        border: '1px solid #e2e8f0',
+                        cursor: 'pointer',
+                        color: '#64748b',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.5rem',
-                        color: '#64748b',
-                        fontSize: '0.85rem'
-                      }}>
-                        <Upload size={16} />
-                        {customerLogo ? 'Change Logo' : 'Upload'}
-                        <input type="file" onChange={(e) => handleLogoUpload(e, 'customer')} accept="image/*" style={{ display: 'none' }} />
-                      </label>
-                      {customerLogo && (
-                        <button onClick={() => setCustomerLogo(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Remove">
-                          <X size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Company Logo</label>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <label style={{
-                        flex: 1,
-                        cursor: 'pointer',
-                        background: '#f1f5f9',
-                        border: '1px dashed #cbd5e1',
-                        borderRadius: '8px',
-                        padding: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        color: '#64748b',
-                        fontSize: '0.85rem'
-                      }}>
-                        <Upload size={16} />
-                        {companyLogo ? 'Change Logo' : 'Upload'}
-                        <input type="file" onChange={(e) => handleLogoUpload(e, 'company')} accept="image/*" style={{ display: 'none' }} />
-                      </label>
-                      {companyLogo && (
-                        <button onClick={() => setCompanyLogo(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Remove">
-                          <X size={16} />
-                        </button>
-                      )}
-                    </div>
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#e2e8f0';
+                        e.currentTarget.style.color = '#334155';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#f1f5f9';
+                        e.currentTarget.style.color = '#64748b';
+                      }}
+                      aria-label="Close settings"
+                      title="Close"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              <div style={{ height: '1px', background: '#e2e8f0', margin: '2rem 0' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    padding: '1rem',
+                    boxShadow: '0 10px 22px rgba(15, 23, 42, 0.06)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <ImageIcon size={16} style={{ color: '#64748b' }} />
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
+                          Logos
+                        </h4>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Export Header
+                      </div>
+                    </div>
 
-              <h4 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '1rem' }}>Holidays</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>Customer</div>
+                          {customerLogo && (
+                            <button
+                              onClick={() => setCustomerLogo(null)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                width: '30px',
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#ef4444',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#fee2e2';
+                                e.currentTarget.style.borderColor = '#fecaca';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#e2e8f0';
+                              }}
+                              title="Remove"
+                              aria-label="Remove customer logo"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                <input
-                  type="date"
-                  value={newHoliday}
-                  onChange={(e) => setNewHoliday(e.target.value)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                    fontSize: '0.9rem',
-                    color: '#0f172a'
-                  }}
-                />
-                <button
-                  onClick={addHoliday}
-                  style={{
-                    background: '#0f172a',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Add Holiday
-                </button>
-              </div>
-
-              {holidays.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {holidays.map(date => (
-                    <div key={date} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      background: '#f1f5f9',
-                      padding: '0.375rem 0.75rem',
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      color: '#475569',
-                      fontWeight: '500'
-                    }}>
-                      {new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                      <button
-                        onClick={() => removeHoliday(date)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
+                        <label style={{
                           cursor: 'pointer',
-                          color: '#94a3b8',
-                          padding: 0,
-                          display: 'flex'
+                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                          border: '1px dashed rgba(148, 163, 184, 0.7)',
+                          borderRadius: '12px',
+                          padding: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          color: '#64748b',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          transition: 'all 0.2s'
+                        }}>
+                          <Upload size={16} />
+                          {customerLogo ? 'Change Logo' : 'Upload Logo'}
+                          <input type="file" onChange={(e) => handleLogoUpload(e, 'customer')} accept="image/*" style={{ display: 'none' }} />
+                        </label>
+
+                        {customerLogo && (
+                          <img
+                            src={customerLogo}
+                            alt="Customer Logo Preview"
+                            style={{
+                              marginTop: '0.75rem',
+                              width: '100%',
+                              maxHeight: '56px',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              padding: '0.35rem'
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>Company</div>
+                          {companyLogo && (
+                            <button
+                              onClick={() => setCompanyLogo(null)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                width: '30px',
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#ef4444',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#fee2e2';
+                                e.currentTarget.style.borderColor = '#fecaca';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#e2e8f0';
+                              }}
+                              title="Remove"
+                              aria-label="Remove company logo"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        <label style={{
+                          cursor: 'pointer',
+                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                          border: '1px dashed rgba(148, 163, 184, 0.7)',
+                          borderRadius: '12px',
+                          padding: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          color: '#64748b',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          transition: 'all 0.2s'
+                        }}>
+                          <Upload size={16} />
+                          {companyLogo ? 'Change Logo' : 'Upload Logo'}
+                          <input type="file" onChange={(e) => handleLogoUpload(e, 'company')} accept="image/*" style={{ display: 'none' }} />
+                        </label>
+
+                        {companyLogo && (
+                          <img
+                            src={companyLogo}
+                            alt="Company Logo Preview"
+                            style={{
+                              marginTop: '0.75rem',
+                              width: '100%',
+                              maxHeight: '56px',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              padding: '0.35rem'
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    padding: '1rem',
+                    boxShadow: '0 10px 22px rgba(15, 23, 42, 0.06)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Calendar size={16} style={{ color: '#64748b' }} />
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
+                          Holidays
+                        </h4>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Business Days
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.9rem' }}>
+                      <input
+                        type="date"
+                        value={newHoliday}
+                        onChange={(e) => setNewHoliday(e.target.value)}
+                        style={{
+                          height: '42px',
+                          padding: '0 0.9rem',
+                          borderRadius: '12px',
+                          border: '1px solid #cbd5e1',
+                          outline: 'none',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: '#0f172a',
+                          background: '#ffffff'
+                        }}
+                      />
+
+                      <button
+                        onClick={addHoliday}
+                        style={{
+                          height: '42px',
+                          background: 'linear-gradient(135deg, #0f172a 0%, #111827 100%)',
+                          color: 'white',
+                          border: 'none',
+                          padding: '0 1rem',
+                          borderRadius: '12px',
+                          fontSize: '0.9rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.01em',
+                          cursor: 'pointer',
+                          boxShadow: '0 10px 20px rgba(15, 23, 42, 0.18)',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 14px 26px rgba(15, 23, 42, 0.22)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 10px 20px rgba(15, 23, 42, 0.18)';
                         }}
                       >
-                        <X size={14} />
+                        Add Holiday
                       </button>
                     </div>
-                  ))}
+
+                    {holidays.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
+                        {holidays.map(date => (
+                          <div key={date} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: '#f1f5f9',
+                            border: '1px solid #e2e8f0',
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: '999px',
+                            fontSize: '0.85rem',
+                            color: '#334155',
+                            fontWeight: '700'
+                          }}>
+                            {new Date(date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                            <button
+                              onClick={() => removeHoliday(date)}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                                color: '#94a3b8',
+                                width: '24px',
+                                height: '24px',
+                                padding: 0,
+                                borderRadius: '999px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#fee2e2';
+                                e.currentTarget.style.borderColor = '#fecaca';
+                                e.currentTarget.style.color = '#ef4444';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#e2e8f0';
+                                e.currentTarget.style.color = '#94a3b8';
+                              }}
+                              aria-label="Remove holiday"
+                              title="Remove"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        No holidays added yet. Weekends are excluded automatically.
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: '600', padding: '0 0.25rem' }}>
+                    Tip: Use Modify Graph to toggle dates, totals, quarters, cost, and export options.
+                  </div>
                 </div>
-              )}
-              {holidays.length === 0 && (
-                <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                  No holidays added yet. Weekends are automatically excluded.
-                </div>
-              )}
+              </div>
             </div>
-          )}
-        </div>
+        )}
 
         {/* Task List */}
         <div style={{
@@ -1490,6 +1797,7 @@ export default function GanttChart() {
                 <div key={task.id} style={{ animation: `slideIn 0.3s ease-out ${index * 0.05}s both` }}>
                 {/* Main Task */}
                 <div
+                  className="task-row"
                   style={{
                     background: '#f8fafc',
                     borderRadius: '12px',
@@ -1720,6 +2028,7 @@ export default function GanttChart() {
                       return (
                         <div
                           key={subTask.id}
+                          className="subtask-row"
                           style={{
                             background: '#f1f5f9',
                             borderRadius: '10px',
@@ -2767,11 +3076,9 @@ export default function GanttChart() {
         @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: translateY(20px);
           }
           to {
             opacity: 1;
-            transform: translateY(0);
           }
         }
         
@@ -2783,6 +3090,65 @@ export default function GanttChart() {
           to {
             opacity: 1;
             transform: translateX(0);
+          }
+        }
+
+        @keyframes popIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes overlayFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes drawerIn {
+          from {
+            opacity: 0;
+            transform: translateX(18px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.16);
+        }
+
+        button:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
+        }
+
+        .task-row,
+        .subtask-row {
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .task-row:hover {
+          box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+        }
+
+        .subtask-row:hover {
+          box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .settings-overlay,
+          .settings-panel {
+            animation: none !important;
           }
         }
 
