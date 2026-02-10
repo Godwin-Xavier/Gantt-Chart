@@ -301,7 +301,7 @@ export default function GanttChart() {
   const [customerLogoWidth, setCustomerLogoWidth] = useState(150);
   const [companyLogo, setCompanyLogo] = useState(null);
   const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showModifyMenu, setShowModifyMenu] = useState(false);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const [tasks, setTasks] = useState([
@@ -607,7 +607,7 @@ export default function GanttChart() {
     if (!chartRef.current || isDownloading) return;
 
     setIsDownloading(true);
-    setShowExportMenu(false);
+    setShowModifyMenu(false);
 
     try {
       if (format === 'json') {
@@ -916,62 +916,224 @@ export default function GanttChart() {
               alignItems: 'center',
               gap: '0.75rem',
               flexWrap: 'nowrap',
-              overflowX: 'auto',
-              padding: '0.25rem 0',
-              scrollbarWidth: 'none',
-              WebkitOverflowScrolling: 'touch'
+              padding: '0.25rem 0'
             }}
           >
+            <button
+              onClick={() => {
+                setShowModifyMenu(false);
+                if (fileInputRef.current) fileInputRef.current.click();
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '0.875rem 1.4rem',
+                borderRadius: '12px',
+                fontSize: '1rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.55rem',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 20px rgba(16, 185, 129, 0.28)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 24px rgba(16, 185, 129, 0.34)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.28)';
+              }}
+              title="Import JSON"
+            >
+              <Upload size={18} strokeWidth={2.5} />
+              Import
+            </button>
+
             <div style={{ position: 'relative', flex: '0 0 auto' }}>
               <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                disabled={isDownloading}
+                onClick={() => setShowModifyMenu(!showModifyMenu)}
                 style={{
-                  background: isDownloading
-                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
-                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '0.875rem 1.75rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  padding: '0.875rem 1.25rem',
                   borderRadius: '12px',
                   fontSize: '1rem',
-                  fontWeight: '700',
-                  cursor: isDownloading ? 'not-allowed' : 'pointer',
+                  fontWeight: '800',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.55rem',
                   whiteSpace: 'nowrap',
-                  transition: 'all 0.2s',
-                  boxShadow: isDownloading
-                    ? '0 4px 20px rgba(107, 114, 128, 0.3)'
-                    : '0 4px 20px rgba(16, 185, 129, 0.3)',
-                  opacity: isDownloading ? 0.7 : 1
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+                aria-expanded={showModifyMenu}
               >
-                <Download size={20} />
-                {isDownloading ? '... ' : 'Export / Import'}
+                <Settings size={18} />
+                Modify Graph
                 <ChevronDown size={16} />
               </button>
 
-              {showExportMenu && (
+              {showModifyMenu && (
                 <div style={{
                   position: 'absolute',
                   top: '110%',
                   right: 0,
-                  background: 'white',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                  padding: '0.5rem',
-                  minWidth: '200px',
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
+                  padding: '0.6rem',
+                  minWidth: '280px',
                   border: '1px solid #e2e8f0',
-                  zIndex: 50,
+                  zIndex: 60,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.25rem'
+                  gap: '0.35rem'
                 }}>
-                  <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase' }}>
-                    Export As
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em'
+                  }}>
+                    View
                   </div>
+
+                  {[
+                    { id: 'menuShowDates', label: 'Show Dates', checked: showDates, onChange: (v) => setShowDates(v) },
+                    { id: 'menuShowQuarters', label: 'Show in Quarters', checked: showQuarters, onChange: (v) => setShowQuarters(v) },
+                    { id: 'menuShowTotals', label: 'Show Total', checked: showTotals, onChange: (v) => setShowTotals(v) }
+                  ].map((item) => (
+                    <label
+                      key={item.id}
+                      htmlFor={item.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        padding: '0.7rem 0.75rem',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                        {item.label}
+                      </span>
+                      <input
+                        id={item.id}
+                        type="checkbox"
+                        checked={item.checked}
+                        onChange={(e) => item.onChange(e.target.checked)}
+                        style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#6366f1' }}
+                      />
+                    </label>
+                  ))}
+
+                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
+
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em'
+                  }}>
+                    Cost
+                  </div>
+
+                  <label
+                    htmlFor="menuShowCost"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '1rem',
+                      padding: '0.7rem 0.75rem',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                      Add Cost
+                    </span>
+                    <input
+                      id="menuShowCost"
+                      type="checkbox"
+                      checked={showCost}
+                      onChange={(e) => setShowCost(e.target.checked)}
+                      style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#6366f1' }}
+                    />
+                  </label>
+
+                  <div style={{ padding: '0 0.75rem 0.35rem 0.75rem' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem'
+                    }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#64748b' }}>Currency</span>
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        disabled={!showCost}
+                        style={{
+                          height: '34px',
+                          padding: '0 0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.9rem',
+                          background: showCost ? '#ffffff' : '#f1f5f9',
+                          color: showCost ? '#0f172a' : '#94a3b8',
+                          cursor: showCost ? 'pointer' : 'not-allowed'
+                        }}
+                      >
+                        <option value="$">Dollars ($)</option>
+                        <option value="₹">Rupees (₹)</option>
+                        <option value="€">Euros (€)</option>
+                        <option value="£">Pounds (£)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
+
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em'
+                  }}>
+                    Export
+                  </div>
+
                   {[
                     { type: 'png', label: 'Image (PNG)', icon: <ImageIcon size={16} /> },
                     { type: 'jpeg', label: 'Image (JPEG)', icon: <ImageIcon size={16} /> },
@@ -981,6 +1143,7 @@ export default function GanttChart() {
                     <button
                       key={option.type}
                       onClick={() => exportChart(option.type)}
+                      disabled={isDownloading}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -989,159 +1152,47 @@ export default function GanttChart() {
                         padding: '0.75rem',
                         border: 'none',
                         background: 'transparent',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
+                        borderRadius: '10px',
+                        cursor: isDownloading ? 'not-allowed' : 'pointer',
                         color: '#0f172a',
-                        fontWeight: '500',
-                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        fontSize: '0.92rem',
+                        opacity: isDownloading ? 0.6 : 1,
                         transition: 'background 0.2s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      onMouseEnter={(e) => {
+                        if (!isDownloading) e.currentTarget.style.background = '#f1f5f9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
                       {option.icon}
                       {option.label}
                     </button>
                   ))}
 
-                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
-
-                  <button
-                    onClick={() => fileInputRef.current.click()}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: 'none',
-                      background: 'transparent',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      color: '#4f46e5',
-                      fontWeight: '600',
-                      fontSize: '0.9rem',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#eef2ff'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <Upload size={16} />
-                    Import JSON
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={importChart}
-                    accept=".json"
-                    style={{ display: 'none' }}
-                  />
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
-              <input
-                type="checkbox"
-                id="showCost"
-                checked={showCost}
-                onChange={(e) => setShowCost(e.target.checked)}
-                style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer', accentColor: '#6366f1' }}
-              />
-              <label htmlFor="showCost" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
-                Add Cost
-              </label>
-              {showCost && (
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  style={{
-                    marginLeft: '0.5rem',
-                    height: '32px',
-                    padding: '0 0.5rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
-                    background: '#ffffff',
-                    color: '#0f172a'
-                  }}
-                >
-                  <option value="$">Dollars ($)</option>
-                  <option value="₹">Rupees (₹)</option>
-                  <option value="€">Euros (€)</option>
-                  <option value="£">Pounds (£)</option>
-                </select>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
-              <input
-                type="checkbox"
-                id="showDates"
-                checked={showDates}
-                onChange={(e) => setShowDates(e.target.checked)}
-                style={{
-                  width: '1.25rem',
-                  height: '1.25rem',
-                  cursor: 'pointer',
-                  accentColor: '#6366f1'
-                }}
-              />
-              <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
-                Show Dates
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
-              <input
-                type="checkbox"
-                id="showQuarters"
-                checked={showQuarters}
-                onChange={(e) => setShowQuarters(e.target.checked)}
-                style={{
-                  width: '1.25rem',
-                  height: '1.25rem',
-                  cursor: 'pointer',
-                  accentColor: '#6366f1'
-                }}
-              />
-              <label htmlFor="showQuarters" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
-                Show in Quarters
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
-              <input
-                type="checkbox"
-                id="showTotals"
-                checked={showTotals}
-                onChange={(e) => setShowTotals(e.target.checked)}
-                style={{
-                  width: '1.25rem',
-                  height: '1.25rem',
-                  cursor: 'pointer',
-                  accentColor: '#6366f1'
-                }}
-              />
-              <label htmlFor="showTotals" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
-                Show Total
-              </label>
-            </div>
-
             <button
-              onClick={addTask}
+              onClick={() => {
+                setShowModifyMenu(false);
+                addTask();
+              }}
               style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 color: 'white',
                 border: 'none',
-                padding: '0.875rem 1.75rem',
+                padding: '0.875rem 1.55rem',
                 borderRadius: '12px',
                 fontSize: '1rem',
-                fontWeight: '700',
+                fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.55rem',
                 whiteSpace: 'nowrap',
                 boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
                 transition: 'all 0.2s'
@@ -1154,13 +1205,17 @@ export default function GanttChart() {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.2)';
               }}
-            >
-              <Plus size={18} strokeWidth={2.5} />
-              Add Task
+              title="Add Task"
+              >
+                <Plus size={18} strokeWidth={2.5} />
+                Add Task
             </button>
 
             <button
-              onClick={() => setShowHolidayManager(!showHolidayManager)}
+              onClick={() => {
+                setShowModifyMenu(false);
+                setShowHolidayManager((prev) => !prev);
+              }}
               style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
@@ -1173,10 +1228,29 @@ export default function GanttChart() {
                 justifyContent: 'center',
                 transition: 'all 0.2s'
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f1f5f9';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.color = '#334155';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+                e.currentTarget.style.color = '#64748b';
+              }}
               title="Settings & Branding"
+              aria-label="Settings & Branding"
             >
               <Settings size={20} />
             </button>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={importChart}
+              accept=".json"
+              style={{ display: 'none' }}
+            />
           </div>
 
           {/* Holiday Manager Panel */}
