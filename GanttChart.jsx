@@ -702,6 +702,12 @@ export default function GanttChart() {
 
   const monthMarkers = generateMonthMarkers();
 
+  const totalTopLevelTaskDays = tasks.reduce(
+    (acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays),
+    0
+  );
+  const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -2401,12 +2407,7 @@ export default function GanttChart() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    {(() => {
-                      if (tasks.length === 0) return '-';
-                      // Sum of top-level task durations only (subtasks excluded)
-                      const totalTaskDays = tasks.reduce((acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays), 0);
-                      return `${totalTaskDays} Days`;
-                    })()}
+                    {totalTopLevelTaskDaysLabel}
                   </div>
                 )}
 
@@ -2429,7 +2430,19 @@ export default function GanttChart() {
                 )}
 
                 {/* Spacer for Timeline */}
-                <div style={{ flex: 1, background: '#f8fafc', borderBottom: 'none' }}></div>
+                <div style={{
+                  flex: 1,
+                  background: '#f8fafc',
+                  borderBottom: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 1rem',
+                  color: '#64748b',
+                  fontSize: '0.9rem'
+                }}>
+                  {!showDates && totalTopLevelTaskDaysLabel}
+                </div>
               </div>
             )}
 
