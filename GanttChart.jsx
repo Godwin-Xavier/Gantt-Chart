@@ -828,6 +828,16 @@ export default function GanttChart() {
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
 
+  const editorGridColumns = [
+    '36px',
+    'minmax(260px, 1fr)',
+    '92px',
+    ...(showDates ? ['150px', '150px'] : []),
+    ...(showCost ? ['140px'] : []),
+    '54px',
+    '44px'
+  ].join(' ');
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -883,7 +893,13 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '1rem',
-                transition: 'opacity 0.2s'
+                transition: 'opacity 0.2s',
+                flex: '1 1 auto',
+                minWidth: 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.1
               }}
               onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -893,8 +909,20 @@ export default function GanttChart() {
             </h1>
           )}
 
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <div style={{ position: 'relative' }}>
+          <div
+            className="header-controls"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              padding: '0.25rem 0',
+              scrollbarWidth: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <div style={{ position: 'relative', flex: '0 0 auto' }}>
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 disabled={isDownloading}
@@ -912,6 +940,7 @@ export default function GanttChart() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
+                  whiteSpace: 'nowrap',
                   transition: 'all 0.2s',
                   boxShadow: isDownloading
                     ? '0 4px 20px rgba(107, 114, 128, 0.3)'
@@ -1011,7 +1040,7 @@ export default function GanttChart() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
               <input
                 type="checkbox"
                 id="showCost"
@@ -1019,14 +1048,23 @@ export default function GanttChart() {
                 onChange={(e) => setShowCost(e.target.checked)}
                 style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer', accentColor: '#6366f1' }}
               />
-              <label htmlFor="showCost" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+              <label htmlFor="showCost" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
                 Add Cost
               </label>
               {showCost && (
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                  style={{
+                    marginLeft: '0.5rem',
+                    height: '32px',
+                    padding: '0 0.5rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: '#ffffff',
+                    color: '#0f172a'
+                  }}
                 >
                   <option value="$">Dollars ($)</option>
                   <option value="₹">Rupees (₹)</option>
@@ -1036,7 +1074,7 @@ export default function GanttChart() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
               <input
                 type="checkbox"
                 id="showDates"
@@ -1049,12 +1087,12 @@ export default function GanttChart() {
                   accentColor: '#6366f1'
                 }}
               />
-              <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+              <label htmlFor="showDates" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
                 Show Dates
               </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
               <input
                 type="checkbox"
                 id="showQuarters"
@@ -1067,12 +1105,12 @@ export default function GanttChart() {
                   accentColor: '#6366f1'
                 }}
               />
-              <label htmlFor="showQuarters" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+              <label htmlFor="showQuarters" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
                 Show in Quarters
               </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
               <input
                 type="checkbox"
                 id="showTotals"
@@ -1085,7 +1123,7 @@ export default function GanttChart() {
                   accentColor: '#6366f1'
                 }}
               />
-              <label htmlFor="showTotals" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
+              <label htmlFor="showTotals" style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1 }}>
                 Show Total
               </label>
             </div>
@@ -1104,6 +1142,7 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
+                whiteSpace: 'nowrap',
                 boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
                 transition: 'all 0.2s'
               }}
@@ -1314,8 +1353,41 @@ export default function GanttChart() {
             Tasks
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {tasks.map((task, index) => {
+          <div style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
+            <div style={{ width: 'max-content', minWidth: '100%' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: editorGridColumns,
+                gap: '1rem',
+                alignItems: 'center',
+                padding: '0.75rem 1.25rem',
+                marginBottom: '0.75rem',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                color: '#64748b',
+                fontSize: '0.72rem',
+                fontWeight: '800',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                whiteSpace: 'nowrap'
+              }}>
+                <div />
+                <div>Task</div>
+                <div style={{ textAlign: 'center' }}>Days</div>
+                {showDates && (
+                  <>
+                    <div>Start</div>
+                    <div>End</div>
+                  </>
+                )}
+                {showCost && <div>Cost</div>}
+                <div style={{ textAlign: 'center' }}>Color</div>
+                <div />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {tasks.map((task, index) => {
               const parentDays = getBusinessDays(task.startDate, task.endDate, holidays);
               const parentCost = Number(task.cost) || 0;
 
@@ -1349,10 +1421,11 @@ export default function GanttChart() {
                     borderRadius: '12px',
                     padding: '1.25rem',
                     display: 'grid',
-                    gridTemplateColumns: `auto 1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
+                    gridTemplateColumns: editorGridColumns,
                     gap: '1rem',
                     alignItems: 'center',
-                    border: '1px solid #e2e8f0'
+                    border: '1px solid #e2e8f0',
+                    borderLeft: `4px solid ${task.color}`
                   }}
                 >
                   <button
@@ -1441,45 +1514,41 @@ export default function GanttChart() {
 
                   {showDates && (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Calendar size={16} style={{ color: '#64748b' }} />
-                        <input
-                          type="date"
-                          value={task.startDate}
-                          onChange={(e) => updateTask(task.id, 'startDate', e.target.value)}
-                          style={{
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '8px',
-                            padding: '0.75rem',
-                            color: '#0f172a',
-                            fontSize: '0.875rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            outline: 'none',
-                            colorScheme: 'light'
-                          }}
-                        />
-                      </div>
+                      <input
+                        type="date"
+                        value={task.startDate}
+                        onChange={(e) => updateTask(task.id, 'startDate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '0.75rem',
+                          color: '#0f172a',
+                          fontSize: '0.875rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          outline: 'none',
+                          colorScheme: 'light'
+                        }}
+                      />
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ color: '#64748b', fontSize: '0.875rem' }}>→</span>
-                        <input
-                          type="date"
-                          value={task.endDate}
-                          onChange={(e) => updateTask(task.id, 'endDate', e.target.value)}
-                          style={{
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '8px',
-                            padding: '0.75rem',
-                            color: '#0f172a',
-                            fontSize: '0.875rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            outline: 'none',
-                            colorScheme: 'light'
-                          }}
-                        />
-                      </div>
+                      <input
+                        type="date"
+                        value={task.endDate}
+                        onChange={(e) => updateTask(task.id, 'endDate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '0.75rem',
+                          color: '#0f172a',
+                          fontSize: '0.875rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          outline: 'none',
+                          colorScheme: 'light'
+                        }}
+                      />
                     </>
                   )}
 
@@ -1564,7 +1633,7 @@ export default function GanttChart() {
 
                 {/* Sub-tasks */}
                 {task.expanded && (
-                  <div style={{ marginTop: '0.5rem', marginLeft: '2.5rem' }}>
+                  <div style={{ marginTop: '0.75rem' }}>
                     {task.subTasks.map((subTask, subIndex) => {
                       const rollup = subTaskRollups[subIndex] || {
                         days: getBusinessDays(subTask.startDate, subTask.endDate, holidays),
@@ -1583,13 +1652,51 @@ export default function GanttChart() {
                             padding: '1rem',
                             marginBottom: '0.5rem',
                             display: 'grid',
-                            gridTemplateColumns: `1fr 80px ${showDates ? 'auto auto' : ''} ${showCost ? '100px' : ''} auto auto`,
+                            gridTemplateColumns: editorGridColumns,
                             gap: '0.75rem',
                             alignItems: 'center',
                             border: '1px solid #e2e8f0',
+                            borderLeft: `4px solid ${subTask.color}`,
                             animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
                           }}
                         >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{
+                            position: 'relative',
+                            width: '22px',
+                            height: '22px'
+                          }}>
+                            <div style={{
+                              position: 'absolute',
+                              left: '10px',
+                              top: '2px',
+                              bottom: '8px',
+                              width: '2px',
+                              background: 'rgba(148, 163, 184, 0.85)',
+                              borderRadius: '2px'
+                            }} />
+                            <div style={{
+                              position: 'absolute',
+                              left: '10px',
+                              bottom: '8px',
+                              right: '2px',
+                              height: '2px',
+                              background: 'rgba(148, 163, 184, 0.85)',
+                              borderRadius: '2px'
+                            }} />
+                            <div style={{
+                              position: 'absolute',
+                              right: 0,
+                              bottom: '4px',
+                              width: '10px',
+                              height: '10px',
+                              borderRadius: '999px',
+                              background: subTask.color,
+                              boxShadow: '0 0 0 2px #ffffff, 0 0 0 3px rgba(226, 232, 240, 1)'
+                            }} />
+                          </div>
+                        </div>
+
                         <input
                           type="text"
                           value={subTask.name}
@@ -1663,12 +1770,13 @@ export default function GanttChart() {
                               value={subTask.startDate}
                               onChange={(e) => updateSubTask(task.id, subTask.id, 'startDate', e.target.value)}
                               style={{
+                                width: '100%',
                                 background: '#ffffff',
                                 border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                padding: '0.625rem',
+                                borderRadius: '8px',
+                                padding: '0.75rem',
                                 color: '#0f172a',
-                                fontSize: '0.8rem',
+                                fontSize: '0.875rem',
                                 fontFamily: '"JetBrains Mono", monospace',
                                 outline: 'none',
                                 colorScheme: 'light'
@@ -1680,12 +1788,13 @@ export default function GanttChart() {
                               value={subTask.endDate}
                               onChange={(e) => updateSubTask(task.id, subTask.id, 'endDate', e.target.value)}
                               style={{
+                                width: '100%',
                                 background: '#ffffff',
                                 border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                padding: '0.625rem',
+                                borderRadius: '8px',
+                                padding: '0.75rem',
                                 color: '#0f172a',
-                                fontSize: '0.8rem',
+                                fontSize: '0.875rem',
                                 fontFamily: '"JetBrains Mono", monospace',
                                 outline: 'none',
                                 colorScheme: 'light'
@@ -1843,6 +1952,8 @@ export default function GanttChart() {
               </div>
               );
             })}
+              </div>
+            </div>
           </div>
         </div>
         <div
@@ -2599,6 +2710,14 @@ export default function GanttChart() {
             opacity: 1;
             transform: translateX(0);
           }
+        }
+
+        .header-controls::-webkit-scrollbar {
+          display: none;
+        }
+
+        .header-controls {
+          -ms-overflow-style: none;
         }
        `}</style>
        </div>
