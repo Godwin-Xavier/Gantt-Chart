@@ -241,21 +241,21 @@ export default function GanttChart() {
     const lum = relativeLuminance(rgb);
     const isDark = lum < 0.5;
 
-    const textColor = isDark ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 23, 42, 0.92)';
-    const textShadow = isDark
-      ? '0 1px 2px rgba(0, 0, 0, 0.28)'
-      : '0 1px 0 rgba(255, 255, 255, 0.22)';
+    // Keep duration labels visually consistent across all bars.
+    const textColor = 'rgba(71, 85, 105, 0.92)';
+    const textShadow = '0 1px 0 rgba(255, 255, 255, 0.34), 0 1px 2px rgba(15, 23, 42, 0.08)';
 
-    const tintTop = isDark ? 0.26 : 0.18;
-    const tintBottom = isDark ? 0.14 : 0.10;
-    const highlightTop = isDark ? 0.14 : 0.24;
-    const highlightBottom = isDark ? 0.05 : 0.08;
+    // For darker bars, increase the light layer so the ash text stays readable.
+    const tintTop = 0.16;
+    const tintBottom = 0.08;
+    const highlightTop = isDark ? 0.46 : 0.30;
+    const highlightBottom = isDark ? 0.18 : 0.12;
 
     const background = `linear-gradient(180deg, rgba(255, 255, 255, ${highlightTop}) 0%, rgba(255, 255, 255, ${highlightBottom}) 100%), linear-gradient(180deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${tintTop}) 0%, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${tintBottom}) 100%)`;
 
     const border = isDark
-      ? `1px solid rgba(255, 255, 255, 0.28)`
-      : `1px solid rgba(255, 255, 255, 0.48)`;
+      ? `1px solid rgba(255, 255, 255, 0.36)`
+      : `1px solid rgba(255, 255, 255, 0.55)`;
 
     const boxShadow = isDark
       ? `0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 0 0 1px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.14) inset, 0 10px 20px rgba(15, 23, 42, 0.10)`
@@ -272,8 +272,8 @@ export default function GanttChart() {
       padding: isSub ? '0.22rem 0.5rem' : '0.3rem 0.6rem',
       borderRadius: isSub ? '6px' : '8px',
       textShadow,
-      backdropFilter: 'saturate(1.2)',
-      WebkitBackdropFilter: 'saturate(1.2)',
+      backdropFilter: 'blur(10px) saturate(1.2) brightness(1.06)',
+      WebkitBackdropFilter: 'blur(10px) saturate(1.2) brightness(1.06)',
       border,
       boxShadow,
       position: 'absolute',
