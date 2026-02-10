@@ -2384,7 +2384,8 @@ export default function GanttChart() {
                   color: '#0f172a',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'flex-start', // Align left like tasks
+                  justifyContent: 'center',
+                  textAlign: 'center',
                   borderRight: '1px solid #e2e8f0',
                   background: '#f8fafc',
                   textTransform: 'uppercase',
