@@ -227,6 +227,8 @@ export default function GanttChart() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
+  const timelineColRef = useRef(null);
+  const [timelineColWidth, setTimelineColWidth] = useState(0);
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -673,9 +675,14 @@ export default function GanttChart() {
     const startOffset = (taskStart - timelineStart) / (1000 * 60 * 60 * 24);
     const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
 
+    const leftPct = (startOffset / totalDays) * 100;
+    const widthPct = (duration / totalDays) * 100;
+
     return {
-      left: `${(startOffset / totalDays) * 100}%`,
-      width: `${(duration / totalDays) * 100}%`
+      left: `${leftPct}%`,
+      width: `${widthPct}%`,
+      leftPct,
+      widthPct
     };
   };
 
@@ -707,6 +714,60 @@ export default function GanttChart() {
     0
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
+
+  useEffect(() => {
+    const el = timelineColRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const nextWidth = el.getBoundingClientRect().width;
+      setTimelineColWidth((prev) => (Math.abs(prev - nextWidth) < 0.5 ? prev : nextWidth));
+    };
+
+    update();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => update());
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [showDates, showCost]);
+
+  const getDurationBadgePlacement = (leftPct, widthPct, options = {}) => {
+    const {
+      minInsidePx = 56,
+      estimatedBadgePx = 60,
+      gapPx = 8
+    } = options;
+
+    const safeWidth = timelineColWidth;
+    const endPct = leftPct + widthPct;
+
+    const canFitInside = safeWidth > 0
+      ? ((widthPct / 100) * safeWidth) >= minInsidePx
+      : widthPct >= 7;
+
+    if (canFitInside) {
+      return { inside: true, side: 'inside' };
+    }
+
+    // Prefer placing the badge to the right unless it would clip.
+    if (safeWidth <= 0) {
+      return { inside: false, side: endPct <= 85 ? 'right' : 'left' };
+    }
+
+    const endPx = (endPct / 100) * safeWidth;
+    const startPx = (leftPct / 100) * safeWidth;
+
+    const canFitRight = (endPx + gapPx + estimatedBadgePx) <= safeWidth;
+    const canFitLeft = (startPx - gapPx - estimatedBadgePx) >= 0;
+
+    if (canFitRight || !canFitLeft) return { inside: false, side: 'right' };
+    return { inside: false, side: 'left' };
+  };
 
   return (
     <div style={{
@@ -2131,7 +2192,7 @@ export default function GanttChart() {
             )}
 
             {/* Timeline Column */}
-            <div style={{ position: 'relative', overflow: 'hidden' }}>
+            <div ref={timelineColRef} style={{ position: 'relative', overflow: 'hidden' }}>
               {/* Timeline Header */}
               <div style={{
                 position: 'relative',
@@ -2226,6 +2287,13 @@ export default function GanttChart() {
                   const position = getTaskPosition(task);
                   const duration = getBusinessDays(task.startDate, task.endDate, holidays);
 
+                  const badgePlacement = getDurationBadgePlacement(position.leftPct, position.widthPct, {
+                    minInsidePx: 64,
+                    estimatedBadgePx: 64,
+                    gapPx: 8
+                  });
+                  const badgeOutside = !badgePlacement.inside;
+
                   return (
                     <div key={task.id}>
                       {/* Main Task Bar */}
@@ -2257,7 +2325,7 @@ export default function GanttChart() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            overflow: 'hidden'
+                            overflow: badgeOutside ? 'visible' : 'hidden'
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'scale(1.05)';
@@ -2277,14 +2345,22 @@ export default function GanttChart() {
                             fontSize: '0.8rem',
                             fontFamily: '"JetBrains Mono", monospace',
                             fontWeight: '800',
-                            background: 'rgba(0, 0, 0, 0.25)',
-                            padding: '0.4rem 0.75rem',
+                            background: badgeOutside ? 'rgba(15, 23, 42, 0.92)' : 'rgba(0, 0, 0, 0.25)',
+                            padding: badgeOutside ? '0.35rem 0.6rem' : '0.4rem 0.75rem',
                             borderRadius: '8px',
                             textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
-                            backdropFilter: 'blur(4px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            position: 'relative',
-                            zIndex: 2
+                            backdropFilter: badgeOutside ? 'none' : 'blur(4px)',
+                            border: badgeOutside ? '1px solid rgba(15, 23, 42, 0.25)' : '1px solid rgba(255, 255, 255, 0.2)',
+                            position: badgeOutside ? 'absolute' : 'relative',
+                            top: badgeOutside ? '50%' : undefined,
+                            transform: badgeOutside ? 'translateY(-50%)' : undefined,
+                            left: badgeOutside && badgePlacement.side === 'right' ? '100%' : undefined,
+                            marginLeft: badgeOutside && badgePlacement.side === 'right' ? '8px' : undefined,
+                            right: badgeOutside && badgePlacement.side === 'left' ? '100%' : undefined,
+                            marginRight: badgeOutside && badgePlacement.side === 'left' ? '8px' : undefined,
+                            boxShadow: badgeOutside ? '0 4px 16px rgba(15, 23, 42, 0.18)' : undefined,
+                            whiteSpace: 'nowrap',
+                            zIndex: badgeOutside ? 20 : 2
                           }}>
                             {duration}d
                           </div>
@@ -2295,6 +2371,13 @@ export default function GanttChart() {
                       {task.expanded && task.subTasks.map((subTask, subIndex) => {
                         const subPosition = getTaskPosition(subTask);
                         const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+
+                        const subBadgePlacement = getDurationBadgePlacement(subPosition.leftPct, subPosition.widthPct, {
+                          minInsidePx: 52,
+                          estimatedBadgePx: 56,
+                          gapPx: 8
+                        });
+                        const subBadgeOutside = !subBadgePlacement.inside;
 
                         return (
                           <div
@@ -2326,7 +2409,7 @@ export default function GanttChart() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                overflow: 'hidden'
+                                overflow: subBadgeOutside ? 'visible' : 'hidden'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = 'scale(1.08)';
@@ -2346,14 +2429,22 @@ export default function GanttChart() {
                                 fontSize: '0.75rem',
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontWeight: '800',
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                padding: '0.3rem 0.6rem',
+                                background: subBadgeOutside ? 'rgba(15, 23, 42, 0.92)' : 'rgba(0, 0, 0, 0.2)',
+                                padding: subBadgeOutside ? '0.25rem 0.5rem' : '0.3rem 0.6rem',
                                 borderRadius: '6px',
                                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
-                                backdropFilter: 'blur(4px)',
-                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                position: 'relative',
-                                zIndex: 2
+                                backdropFilter: subBadgeOutside ? 'none' : 'blur(4px)',
+                                border: subBadgeOutside ? '1px solid rgba(15, 23, 42, 0.25)' : '1px solid rgba(255, 255, 255, 0.15)',
+                                position: subBadgeOutside ? 'absolute' : 'relative',
+                                top: subBadgeOutside ? '50%' : undefined,
+                                transform: subBadgeOutside ? 'translateY(-50%)' : undefined,
+                                left: subBadgeOutside && subBadgePlacement.side === 'right' ? '100%' : undefined,
+                                marginLeft: subBadgeOutside && subBadgePlacement.side === 'right' ? '8px' : undefined,
+                                right: subBadgeOutside && subBadgePlacement.side === 'left' ? '100%' : undefined,
+                                marginRight: subBadgeOutside && subBadgePlacement.side === 'left' ? '8px' : undefined,
+                                boxShadow: subBadgeOutside ? '0 4px 14px rgba(15, 23, 42, 0.16)' : undefined,
+                                whiteSpace: 'nowrap',
+                                zIndex: subBadgeOutside ? 20 : 2
                               }}>
                                 {subDuration}d
                               </div>
