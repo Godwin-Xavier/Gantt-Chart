@@ -242,8 +242,8 @@ export default function GanttChart() {
     const isDark = lum < 0.5;
 
     // Keep duration labels visually consistent across all bars.
-    const textColor = 'rgba(71, 85, 105, 0.92)';
-    const textShadow = '0 1px 0 rgba(255, 255, 255, 0.34), 0 1px 2px rgba(15, 23, 42, 0.08)';
+    const textColor = 'rgba(15, 23, 42, 0.92)';
+    const textShadow = '0 1px 0 rgba(255, 255, 255, 0.32), 0 1px 2px rgba(15, 23, 42, 0.10)';
 
     // For darker bars, increase the light layer so the ash text stays readable.
     const tintTop = 0.16;
