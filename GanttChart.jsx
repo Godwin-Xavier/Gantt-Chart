@@ -210,6 +210,82 @@ export default function GanttChart() {
     '#f97316'  // Orange
   ];
 
+  const hexToRgb = (hex) => {
+    if (typeof hex !== 'string') return null;
+    let h = hex.trim();
+    if (h.startsWith('#')) h = h.slice(1);
+    if (h.length === 3) h = h.split('').map((ch) => ch + ch).join('');
+    if (h.length !== 6) return null;
+    const n = parseInt(h, 16);
+    if (Number.isNaN(n)) return null;
+    return {
+      r: (n >> 16) & 255,
+      g: (n >> 8) & 255,
+      b: n & 255
+    };
+  };
+
+  const relativeLuminance = ({ r, g, b }) => {
+    const toLinear = (v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    const R = toLinear(r);
+    const G = toLinear(g);
+    const B = toLinear(b);
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+  };
+
+  const getDurationBadgeStyle = (barColor, size = 'main') => {
+    const rgb = hexToRgb(barColor) || { r: 99, g: 102, b: 241 };
+    const lum = relativeLuminance(rgb);
+    const isDark = lum < 0.5;
+
+    const textColor = isDark ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 23, 42, 0.92)';
+    const textShadow = isDark
+      ? '0 1px 2px rgba(0, 0, 0, 0.28)'
+      : '0 1px 0 rgba(255, 255, 255, 0.22)';
+
+    const tintTop = isDark ? 0.26 : 0.18;
+    const tintBottom = isDark ? 0.14 : 0.10;
+    const highlightTop = isDark ? 0.14 : 0.24;
+    const highlightBottom = isDark ? 0.05 : 0.08;
+
+    const background = `linear-gradient(180deg, rgba(255, 255, 255, ${highlightTop}) 0%, rgba(255, 255, 255, ${highlightBottom}) 100%), linear-gradient(180deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${tintTop}) 0%, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${tintBottom}) 100%)`;
+
+    const border = isDark
+      ? `1px solid rgba(255, 255, 255, 0.28)`
+      : `1px solid rgba(255, 255, 255, 0.48)`;
+
+    const boxShadow = isDark
+      ? `0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 0 0 1px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.14) inset, 0 10px 20px rgba(15, 23, 42, 0.10)`
+      : `0 1px 0 rgba(255, 255, 255, 0.28) inset, 0 0 0 1px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.10) inset, 0 10px 20px rgba(15, 23, 42, 0.08)`;
+
+    const isSub = size === 'sub';
+
+    return {
+      color: textColor,
+      fontSize: isSub ? '0.75rem' : '0.8rem',
+      fontFamily: '"JetBrains Mono", monospace',
+      fontWeight: '800',
+      background,
+      padding: isSub ? '0.22rem 0.5rem' : '0.3rem 0.6rem',
+      borderRadius: isSub ? '6px' : '8px',
+      textShadow,
+      backdropFilter: 'saturate(1.2)',
+      WebkitBackdropFilter: 'saturate(1.2)',
+      border,
+      boxShadow,
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      zIndex: 2
+    };
+  };
+
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -2333,26 +2409,7 @@ export default function GanttChart() {
                           }}
                         >
 
-                          <div style={{
-                            color: '#0f172a',
-                            fontSize: '0.8rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontWeight: '800',
-                            background: 'rgba(255, 255, 255, 0.92)',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '8px',
-                            textShadow: 'none',
-                            backdropFilter: 'blur(6px)',
-                            border: '1px solid rgba(15, 23, 42, 0.14)',
-                            boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)',
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            whiteSpace: 'nowrap',
-                            pointerEvents: 'none',
-                            zIndex: 2
-                          }}>
+                          <div style={getDurationBadgeStyle(task.color, 'main')}>
                             {duration}d
                           </div>
                         </div>
@@ -2406,27 +2463,7 @@ export default function GanttChart() {
                                 e.currentTarget.style.zIndex = '1';
                               }}
                             >
-
-                              <div style={{
-                                color: '#0f172a',
-                                fontSize: '0.75rem',
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontWeight: '800',
-                                background: 'rgba(255, 255, 255, 0.92)',
-                                padding: '0.25rem 0.55rem',
-                                borderRadius: '6px',
-                                textShadow: 'none',
-                                backdropFilter: 'blur(6px)',
-                                border: '1px solid rgba(15, 23, 42, 0.14)',
-                                boxShadow: '0 7px 16px rgba(15, 23, 42, 0.12)',
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                whiteSpace: 'nowrap',
-                                pointerEvents: 'none',
-                                zIndex: 2
-                              }}>
+                              <div style={getDurationBadgeStyle(subTask.color, 'sub')}>
                                 {subDuration}d
                               </div>
                             </div>
