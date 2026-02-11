@@ -1,6 +1,29 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, X, Calendar, Edit2, Download, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck } from 'lucide-react';
+
+const APP_STORAGE_KEY = 'gantt-chart:workspace:v1';
+const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
+const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
+
+const readStorageFlag = (key) => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(key) === '1';
+  } catch (error) {
+    console.warn(`Failed to read storage key: ${key}`, error);
+    return false;
+  }
+};
+
+const writeStorageFlag = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value ? '1' : '0');
+  } catch (error) {
+    console.warn(`Failed to write storage key: ${key}`, error);
+  }
+};
 
 export default function GanttChart() {
   const currentYear = new Date().getFullYear();
@@ -81,32 +104,41 @@ export default function GanttChart() {
 
     // Use refs for values needed inside event listeners to avoid stale closures
     const activeHandleRef = useRef(null);
+    const activePointerIdRef = useRef(null);
     const startXRef = useRef(0);
     const startYRef = useRef(0);
     const startWidthRef = useRef(0);
     const isResizingRef = useRef(false);
+    const widthRef = useRef(width);
 
     useEffect(() => {
       if (initialWidth) setWidth(initialWidth);
     }, [initialWidth]);
 
-    const handleMouseDown = (e, handle) => {
+    useEffect(() => {
+      widthRef.current = width;
+    }, [width]);
+
+    const handlePointerDown = (e, handle) => {
       e.stopPropagation();
       e.preventDefault();
 
       setIsResizing(true);
       isResizingRef.current = true;
+      activePointerIdRef.current = e.pointerId;
       activeHandleRef.current = handle;
       startXRef.current = e.clientX;
       startYRef.current = e.clientY;
       startWidthRef.current = width;
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
     };
 
-    const handleMouseMove = (e) => {
+    const handlePointerMove = (e) => {
       if (!isResizingRef.current || !activeHandleRef.current) return;
+      if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
 
       const dx = e.clientX - startXRef.current;
       const dy = e.clientY - startYRef.current;
@@ -129,15 +161,19 @@ export default function GanttChart() {
       setWidth(newWidth);
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = (e) => {
+      if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
+
       setIsResizing(false);
       isResizingRef.current = false;
       activeHandleRef.current = null;
+      activePointerIdRef.current = null;
 
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
 
-      if (onResize) onResize(width);
+      if (onResize) onResize(widthRef.current);
     };
 
     const handleStyle = {
@@ -161,26 +197,26 @@ export default function GanttChart() {
         {/* Handles */}
         <div
           data-html2canvas-ignore="true"
-          onMouseDown={(e) => handleMouseDown(e, 'nw')}
-          style={{ ...handleStyle, top: -6, left: -6, cursor: 'nw-resize' }}
+          onPointerDown={(e) => handlePointerDown(e, 'nw')}
+          style={{ ...handleStyle, top: -6, left: -6, cursor: 'nw-resize', touchAction: 'none' }}
           title="Resize"
         />
         <div
           data-html2canvas-ignore="true"
-          onMouseDown={(e) => handleMouseDown(e, 'ne')}
-          style={{ ...handleStyle, top: -6, right: -6, cursor: 'ne-resize' }}
+          onPointerDown={(e) => handlePointerDown(e, 'ne')}
+          style={{ ...handleStyle, top: -6, right: -6, cursor: 'ne-resize', touchAction: 'none' }}
           title="Resize"
         />
         <div
           data-html2canvas-ignore="true"
-          onMouseDown={(e) => handleMouseDown(e, 'sw')}
-          style={{ ...handleStyle, bottom: -6, left: -6, cursor: 'sw-resize' }}
+          onPointerDown={(e) => handlePointerDown(e, 'sw')}
+          style={{ ...handleStyle, bottom: -6, left: -6, cursor: 'sw-resize', touchAction: 'none' }}
           title="Resize"
         />
         <div
           data-html2canvas-ignore="true"
-          onMouseDown={(e) => handleMouseDown(e, 'se')}
-          style={{ ...handleStyle, bottom: -6, right: -6, cursor: 'se-resize' }}
+          onPointerDown={(e) => handlePointerDown(e, 'se')}
+          style={{ ...handleStyle, bottom: -6, right: -6, cursor: 'se-resize', touchAction: 'none' }}
           title="Resize"
         />
 
@@ -302,9 +338,21 @@ export default function GanttChart() {
   const [companyLogo, setCompanyLogo] = useState(null);
   const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
   const [showModifyMenu, setShowModifyMenu] = useState(false);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => !readStorageFlag(INTRO_BANNER_KEY));
+  const [isTutorialActive, setIsTutorialActive] = useState(false);
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
+  const titleRef = useRef(null);
+  const importButtonRef = useRef(null);
+  const modifyButtonRef = useRef(null);
+  const addTaskButtonRef = useRef(null);
+  const settingsButtonRef = useRef(null);
+  const taskEditorRef = useRef(null);
+  const timelineChartRef = useRef(null);
+  const settingsPanelRef = useRef(null);
+  const scriptLoaderRef = useRef({});
 
   useEffect(() => {
     if (!showHolidayManager) return;
@@ -492,6 +540,209 @@ export default function GanttChart() {
     }
   ]);
 
+  const tutorialSteps = useMemo(() => ([
+    {
+      id: 'title',
+      title: 'Name your project',
+      body: 'Tap the project title to rename the tracker for your customer or team.',
+      target: 'title',
+      panel: null
+    },
+    {
+      id: 'add-task',
+      title: 'Add task phases',
+      body: 'Use Add Task to create major phases. Each phase can hold many subtasks.',
+      target: 'addTask',
+      panel: null
+    },
+    {
+      id: 'editor',
+      title: 'Edit dates and duration',
+      body: 'In the Tasks area, update dates, business-day duration, color, and optional cost.',
+      target: 'taskEditor',
+      panel: null
+    },
+    {
+      id: 'modify-menu',
+      title: 'Modify and export',
+      body: 'Open Modify Graph to toggle dates, quarters, totals, cost view, and export formats.',
+      target: 'modifyMenu',
+      panel: 'modify'
+    },
+    {
+      id: 'settings',
+      title: 'Branding and holidays',
+      body: 'Upload customer/company logos and configure holidays to get accurate business-day rollups.',
+      target: 'settingsPanel',
+      panel: 'settings'
+    },
+    {
+      id: 'timeline',
+      title: 'Read the timeline',
+      body: 'The right panel renders live Gantt bars for every task and subtask based on your dates.',
+      target: 'timeline',
+      panel: null
+    },
+    {
+      id: 'import',
+      title: 'Import existing plans',
+      body: 'Use Import to load a previously exported JSON and continue where you left off.',
+      target: 'import',
+      panel: null
+    }
+  ]), []);
+
+  const activeTutorialStep = isTutorialActive ? tutorialSteps[tutorialStepIndex] : null;
+  const activeTutorialTarget = activeTutorialStep?.target || null;
+
+  const markIntroSeen = () => {
+    writeStorageFlag(INTRO_BANNER_KEY, true);
+  };
+
+  const markTutorialDone = () => {
+    writeStorageFlag(TUTORIAL_DONE_KEY, true);
+  };
+
+  const startTutorial = () => {
+    setShowWelcomeBanner(false);
+    markIntroSeen();
+    setShowHolidayManager(false);
+    setShowModifyMenu(false);
+    setTutorialStepIndex(0);
+    setIsTutorialActive(true);
+  };
+
+  const skipTutorial = () => {
+    setShowWelcomeBanner(false);
+    setShowHolidayManager(false);
+    setShowModifyMenu(false);
+    setIsTutorialActive(false);
+    markIntroSeen();
+  };
+
+  const completeTutorial = () => {
+    setIsTutorialActive(false);
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    markIntroSeen();
+    markTutorialDone();
+  };
+
+  const goToNextTutorialStep = () => {
+    if (tutorialStepIndex >= tutorialSteps.length - 1) {
+      completeTutorial();
+      return;
+    }
+    setTutorialStepIndex((prev) => Math.min(prev + 1, tutorialSteps.length - 1));
+  };
+
+  const goToPreviousTutorialStep = () => {
+    setTutorialStepIndex((prev) => Math.max(prev - 1, 0));
+  };
+
+  useEffect(() => {
+    if (!isTutorialActive || !activeTutorialStep) return;
+
+    if (activeTutorialStep.panel === 'modify') {
+      setShowHolidayManager(false);
+      setShowModifyMenu(true);
+    } else if (activeTutorialStep.panel === 'settings') {
+      setShowModifyMenu(false);
+      setShowHolidayManager(true);
+    } else {
+      setShowModifyMenu(false);
+      setShowHolidayManager(false);
+    }
+
+    const refMap = {
+      title: titleRef,
+      addTask: addTaskButtonRef,
+      taskEditor: taskEditorRef,
+      modifyMenu: modifyButtonRef,
+      settingsPanel: settingsPanelRef,
+      timeline: timelineChartRef,
+      import: importButtonRef
+    };
+
+    const targetRef = refMap[activeTutorialStep.target];
+    if (targetRef?.current) {
+      targetRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center'
+      });
+    }
+  }, [activeTutorialStep, isTutorialActive]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(APP_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+
+      if (typeof parsed.projectTitle === 'string') setProjectTitle(parsed.projectTitle);
+      if (Array.isArray(parsed.tasks)) setTasks(parsed.tasks);
+      if (Array.isArray(parsed.holidays)) setHolidays(parsed.holidays);
+      if (typeof parsed.customerLogo === 'string' || parsed.customerLogo === null) setCustomerLogo(parsed.customerLogo);
+      if (typeof parsed.customerLogoWidth === 'number') setCustomerLogoWidth(parsed.customerLogoWidth);
+      if (typeof parsed.companyLogo === 'string' || parsed.companyLogo === null) setCompanyLogo(parsed.companyLogo);
+      if (typeof parsed.companyLogoWidth === 'number') setCompanyLogoWidth(parsed.companyLogoWidth);
+      if (typeof parsed.showDates === 'boolean') setShowDates(parsed.showDates);
+      if (typeof parsed.showQuarters === 'boolean') setShowQuarters(parsed.showQuarters);
+      if (typeof parsed.showCost === 'boolean') setShowCost(parsed.showCost);
+      if (typeof parsed.showTotals === 'boolean') setShowTotals(parsed.showTotals);
+      if (typeof parsed.currency === 'string' && parsed.currency.length > 0) setCurrency(parsed.currency);
+    } catch (error) {
+      console.warn('Failed to restore saved workspace', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const workspace = {
+          projectTitle,
+          tasks,
+          holidays,
+          customerLogo,
+          customerLogoWidth,
+          companyLogo,
+          companyLogoWidth,
+          showDates,
+          showQuarters,
+          showCost,
+          showTotals,
+          currency
+        };
+
+        window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(workspace));
+      } catch (error) {
+        console.warn('Failed to persist workspace', error);
+      }
+    }, 220);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    projectTitle,
+    tasks,
+    holidays,
+    customerLogo,
+    customerLogoWidth,
+    companyLogo,
+    companyLogoWidth,
+    showDates,
+    showQuarters,
+    showCost,
+    showTotals,
+    currency
+  ]);
+
   const addTask = () => {
     const nextColor = DEFAULT_PALETTE[tasks.length % DEFAULT_PALETTE.length];
     const newTask = {
@@ -624,18 +875,18 @@ export default function GanttChart() {
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
-          if (data.tasks) setTasks(data.tasks);
-          if (data.projectTitle) setProjectTitle(data.projectTitle);
-          if (data.holidays) setHolidays(data.holidays);
-          if (data.customerLogo) setCustomerLogo(data.customerLogo);
-          if (data.customerLogoWidth) setCustomerLogoWidth(data.customerLogoWidth);
-          if (data.companyLogo) setCompanyLogo(data.companyLogo);
-          if (data.companyLogoWidth) setCompanyLogoWidth(data.companyLogoWidth);
+          if (Array.isArray(data.tasks)) setTasks(data.tasks);
+          if (typeof data.projectTitle === 'string') setProjectTitle(data.projectTitle);
+          if (Array.isArray(data.holidays)) setHolidays(data.holidays);
+          if (data.customerLogo !== undefined) setCustomerLogo(data.customerLogo);
+          if (typeof data.customerLogoWidth === 'number') setCustomerLogoWidth(data.customerLogoWidth);
+          if (data.companyLogo !== undefined) setCompanyLogo(data.companyLogo);
+          if (typeof data.companyLogoWidth === 'number') setCompanyLogoWidth(data.companyLogoWidth);
           if (data.showDates !== undefined) setShowDates(data.showDates);
           if (data.showQuarters !== undefined) setShowQuarters(data.showQuarters);
           if (data.showCost !== undefined) setShowCost(data.showCost);
           if (data.showTotals !== undefined) setShowTotals(data.showTotals);
-          if (data.currency) setCurrency(data.currency);
+          if (typeof data.currency === 'string' && data.currency.length > 0) setCurrency(data.currency);
         } catch (error) {
           console.error('Error importing chart:', error);
           alert('Failed to import chart. Invalid JSON file.');
@@ -643,6 +894,53 @@ export default function GanttChart() {
       };
       reader.readAsText(file);
     }
+  };
+
+  const loadExternalScript = (src, globalCheck) => {
+    if (typeof window === 'undefined') {
+      return Promise.reject(new Error('Cannot load scripts outside browser context'));
+    }
+
+    const isReady = () => (typeof globalCheck === 'function' ? globalCheck() : false);
+    if (isReady()) return Promise.resolve();
+
+    if (scriptLoaderRef.current[src]) {
+      return scriptLoaderRef.current[src];
+    }
+
+    scriptLoaderRef.current[src] = new Promise((resolve, reject) => {
+      const existingScript =
+        document.querySelector(`script[data-external-src="${src}"]`) ||
+        Array.from(document.scripts).find((script) => script.src === src);
+
+      if (existingScript) {
+        if (isReady() || existingScript.dataset.loaded === '1') {
+          resolve();
+          return;
+        }
+
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.externalSrc = src;
+      script.onload = () => {
+        script.dataset.loaded = '1';
+        resolve();
+      };
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    }).finally(() => {
+      if (!isReady()) {
+        delete scriptLoaderRef.current[src];
+      }
+    });
+
+    return scriptLoaderRef.current[src];
   };
 
   const exportChart = async (format) => {
@@ -668,28 +966,22 @@ export default function GanttChart() {
           currency,
           exportedAt: new Date().toISOString()
         };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
         const link = document.createElement('a');
         link.download = `${projectTitle.replace(/\s+/g, '_')}_gantt_data.json`;
         link.href = dataStr;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setIsDownloading(false);
         return;
       }
 
-      // Load html2canvas
-      const canvasScript = document.createElement('script');
-      canvasScript.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      await loadExternalScript(
+        'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+        () => typeof window.html2canvas !== 'undefined'
+      );
 
-      await new Promise((resolve, reject) => {
-        canvasScript.onload = resolve;
-        canvasScript.onerror = () => reject(new Error('Failed to load html2canvas'));
-        document.head.appendChild(canvasScript);
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 120));
 
       if (typeof window.html2canvas === 'undefined') {
         throw new Error('html2canvas not loaded');
@@ -704,20 +996,15 @@ export default function GanttChart() {
       });
 
       if (format === 'pdf') {
-        // Load jsPDF
-        const pdfScript = document.createElement('script');
-        pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-
-        await new Promise((resolve, reject) => {
-          pdfScript.onload = resolve;
-          pdfScript.onerror = () => reject(new Error('Failed to load jsPDF'));
-          document.head.appendChild(pdfScript);
-        });
+        await loadExternalScript(
+          'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+          () => typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined'
+        );
 
         const { jsPDF } = window.jspdf;
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 295; // A4 height in mm
+        const imgWidth = 210;
+        const pageHeight = 295;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         let heightLeft = imgHeight;
 
@@ -735,10 +1022,7 @@ export default function GanttChart() {
         }
 
         doc.save(`${projectTitle.replace(/\s+/g, '_')}_gantt_chart.pdf`);
-        document.head.removeChild(pdfScript);
-
       } else {
-        // PNG or JPEG
         const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
         const dataUrl = canvas.toDataURL(mimeType, 1.0);
         const link = document.createElement('a');
@@ -748,57 +1032,66 @@ export default function GanttChart() {
         link.click();
         document.body.removeChild(link);
       }
-
-      document.head.removeChild(canvasScript);
-      setIsDownloading(false);
-
     } catch (error) {
       console.error('Export error:', error);
       alert(`Failed to export chart: ${error.message}`);
+    } finally {
       setIsDownloading(false);
     }
   };
 
-  // Calculate timeline range
+  const msPerDay = 1000 * 60 * 60 * 24;
+
   const getTimelineRange = () => {
-    if (tasks.length === 0) return { start: new Date(), end: new Date() };
+    if (tasks.length === 0) {
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      return { start: today, end: today };
+    }
 
     const allDates = [];
     tasks.forEach(task => {
-      allDates.push(new Date(task.startDate), new Date(task.endDate));
+      allDates.push(getDateAtNoon(task.startDate), getDateAtNoon(task.endDate));
       task.subTasks.forEach(st => {
-        allDates.push(new Date(st.startDate), new Date(st.endDate));
+        allDates.push(getDateAtNoon(st.startDate), getDateAtNoon(st.endDate));
       });
     });
 
     const minDate = new Date(Math.min(...allDates));
     const maxDate = new Date(Math.max(...allDates));
 
-    // Set to start of month for min date
     minDate.setDate(1);
-    minDate.setHours(0, 0, 0, 0);
+    minDate.setHours(12, 0, 0, 0);
 
-    // Set to end of month for max date
     maxDate.setMonth(maxDate.getMonth() + 1);
     maxDate.setDate(0);
-    maxDate.setHours(23, 59, 59, 999);
+    maxDate.setHours(12, 0, 0, 0);
 
     return { start: minDate, end: maxDate };
   };
 
-  const { start: timelineStart, end: timelineEnd } = getTimelineRange();
-  const totalDays = (timelineEnd - timelineStart) / (1000 * 60 * 60 * 24);
+  const timelineRange = useMemo(() => getTimelineRange(), [tasks]);
+  const timelineStart = timelineRange.start;
+  const timelineEnd = timelineRange.end;
+
+  const totalDays = useMemo(() => {
+    const days = Math.ceil((timelineEnd - timelineStart) / msPerDay) + 1;
+    return Math.max(1, days);
+  }, [timelineEnd, timelineStart]);
 
   const getTaskPosition = (task) => {
-    const taskStart = new Date(task.startDate);
-    const taskEnd = new Date(task.endDate);
+    const taskStart = getDateAtNoon(task.startDate);
+    const taskEnd = getDateAtNoon(task.endDate);
 
-    const startOffset = (taskStart - timelineStart) / (1000 * 60 * 60 * 24);
-    const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
+    const startOffset = Math.max(0, Math.floor((taskStart - timelineStart) / msPerDay));
+    const duration = Math.max(1, Math.floor((taskEnd - taskStart) / msPerDay) + 1);
+
+    const leftPercent = (startOffset / totalDays) * 100;
+    const widthPercent = (duration / totalDays) * 100;
 
     return {
-      left: `${(startOffset / totalDays) * 100}%`,
-      width: `${(duration / totalDays) * 100}%`
+      left: `${Math.min(100, Math.max(0, leftPercent))}%`,
+      width: `${Math.max(0.8, Math.min(100, widthPercent))}%`
     };
   };
 
@@ -809,7 +1102,7 @@ export default function GanttChart() {
     current.setDate(1); // Start of month
 
     while (current <= timelineEnd) {
-      const offset = Math.ceil((current - timelineStart) / (1000 * 60 * 60 * 24));
+      const offset = Math.ceil((current - timelineStart) / msPerDay);
       const position = (offset / totalDays) * 100;
 
       markers.push({
@@ -825,8 +1118,6 @@ export default function GanttChart() {
 
   const generateQuarterMarkers = () => {
     const markers = [];
-    const msPerDay = 1000 * 60 * 60 * 24;
-
     const getNextQuarterStart = (d) => {
       const y = d.getFullYear();
       const m = d.getMonth();
@@ -862,11 +1153,14 @@ export default function GanttChart() {
     return markers;
   };
 
-  const timelineMarkers = showQuarters ? generateQuarterMarkers() : generateMonthMarkers();
+  const timelineMarkers = useMemo(
+    () => (showQuarters ? generateQuarterMarkers() : generateMonthMarkers()),
+    [showQuarters, timelineStart, timelineEnd, totalDays]
+  );
 
-  const totalTopLevelTaskDays = tasks.reduce(
-    (acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays),
-    0
+  const totalTopLevelTaskDays = useMemo(
+    () => tasks.reduce((acc, t) => acc + getBusinessDays(t.startDate, t.endDate, holidays), 0),
+    [tasks, holidays]
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
 
@@ -880,23 +1174,130 @@ export default function GanttChart() {
     '44px'
   ].join(' ');
 
+  const editorMinWidth = showDates
+    ? (showCost ? 1020 : 880)
+    : (showCost ? 720 : 560);
+
+  const chartGridMinWidth = showDates
+    ? (showCost ? 1240 : 1140)
+    : (showCost ? 1040 : 940);
+
   return (
-    <div style={{
+    <div className="app-shell" style={{
       minHeight: '100vh',
       background: '#ffffff',
       padding: '3rem 2rem',
       fontFamily: '"Outfit", sans-serif',
       color: '#0f172a'
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
-      <div style={{
+      <div className="app-main" style={{
         maxWidth: '1400px',
         margin: '0 auto',
         animation: 'fadeIn 0.6s ease-out'
       }}>
+        {showWelcomeBanner && (
+          <div className="welcome-overlay" role="dialog" aria-modal="true" aria-label="Welcome tutorial">
+            <div className="welcome-card">
+              <div className="welcome-card-header">
+                <div className="welcome-badge">
+                  <Sparkles size={16} />
+                  New Workspace Tour
+                </div>
+                <h2>Welcome to your project tracker</h2>
+                <p>
+                  We can walk your users through all key features in under two minutes: planning,
+                  subtasks, timeline controls, branding, exports, and imports.
+                </p>
+              </div>
+
+              <div className="welcome-feature-grid">
+                <div>
+                  <h4>Hands-on flow</h4>
+                  <p>Users perform actions directly on live controls while the guide explains each step.</p>
+                </div>
+                <div>
+                  <h4>Skip anytime</h4>
+                  <p>The guide can be skipped instantly and restarted later from the Guide button.</p>
+                </div>
+                <div>
+                  <h4>Mobile friendly</h4>
+                  <p>Works on Android, iPhone, and tablets with responsive layouts and touch support.</p>
+                </div>
+              </div>
+
+              <div className="welcome-actions">
+                <button
+                  onClick={startTutorial}
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    height: '46px',
+                    padding: '0 1.25rem',
+                    fontSize: '0.95rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.55rem'
+                  }}
+                >
+                  <BookOpenCheck size={17} />
+                  Start Guided Tutorial
+                </button>
+
+                <button
+                  onClick={skipTutorial}
+                  style={{
+                    background: '#ffffff',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    height: '46px',
+                    padding: '0 1.1rem',
+                    fontSize: '0.92rem',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Skip for now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isTutorialActive && activeTutorialStep && (
+          <div className="tutorial-coachmark" role="dialog" aria-live="polite">
+            <div className="tutorial-step-count">
+              Step {tutorialStepIndex + 1} of {tutorialSteps.length}
+            </div>
+            <h4>{activeTutorialStep.title}</h4>
+            <p>{activeTutorialStep.body}</p>
+
+            <div className="tutorial-actions">
+              <button
+                onClick={goToPreviousTutorialStep}
+                disabled={tutorialStepIndex === 0}
+                className="tutorial-secondary-btn"
+              >
+                Back
+              </button>
+
+              <button onClick={skipTutorial} className="tutorial-secondary-btn">
+                Skip
+              </button>
+
+              <button onClick={goToNextTutorialStep} className="tutorial-primary-btn">
+                {tutorialStepIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
-        <div style={{
+        <div className="top-header" style={{
           marginBottom: '2.25rem',
           display: 'flex',
           alignItems: 'center',
@@ -915,6 +1316,8 @@ export default function GanttChart() {
         }}>
           {isEditingTitle ? (
             <input
+              ref={titleRef}
+              className={activeTutorialTarget === 'title' ? 'tutorial-target-active' : ''}
               type="text"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
@@ -935,6 +1338,8 @@ export default function GanttChart() {
             />
           ) : (
             <h1
+              ref={titleRef}
+              className={`project-title ${activeTutorialTarget === 'title' ? 'tutorial-target-active' : ''}`}
               onClick={() => setIsEditingTitle(true)}
               style={{
                 fontSize: '2.5rem',
@@ -973,10 +1378,14 @@ export default function GanttChart() {
               background: 'rgba(248, 250, 252, 0.92)',
               border: '1px solid rgba(226, 232, 240, 0.95)',
               boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
-              flex: '0 0 auto'
+              flex: '0 0 auto',
+              overflowX: 'auto',
+              scrollbarWidth: 'none'
             }}
           >
             <button
+              ref={importButtonRef}
+              className={activeTutorialTarget === 'import' ? 'tutorial-target-active' : ''}
               onClick={() => {
                 setShowModifyMenu(false);
                 if (fileInputRef.current) fileInputRef.current.click();
@@ -1013,8 +1422,43 @@ export default function GanttChart() {
               Import
             </button>
 
+            <button
+              onClick={startTutorial}
+              style={{
+                background: '#f8fafc',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
+                height: '46px',
+                padding: '0 1.05rem',
+                borderRadius: '14px',
+                fontSize: '0.95rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.55rem',
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.01em',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f1f5f9';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+              title="Start guided tutorial"
+            >
+              <BookOpenCheck size={17} />
+              Guide
+            </button>
+
             <div ref={modifyMenuRef} style={{ position: 'relative', flex: '0 0 auto' }}>
               <button
+                ref={modifyButtonRef}
+                className={activeTutorialTarget === 'modifyMenu' ? 'tutorial-target-active' : ''}
                 onClick={() => {
                   setShowHolidayManager(false);
                   setShowModifyMenu(!showModifyMenu);
@@ -1244,6 +1688,8 @@ export default function GanttChart() {
             </div>
 
             <button
+              ref={addTaskButtonRef}
+              className={activeTutorialTarget === 'addTask' ? 'tutorial-target-active' : ''}
               onClick={() => {
                 setShowModifyMenu(false);
                 addTask();
@@ -1281,6 +1727,8 @@ export default function GanttChart() {
             </button>
 
             <button
+              ref={settingsButtonRef}
+              className={activeTutorialTarget === 'settingsButton' ? 'tutorial-target-active' : ''}
               onClick={() => {
                 setShowModifyMenu(false);
                 setShowHolidayManager((prev) => !prev);
@@ -1346,7 +1794,8 @@ export default function GanttChart() {
               }}
             >
               <div
-                className="settings-panel"
+                ref={settingsPanelRef}
+                className={`settings-panel ${activeTutorialTarget === 'settingsPanel' ? 'tutorial-target-active' : ''}`}
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
@@ -1435,7 +1884,7 @@ export default function GanttChart() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="logos-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.9rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem' }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>Customer</div>
@@ -1603,7 +2052,7 @@ export default function GanttChart() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.9rem' }}>
+                    <div className="holiday-input-row" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.9rem' }}>
                       <input
                         type="date"
                         value={newHoliday}
@@ -1716,14 +2165,18 @@ export default function GanttChart() {
         )}
 
         {/* Task List */}
-        <div style={{
+        <div
+          ref={taskEditorRef}
+          className={`task-list-card ${activeTutorialTarget === 'taskEditor' ? 'tutorial-target-active' : ''}`}
+          style={{
           background: '#ffffff',
           borderRadius: '24px',
           padding: '2rem',
           marginBottom: '2rem',
           border: '1px solid #e2e8f0',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-        }}>
+          }}
+        >
           <h2 style={{
             fontSize: '1.25rem',
             fontWeight: '700',
@@ -1734,8 +2187,8 @@ export default function GanttChart() {
             Tasks
           </h2>
 
-          <div style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
-            <div style={{ width: 'max-content', minWidth: '100%' }}>
+          <div className="task-editor-scroll" style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
+            <div style={{ width: 'max-content', minWidth: `max(100%, ${editorMinWidth}px)` }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: editorGridColumns,
@@ -2340,7 +2793,11 @@ export default function GanttChart() {
           </div>
         </div>
         <div
-          ref={chartRef}
+          ref={(node) => {
+            timelineChartRef.current = node;
+            chartRef.current = node;
+          }}
+          className={`chart-card ${activeTutorialTarget === 'timeline' ? 'tutorial-target-active' : ''}`}
           data-chart-export="true"
           style={{
             background: '#ffffff',
@@ -2352,7 +2809,7 @@ export default function GanttChart() {
           }}
         >
           {/* Logo Header Row */}
-          <div style={{
+          <div className="chart-logo-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
@@ -2382,7 +2839,7 @@ export default function GanttChart() {
               )}
             </div>
           </div>
-          <div style={{
+          <div className="chart-title-wrap" style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -2425,18 +2882,23 @@ export default function GanttChart() {
           </div>
 
           {/* Grid Layout: Tasks Column + Timeline */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: showDates
-              ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
-              : (showCost ? '320px 100px 1fr' : '320px 1fr'),
-            gap: '0',
-            background: '#f8fafc',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-          }}>
+          <div className="timeline-grid-scroll" style={{ overflowX: 'auto' }}>
+            <div
+              className="timeline-grid"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: showDates
+                  ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
+                  : (showCost ? '320px 100px 1fr' : '320px 1fr'),
+                gap: '0',
+                background: '#f8fafc',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                minWidth: `${chartGridMinWidth}px`
+              }}
+            >
             {/* Tasks Column */}
             <div style={{
               background: '#f8fafc',
@@ -3067,6 +3529,7 @@ export default function GanttChart() {
                 Note: Prepared by Zoho SMBS Team
               </p>
             </div>
+            </div>
           </div>
         </div>
 
@@ -3145,9 +3608,195 @@ export default function GanttChart() {
           box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
         }
 
+        .tutorial-target-active {
+          position: relative;
+          z-index: 160;
+          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.22), 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+          border-radius: 14px;
+          animation: tutorialPulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes tutorialPulse {
+          0%,
+          100% {
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2), 0 14px 30px rgba(15, 23, 42, 0.14);
+          }
+          50% {
+            box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.12), 0 18px 36px rgba(15, 23, 42, 0.18);
+          }
+        }
+
+        .welcome-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 210;
+          background: linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(30, 41, 59, 0.5));
+          backdrop-filter: blur(10px) saturate(1.1);
+          -webkit-backdrop-filter: blur(10px) saturate(1.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        }
+
+        .welcome-card {
+          width: min(760px, 100%);
+          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+          border: 1px solid rgba(226, 232, 240, 0.95);
+          border-radius: 24px;
+          box-shadow: 0 35px 80px rgba(15, 23, 42, 0.34);
+          padding: 1.5rem;
+        }
+
+        .welcome-card-header h2 {
+          margin: 0.5rem 0 0.45rem;
+          font-size: 1.8rem;
+          line-height: 1.1;
+          color: #0f172a;
+          letter-spacing: -0.02em;
+        }
+
+        .welcome-card-header p {
+          margin: 0;
+          font-size: 0.96rem;
+          line-height: 1.55;
+          color: #475569;
+          font-weight: 600;
+        }
+
+        .welcome-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          font-size: 0.78rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          font-weight: 800;
+          color: #1e293b;
+          padding: 0.38rem 0.6rem;
+          border: 1px solid #cbd5e1;
+          border-radius: 999px;
+          background: #f8fafc;
+        }
+
+        .welcome-feature-grid {
+          margin-top: 1.15rem;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0.75rem;
+        }
+
+        .welcome-feature-grid > div {
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 0.85rem;
+          background: #ffffff;
+        }
+
+        .welcome-feature-grid h4 {
+          margin: 0;
+          font-size: 0.88rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .welcome-feature-grid p {
+          margin: 0.35rem 0 0;
+          font-size: 0.82rem;
+          color: #64748b;
+          line-height: 1.45;
+          font-weight: 600;
+        }
+
+        .welcome-actions {
+          margin-top: 1.1rem;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.65rem;
+          justify-content: flex-end;
+        }
+
+        .tutorial-coachmark {
+          position: fixed;
+          right: 1.1rem;
+          bottom: 1.1rem;
+          width: min(360px, calc(100vw - 2.2rem));
+          z-index: 205;
+          background: rgba(15, 23, 42, 0.96);
+          border: 1px solid rgba(100, 116, 139, 0.45);
+          border-radius: 16px;
+          box-shadow: 0 24px 50px rgba(2, 6, 23, 0.45);
+          color: #e2e8f0;
+          padding: 0.95rem;
+        }
+
+        .tutorial-step-count {
+          font-size: 0.72rem;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #93c5fd;
+          font-weight: 800;
+          margin-bottom: 0.45rem;
+        }
+
+        .tutorial-coachmark h4 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 800;
+          color: #f8fafc;
+        }
+
+        .tutorial-coachmark p {
+          margin: 0.55rem 0 0;
+          font-size: 0.88rem;
+          line-height: 1.48;
+          color: #cbd5e1;
+          font-weight: 600;
+        }
+
+        .tutorial-actions {
+          margin-top: 0.85rem;
+          display: flex;
+          gap: 0.45rem;
+          justify-content: flex-end;
+        }
+
+        .tutorial-secondary-btn,
+        .tutorial-primary-btn {
+          height: 36px;
+          border-radius: 10px;
+          border: 1px solid transparent;
+          font-size: 0.83rem;
+          font-weight: 800;
+          padding: 0 0.8rem;
+          cursor: pointer;
+        }
+
+        .tutorial-secondary-btn {
+          background: rgba(148, 163, 184, 0.16);
+          border-color: rgba(148, 163, 184, 0.26);
+          color: #e2e8f0;
+        }
+
+        .tutorial-secondary-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .tutorial-primary-btn {
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          color: #ffffff;
+        }
+
         @media (prefers-reduced-motion: reduce) {
+          .tutorial-target-active {
+            animation: none !important;
+          }
+
           .settings-overlay,
-          .settings-panel {
+          .settings-panel,
+          .tutorial-coachmark,
+          .welcome-card {
             animation: none !important;
           }
         }
@@ -3158,6 +3807,141 @@ export default function GanttChart() {
 
         .header-controls {
           -ms-overflow-style: none;
+        }
+
+        @media (max-width: 1150px) {
+          .app-shell {
+            padding: 1.8rem 0.9rem !important;
+          }
+
+          .project-title {
+            font-size: 2rem !important;
+          }
+
+          .chart-card {
+            padding: 1.5rem !important;
+          }
+        }
+
+        @media (max-width: 980px) {
+          .top-header {
+            position: static !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 1rem !important;
+          }
+
+          .project-title {
+            font-size: 1.7rem !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+          }
+
+          .header-controls {
+            width: 100% !important;
+            justify-content: flex-start !important;
+          }
+
+          .task-list-card,
+          .chart-card {
+            border-radius: 18px !important;
+            padding: 1rem !important;
+          }
+
+          .settings-overlay {
+            padding: 0.8rem !important;
+            justify-content: center !important;
+            align-items: flex-end !important;
+          }
+
+          .settings-panel {
+            width: min(100%, 680px) !important;
+            max-width: 100% !important;
+            height: calc(100vh - 1.6rem) !important;
+            border-radius: 20px !important;
+          }
+
+          .logos-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .app-shell {
+            padding: 1rem 0.55rem !important;
+          }
+
+          .project-title {
+            font-size: 1.45rem !important;
+          }
+
+          .header-controls button {
+            height: 42px !important;
+            font-size: 0.86rem !important;
+            padding: 0 0.8rem !important;
+            border-radius: 12px !important;
+          }
+
+          .welcome-card {
+            padding: 1rem;
+            border-radius: 18px;
+          }
+
+          .welcome-card-header h2 {
+            font-size: 1.32rem;
+          }
+
+          .welcome-feature-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .welcome-actions {
+            justify-content: stretch;
+          }
+
+          .welcome-actions button {
+            width: 100%;
+          }
+
+          .tutorial-coachmark {
+            right: 0.6rem;
+            left: 0.6rem;
+            bottom: 0.6rem;
+            width: auto;
+          }
+
+          .chart-logo-row {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 0.75rem;
+          }
+
+          .chart-title-wrap {
+            margin-top: 0 !important;
+            margin-bottom: 1.4rem !important;
+          }
+
+          .holiday-input-row {
+            grid-template-columns: 1fr !important;
+          }
+
+          .timeline-grid {
+            min-width: 880px !important;
+          }
+
+          .settings-overlay {
+            padding: 0 !important;
+          }
+
+          .settings-panel {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 92vh !important;
+            border-top-left-radius: 20px !important;
+            border-top-right-radius: 20px !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+          }
         }
        `}</style>
        </div>
