@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck } from 'lucide-react';
 
-const APP_STORAGE_KEY = 'gantt-chart:workspace:v1';
+const APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
 
