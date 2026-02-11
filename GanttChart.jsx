@@ -571,7 +571,7 @@ export default function GanttChart() {
       if (e.key === 'Escape') setShowModifyMenu(false);
     };
 
-    const onPointerDown = (e) => {
+    const onDocumentClick = (e) => {
       const el = modifyMenuRef.current;
       if (!el) return;
       if (el.contains(e.target)) return;
@@ -579,10 +579,10 @@ export default function GanttChart() {
     };
 
     document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('click', onDocumentClick);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('click', onDocumentClick);
     };
   }, [showModifyMenu]);
 
@@ -1528,16 +1528,14 @@ export default function GanttChart() {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '1.5rem',
-          position: 'sticky',
-          top: '1.25rem',
-          zIndex: 70,
+          position: 'relative',
+          top: 'auto',
+          zIndex: 1,
           padding: '1.1rem 1.25rem',
           borderRadius: '22px',
-          background: 'rgba(255, 255, 255, 0.78)',
+          background: '#ffffff',
           border: '1px solid rgba(226, 232, 240, 0.95)',
-          boxShadow: '0 18px 40px rgba(15, 23, 42, 0.08)',
-          backdropFilter: 'blur(12px) saturate(1.2)',
-          WebkitBackdropFilter: 'blur(12px) saturate(1.2)'
+          boxShadow: '0 12px 26px rgba(15, 23, 42, 0.07)'
         }}>
           {isEditingTitle ? (
             <input
