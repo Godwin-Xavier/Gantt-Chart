@@ -6,6 +6,146 @@ const APP_STORAGE_KEY = 'gantt-chart:workspace:v1';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
 
+const DEFAULT_TASK_BLUEPRINT = [
+  {
+    id: 1,
+    name: 'Planning Phase',
+    color: '#6366f1',
+    cost: 1500,
+    startOffsetDays: 47,
+    durationDays: 7,
+    subTasks: [
+      {
+        id: 101,
+        name: 'Requirements Gathering',
+        color: '#818cf8',
+        cost: 0,
+        startOffsetDays: 21,
+        durationDays: 2
+      },
+      {
+        id: 102,
+        name: 'BRD Preparation',
+        color: '#ec4899',
+        cost: 0,
+        startOffsetDays: 47,
+        durationDays: 4
+      },
+      {
+        id: 103,
+        name: 'BRD Signoff',
+        color: '#3b82f6',
+        cost: 0,
+        startOffsetDays: 47,
+        durationDays: 1
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: 'Development',
+    color: '#8b5cf6',
+    cost: 5000,
+    startOffsetDays: 29,
+    durationDays: 21,
+    subTasks: [
+      {
+        id: 201,
+        name: 'Modules and fields configuration',
+        color: '#22d3ee',
+        cost: 0,
+        startOffsetDays: 29,
+        durationDays: 4
+      },
+      {
+        id: 202,
+        name: 'Masters Set up',
+        color: '#22c55e',
+        cost: 0,
+        startOffsetDays: 29,
+        durationDays: 4
+      },
+      {
+        id: 203,
+        name: 'Blueprints and automation configuration',
+        color: '#84cc16',
+        cost: 0,
+        startOffsetDays: 29,
+        durationDays: 5
+      },
+      {
+        id: 204,
+        name: 'Notifications and SLA\'s',
+        color: '#d9f99d',
+        cost: 0,
+        startOffsetDays: 29,
+        durationDays: 3
+      },
+      {
+        id: 205,
+        name: 'Reports & Dashboards',
+        color: '#3b82f6',
+        cost: 0,
+        startOffsetDays: 29,
+        durationDays: 5
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: 'Testing',
+    color: '#ec4899',
+    cost: 2000,
+    startOffsetDays: 65,
+    durationDays: 2,
+    subTasks: [
+      {
+        id: 301,
+        name: 'Code Review',
+        color: '#fda4af',
+        cost: 0,
+        startOffsetDays: 65,
+        durationDays: 1
+      },
+      {
+        id: 302,
+        name: 'Internal Testing and DEMO',
+        color: '#fdba74',
+        cost: 0,
+        startOffsetDays: 65,
+        durationDays: 1
+      }
+    ]
+  },
+  {
+    id: 4,
+    name: 'UAT',
+    color: '#6366f1',
+    cost: 500,
+    startOffsetDays: 0,
+    durationDays: 2,
+    subTasks: []
+  },
+  {
+    id: 5,
+    name: 'GO-LIVE',
+    color: '#4338ca',
+    cost: 500,
+    startOffsetDays: 0,
+    durationDays: 1,
+    subTasks: []
+  },
+  {
+    id: 6,
+    name: 'Hyper Care Support',
+    color: '#06b6d4',
+    cost: 500,
+    startOffsetDays: 0,
+    durationDays: 2,
+    subTasks: []
+  }
+];
+
 const readStorageFlag = (key) => {
   if (typeof window === 'undefined') return false;
   try {
@@ -26,8 +166,6 @@ const writeStorageFlag = (key, value) => {
 };
 
 export default function GanttChart() {
-  const currentYear = new Date().getFullYear();
-
   // Robust date helpers using Local Noon to avoid timezone/DST issues
   const getDateAtNoon = (dateStr) => {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -93,6 +231,48 @@ export default function GanttChart() {
     }
 
     return formatDate(curDate);
+  };
+
+  const addCalendarDays = (startDateStr, days) => {
+    const date = getDateAtNoon(startDateStr);
+    date.setDate(date.getDate() + days);
+    return formatDate(date);
+  };
+
+  const getLoginDateString = () => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    return formatDate(today);
+  };
+
+  const buildDefaultTasks = (loginDateStr = getLoginDateString()) => {
+    return DEFAULT_TASK_BLUEPRINT.map((task) => {
+      const startDate = addCalendarDays(loginDateStr, task.startOffsetDays);
+      const endDate = addBusinessDays(startDate, task.durationDays, []);
+
+      return {
+        id: task.id,
+        name: task.name,
+        startDate,
+        endDate,
+        color: task.color,
+        cost: task.cost,
+        expanded: true,
+        subTasks: task.subTasks.map((subTask) => {
+          const subStartDate = addCalendarDays(loginDateStr, subTask.startOffsetDays);
+          const subEndDate = addBusinessDays(subStartDate, subTask.durationDays, []);
+
+          return {
+            id: subTask.id,
+            name: subTask.name,
+            startDate: subStartDate,
+            endDate: subEndDate,
+            color: subTask.color,
+            cost: subTask.cost
+          };
+        })
+      };
+    });
   };
 
 
@@ -322,6 +502,8 @@ export default function GanttChart() {
     };
   };
 
+  const loginDateSeed = useMemo(() => getLoginDateString(), []);
+
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -418,151 +600,7 @@ export default function GanttChart() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: 'Planning Phase',
-      startDate: `${currentYear}-03-27`,
-      endDate: `${currentYear}-04-02`,
-      color: '#6366f1',
-      cost: 1500,
-      expanded: true,
-      subTasks: [
-        {
-          id: 101,
-          name: 'Requirements Gathering',
-          startDate: `${currentYear}-03-01`,
-          endDate: `${currentYear}-03-08`,
-          color: '#818cf8',
-          cost: 0
-        },
-        {
-          id: 102,
-          name: 'BRD Preparation',
-          startDate: `${currentYear}-03-27`,
-          endDate: `${currentYear}-04-02`,
-          color: '#ec4899',
-          cost: 0
-        },
-        {
-          id: 103,
-          name: 'BRD Signoff',
-          startDate: `${currentYear}-03-27`,
-          endDate: `${currentYear}-04-02`,
-          color: '#3b82f6',
-          cost: 0
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Development',
-      startDate: `${currentYear}-03-10`,
-      endDate: `${currentYear}-04-20`,
-      color: '#8b5cf6',
-      cost: 5000,
-      expanded: true,
-      subTasks: [
-        {
-          id: 201,
-          name: 'Modules and fields configuration',
-          startDate: `${currentYear}-03-10`,
-          endDate: `${currentYear}-04-20`,
-          color: '#22d3ee',
-          cost: 0
-        },
-        {
-          id: 202,
-          name: 'Masters Set up',
-          startDate: `${currentYear}-03-10`,
-          endDate: `${currentYear}-04-20`,
-          color: '#22c55e',
-          cost: 0
-        },
-        {
-          id: 203,
-          name: 'Blueprints and automation configuration',
-          startDate: `${currentYear}-03-10`,
-          endDate: `${currentYear}-04-20`,
-          color: '#84cc16',
-          cost: 0
-        },
-        {
-          id: 204,
-          name: 'Notifications and SLA\'s',
-          startDate: `${currentYear}-03-10`,
-          endDate: `${currentYear}-04-20`,
-          color: '#d9f99d',
-          cost: 0
-        },
-        {
-          id: 205,
-          name: 'Reports & Dashboards',
-          startDate: `${currentYear}-03-10`,
-          endDate: `${currentYear}-04-20`,
-          color: '#3b82f6',
-          cost: 0
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: 'Testing',
-      startDate: `${currentYear}-04-15`,
-      endDate: `${currentYear}-05-05`,
-      color: '#ec4899',
-      cost: 2000,
-      expanded: true,
-      subTasks: [
-        {
-          id: 301,
-          name: 'Code Review',
-          startDate: `${currentYear}-04-15`,
-          endDate: `${currentYear}-05-05`,
-          color: '#fda4af',
-          cost: 0
-        },
-        {
-          id: 302,
-          name: 'Internal Testing and DEMO',
-          startDate: `${currentYear}-04-15`,
-          endDate: `${currentYear}-05-05`,
-          color: '#fdba74',
-          cost: 0
-        }
-      ]
-    },
-    {
-      id: 4,
-      name: 'UAT',
-      startDate: `${currentYear}-02-09`,
-      endDate: `${currentYear}-02-16`,
-      color: '#6366f1',
-      cost: 500,
-      expanded: true,
-      subTasks: []
-    },
-    {
-      id: 5,
-      name: 'GO-LIVE',
-      startDate: `${currentYear}-02-09`,
-      endDate: `${currentYear}-02-16`,
-      color: '#4338ca',
-      cost: 500,
-      expanded: true,
-      subTasks: []
-    },
-    {
-      id: 6,
-      name: 'Hyper Care Support',
-      startDate: `${currentYear}-02-09`,
-      endDate: `${currentYear}-02-16`,
-      color: '#06b6d4',
-      cost: 500,
-      expanded: true,
-      subTasks: []
-    }
-  ]);
+  const [tasks, setTasks] = useState(() => buildDefaultTasks(loginDateSeed));
 
   const tutorialSteps = useMemo(() => ([
     {
@@ -796,7 +834,13 @@ export default function GanttChart() {
       if (!parsed || typeof parsed !== 'object') return;
 
       if (typeof parsed.projectTitle === 'string') setProjectTitle(parsed.projectTitle);
-      if (Array.isArray(parsed.tasks)) setTasks(parsed.tasks);
+      if (Array.isArray(parsed.tasks)) {
+        if (parsed.loginDateSeed === loginDateSeed) {
+          setTasks(parsed.tasks);
+        } else {
+          setTasks(buildDefaultTasks(loginDateSeed));
+        }
+      }
       if (Array.isArray(parsed.holidays)) setHolidays(parsed.holidays);
       if (typeof parsed.customerLogo === 'string' || parsed.customerLogo === null) setCustomerLogo(parsed.customerLogo);
       if (typeof parsed.customerLogoWidth === 'number') setCustomerLogoWidth(parsed.customerLogoWidth);
@@ -810,7 +854,7 @@ export default function GanttChart() {
     } catch (error) {
       console.warn('Failed to restore saved workspace', error);
     }
-  }, []);
+  }, [loginDateSeed]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -829,7 +873,8 @@ export default function GanttChart() {
           showQuarters,
           showCost,
           showTotals,
-          currency
+          currency,
+          loginDateSeed
         };
 
         window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(workspace));
@@ -851,7 +896,8 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
-    currency
+    currency,
+    loginDateSeed
   ]);
 
   const addTask = () => {
