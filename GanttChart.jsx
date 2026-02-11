@@ -12,7 +12,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'Planning Phase',
     color: '#6366f1',
     cost: 1500,
-    startOffsetDays: 47,
     durationDays: 7,
     subTasks: [
       {
@@ -20,7 +19,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Requirements Gathering',
         color: '#818cf8',
         cost: 0,
-        startOffsetDays: 21,
         durationDays: 2
       },
       {
@@ -28,7 +26,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'BRD Preparation',
         color: '#ec4899',
         cost: 0,
-        startOffsetDays: 47,
         durationDays: 4
       },
       {
@@ -36,7 +33,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'BRD Signoff',
         color: '#3b82f6',
         cost: 0,
-        startOffsetDays: 47,
         durationDays: 1
       }
     ]
@@ -46,7 +42,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'Development',
     color: '#8b5cf6',
     cost: 5000,
-    startOffsetDays: 29,
     durationDays: 21,
     subTasks: [
       {
@@ -54,7 +49,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Modules and fields configuration',
         color: '#22d3ee',
         cost: 0,
-        startOffsetDays: 29,
         durationDays: 4
       },
       {
@@ -62,7 +56,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Masters Set up',
         color: '#22c55e',
         cost: 0,
-        startOffsetDays: 29,
         durationDays: 4
       },
       {
@@ -70,7 +63,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Blueprints and automation configuration',
         color: '#84cc16',
         cost: 0,
-        startOffsetDays: 29,
         durationDays: 5
       },
       {
@@ -78,7 +70,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Notifications and SLA\'s',
         color: '#d9f99d',
         cost: 0,
-        startOffsetDays: 29,
         durationDays: 3
       },
       {
@@ -86,7 +77,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Reports & Dashboards',
         color: '#3b82f6',
         cost: 0,
-        startOffsetDays: 29,
         durationDays: 5
       }
     ]
@@ -96,7 +86,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'Testing',
     color: '#ec4899',
     cost: 2000,
-    startOffsetDays: 65,
     durationDays: 2,
     subTasks: [
       {
@@ -104,7 +93,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Code Review',
         color: '#fda4af',
         cost: 0,
-        startOffsetDays: 65,
         durationDays: 1
       },
       {
@@ -112,7 +100,6 @@ const DEFAULT_TASK_BLUEPRINT = [
         name: 'Internal Testing and DEMO',
         color: '#fdba74',
         cost: 0,
-        startOffsetDays: 65,
         durationDays: 1
       }
     ]
@@ -122,7 +109,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'UAT',
     color: '#6366f1',
     cost: 500,
-    startOffsetDays: 0,
     durationDays: 2,
     subTasks: []
   },
@@ -131,7 +117,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'GO-LIVE',
     color: '#4338ca',
     cost: 500,
-    startOffsetDays: 0,
     durationDays: 1,
     subTasks: []
   },
@@ -140,7 +125,6 @@ const DEFAULT_TASK_BLUEPRINT = [
     name: 'Hyper Care Support',
     color: '#06b6d4',
     cost: 500,
-    startOffsetDays: 0,
     durationDays: 2,
     subTasks: []
   }
@@ -246,9 +230,29 @@ export default function GanttChart() {
   };
 
   const buildDefaultTasks = (loginDateStr = getLoginDateString()) => {
+    let taskStartCursor = loginDateStr;
+
     return DEFAULT_TASK_BLUEPRINT.map((task) => {
-      const startDate = addCalendarDays(loginDateStr, task.startOffsetDays);
+      const startDate = taskStartCursor;
       const endDate = addBusinessDays(startDate, task.durationDays, []);
+
+      let subTaskStartCursor = startDate;
+      const builtSubTasks = task.subTasks.map((subTask) => {
+        const subStartDate = subTaskStartCursor;
+        const subEndDate = addBusinessDays(subStartDate, subTask.durationDays, []);
+        subTaskStartCursor = addCalendarDays(subEndDate, 1);
+
+        return {
+          id: subTask.id,
+          name: subTask.name,
+          startDate: subStartDate,
+          endDate: subEndDate,
+          color: subTask.color,
+          cost: subTask.cost
+        };
+      });
+
+      taskStartCursor = addCalendarDays(endDate, 1);
 
       return {
         id: task.id,
@@ -258,19 +262,7 @@ export default function GanttChart() {
         color: task.color,
         cost: task.cost,
         expanded: true,
-        subTasks: task.subTasks.map((subTask) => {
-          const subStartDate = addCalendarDays(loginDateStr, subTask.startOffsetDays);
-          const subEndDate = addBusinessDays(subStartDate, subTask.durationDays, []);
-
-          return {
-            id: subTask.id,
-            name: subTask.name,
-            startDate: subStartDate,
-            endDate: subEndDate,
-            color: subTask.color,
-            cost: subTask.cost
-          };
-        })
+        subTasks: builtSubTasks
       };
     });
   };
@@ -902,11 +894,15 @@ export default function GanttChart() {
 
   const addTask = () => {
     const nextColor = DEFAULT_PALETTE[tasks.length % DEFAULT_PALETTE.length];
+    const lastTask = tasks[tasks.length - 1];
+    const startDate = lastTask ? addCalendarDays(lastTask.endDate, 1) : loginDateSeed;
+    const endDate = addBusinessDays(startDate, 7, holidays);
+
     const newTask = {
       id: Date.now(),
       name: 'New Task',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      startDate,
+      endDate,
       color: nextColor,
       cost: 0,
       expanded: true,
@@ -975,12 +971,15 @@ export default function GanttChart() {
   const addSubTask = (parentId) => {
     const parent = tasks.find(t => t.id === parentId);
     const subTaskColor = DEFAULT_PALETTE[(parent.subTasks.length + 1) % DEFAULT_PALETTE.length];
+    const lastSubTask = parent.subTasks[parent.subTasks.length - 1];
+    const startDate = lastSubTask ? addCalendarDays(lastSubTask.endDate, 1) : parent.startDate;
+    const endDate = addBusinessDays(startDate, 1, holidays);
 
     const newSubTask = {
       id: Date.now(),
       name: 'New Sub-task',
-      startDate: parent.startDate,
-      endDate: parent.endDate,
+      startDate,
+      endDate,
       color: subTaskColor,
       cost: 0
     };
@@ -1588,6 +1587,7 @@ export default function GanttChart() {
             }}
           >
             <button
+              type="button"
               ref={importButtonRef}
               className={activeTutorialTarget === 'import' ? 'tutorial-target-active' : ''}
               onClick={() => {
@@ -1629,6 +1629,7 @@ export default function GanttChart() {
             </button>
 
             <button
+              type="button"
               onClick={openGuideIntro}
               style={{
                 background: '#f8fafc',
@@ -1665,6 +1666,7 @@ export default function GanttChart() {
 
             <div ref={modifyMenuRef} style={{ position: 'relative', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto', width: isPhoneLayout ? '100%' : 'auto' }}>
               <button
+                type="button"
                 ref={modifyButtonRef}
                 className={activeTutorialTarget === 'modifyMenu' ? 'tutorial-target-active' : ''}
                 onClick={() => {
@@ -1864,6 +1866,7 @@ export default function GanttChart() {
                     { type: 'json', label: 'Data (JSON)', icon: <FileJson size={16} /> }
                   ].map(option => (
                     <button
+                      type="button"
                       key={option.type}
                       onClick={() => exportChart(option.type)}
                       disabled={isDownloading}
@@ -1900,6 +1903,7 @@ export default function GanttChart() {
             </div>
 
             <button
+              type="button"
               ref={addTaskButtonRef}
               className={activeTutorialTarget === 'addTask' ? 'tutorial-target-active' : ''}
               onClick={() => {
@@ -1941,6 +1945,7 @@ export default function GanttChart() {
             </button>
 
             <button
+              type="button"
               ref={settingsButtonRef}
               className={activeTutorialTarget === 'settingsButton' ? 'tutorial-target-active' : ''}
               onClick={() => {
