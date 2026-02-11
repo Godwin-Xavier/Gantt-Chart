@@ -346,6 +346,10 @@ export default function GanttChart() {
     if (typeof window === 'undefined') return false;
     return window.innerWidth <= 1024;
   });
+  const [isPhoneLayout, setIsPhoneLayout] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 760;
+  });
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -406,6 +410,7 @@ export default function GanttChart() {
 
     const onResize = () => {
       setIsCompactLayout(window.innerWidth <= 1024);
+      setIsPhoneLayout(window.innerWidth <= 760);
     };
 
     onResize();
@@ -643,6 +648,13 @@ export default function GanttChart() {
     setShowModifyMenu(false);
     setTutorialStepIndex(0);
     setIsTutorialActive(true);
+  };
+
+  const openGuideIntro = () => {
+    setIsTutorialActive(false);
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    setShowWelcomeBanner(true);
   };
 
   const skipTutorial = () => {
@@ -1267,7 +1279,8 @@ export default function GanttChart() {
   const showCostInEditor = showCost && !isCompactLayout;
   const showDatesInChart = showDates && !isCompactLayout;
   const showCostInChart = showCost && !isCompactLayout;
-  const taskLabelColumnWidth = isCompactLayout ? 240 : 320;
+  const showInlineEditorExtras = !isCompactLayout;
+  const taskLabelColumnWidth = isPhoneLayout ? 200 : (isCompactLayout ? 240 : 320);
 
   const chartGridTemplateColumns = showDatesInChart
     ? (showCostInChart
@@ -1278,7 +1291,7 @@ export default function GanttChart() {
       : `${taskLabelColumnWidth}px minmax(0, 1fr)`);
 
   const editorGridColumns = isCompactLayout
-    ? ['32px', 'minmax(150px, 1fr)', '84px', '52px', '44px'].join(' ')
+    ? ['30px', 'minmax(0, 1fr)', '78px'].join(' ')
     : [
       '36px',
       'minmax(260px, 1fr)',
@@ -1512,17 +1525,19 @@ export default function GanttChart() {
           <div
             className="header-controls"
             style={{
-              display: 'flex',
-              alignItems: 'center',
+              display: isPhoneLayout ? 'grid' : 'flex',
+              alignItems: isPhoneLayout ? 'stretch' : 'center',
               gap: '0.5rem',
-              flexWrap: 'nowrap',
+              gridTemplateColumns: isPhoneLayout ? '1fr 1fr' : undefined,
+              flexWrap: isPhoneLayout ? 'wrap' : 'nowrap',
               padding: '0.4rem',
               borderRadius: '18px',
               background: 'rgba(248, 250, 252, 0.92)',
               border: '1px solid rgba(226, 232, 240, 0.95)',
               boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
-              flex: '0 0 auto',
-              overflowX: 'auto',
+              width: isPhoneLayout ? '100%' : 'auto',
+              flex: isPhoneLayout ? '1 1 auto' : '0 0 auto',
+              overflowX: isPhoneLayout ? 'visible' : 'auto',
               scrollbarWidth: 'none'
             }}
           >
@@ -1546,6 +1561,8 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.55rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.01em',
                 boxShadow: '0 10px 22px rgba(16, 185, 129, 0.22)',
@@ -1566,7 +1583,7 @@ export default function GanttChart() {
             </button>
 
             <button
-              onClick={startTutorial}
+              onClick={openGuideIntro}
               style={{
                 background: '#f8fafc',
                 color: '#0f172a',
@@ -1580,6 +1597,8 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.55rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.01em',
                 transition: 'all 0.2s'
@@ -1598,7 +1617,7 @@ export default function GanttChart() {
               Guide
             </button>
 
-            <div ref={modifyMenuRef} style={{ position: 'relative', flex: '0 0 auto' }}>
+            <div ref={modifyMenuRef} style={{ position: 'relative', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto', width: isPhoneLayout ? '100%' : 'auto' }}>
               <button
                 ref={modifyButtonRef}
                 className={activeTutorialTarget === 'modifyMenu' ? 'tutorial-target-active' : ''}
@@ -1619,6 +1638,8 @@ export default function GanttChart() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.55rem',
+                  justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                  width: isPhoneLayout ? '100%' : 'auto',
                   whiteSpace: 'nowrap',
                   letterSpacing: '0.01em',
                   boxShadow: showModifyMenu ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
@@ -1643,12 +1664,14 @@ export default function GanttChart() {
                 <div style={{
                   position: 'absolute',
                   top: '110%',
-                  right: 0,
+                  right: isPhoneLayout ? 'auto' : 0,
+                  left: isPhoneLayout ? 0 : 'auto',
                   background: '#ffffff',
                   borderRadius: '14px',
                   boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
                   padding: '0.6rem',
-                  minWidth: '280px',
+                  minWidth: isPhoneLayout ? '100%' : '280px',
+                  width: isPhoneLayout ? '100%' : 'auto',
                   border: '1px solid #e2e8f0',
                   zIndex: 60,
                   display: 'flex',
@@ -1850,6 +1873,8 @@ export default function GanttChart() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.55rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.01em',
                 boxShadow: '0 10px 22px rgba(37, 99, 235, 0.18)',
@@ -1880,14 +1905,16 @@ export default function GanttChart() {
                 background: showHolidayManager ? '#eef2ff' : '#f8fafc',
                 border: `1px solid ${showHolidayManager ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0'}`,
                 height: '46px',
-                width: '46px',
-                padding: 0,
+                width: isPhoneLayout ? '100%' : '46px',
+                padding: isPhoneLayout ? '0 0.85rem' : 0,
+                gridColumn: isPhoneLayout ? '1 / -1' : 'auto',
                 borderRadius: '14px',
                 cursor: 'pointer',
                 color: showHolidayManager ? '#4f46e5' : '#64748b',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: isPhoneLayout ? '0.55rem' : 0,
                 boxShadow: showHolidayManager ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
                 transition: 'all 0.2s'
               }}
@@ -1905,6 +1932,7 @@ export default function GanttChart() {
               aria-label="Settings & Branding"
             >
               <Settings size={20} />
+              {isPhoneLayout && <span style={{ fontWeight: '800', fontSize: '0.92rem' }}>Settings & Branding</span>}
             </button>
 
             <input
@@ -2336,7 +2364,9 @@ export default function GanttChart() {
           </h2>
 
           <div className="task-editor-scroll" style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
-            <div style={{ width: 'max-content', minWidth: `max(100%, ${editorMinWidth}px)` }}>
+            <div style={isCompactLayout
+              ? { width: '100%', minWidth: '100%' }
+              : { width: 'max-content', minWidth: `max(100%, ${editorMinWidth}px)` }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: editorGridColumns,
@@ -2357,15 +2387,15 @@ export default function GanttChart() {
                 <div />
                 <div>Task</div>
                 <div style={{ textAlign: 'center' }}>Days</div>
-                {showDatesInEditor && (
+                {showInlineEditorExtras && showDatesInEditor && (
                   <>
                     <div>Start</div>
                     <div>End</div>
                   </>
                 )}
-                {showCostInEditor && <div>Cost</div>}
-                <div style={{ textAlign: 'center' }}>Color</div>
-                <div />
+                {showInlineEditorExtras && showCostInEditor && <div>Cost</div>}
+                {showInlineEditorExtras && <div style={{ textAlign: 'center' }}>Color</div>}
+                {showInlineEditorExtras && <div />}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -2402,10 +2432,10 @@ export default function GanttChart() {
                   style={{
                     background: '#f8fafc',
                     borderRadius: '12px',
-                    padding: '1.25rem',
+                    padding: isCompactLayout ? '0.85rem' : '1.25rem',
                     display: 'grid',
                     gridTemplateColumns: editorGridColumns,
-                    gap: '1rem',
+                    gap: isCompactLayout ? '0.55rem' : '1rem',
                     alignItems: 'center',
                     border: '1px solid #e2e8f0',
                     borderLeft: `4px solid ${task.color}`
@@ -2436,9 +2466,9 @@ export default function GanttChart() {
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
                       borderRadius: '8px',
-                      padding: '0.75rem 1rem',
+                      padding: isCompactLayout ? '0.65rem 0.7rem' : '0.75rem 1rem',
                       color: '#000000',
-                      fontSize: '1rem',
+                      fontSize: isCompactLayout ? '0.95rem' : '1rem',
                       fontWeight: '700',
                       outline: 'none',
                       transition: 'all 0.2s'
@@ -2458,7 +2488,7 @@ export default function GanttChart() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '0.25rem',
-                    width: '80px'
+                    width: isCompactLayout ? '70px' : '80px'
                   }}>
                     <input
                       type="number"
@@ -2466,13 +2496,13 @@ export default function GanttChart() {
                       value={parentDays}
                       onChange={(e) => updateTaskDuration(task.id, e.target.value)}
                       style={{
-                        width: '60px',
+                        width: isCompactLayout ? '56px' : '60px',
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '8px',
-                        padding: '0.75rem',
+                        padding: isCompactLayout ? '0.6rem' : '0.75rem',
                         color: '#0f172a',
-                        fontSize: '0.875rem',
+                        fontSize: isCompactLayout ? '0.82rem' : '0.875rem',
                         textAlign: 'center',
                         fontWeight: '600',
                         outline: 'none'
@@ -2575,43 +2605,47 @@ export default function GanttChart() {
                     </div>
                   )}
 
-                  <input
-                    type="color"
-                    value={task.color}
-                    onChange={(e) => updateTask(task.id, 'color', e.target.value)}
-                    style={{
-                      width: '50px',
-                      height: '42px',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      background: task.color
-                    }}
-                  />
+                  {showInlineEditorExtras && (
+                    <>
+                      <input
+                        type="color"
+                        value={task.color}
+                        onChange={(e) => updateTask(task.id, 'color', e.target.value)}
+                        style={{
+                          width: '50px',
+                          height: '42px',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: task.color
+                        }}
+                      />
 
-                  <button
-                    onClick={() => removeTask(task.id)}
-                    style={{
-                      background: '#fee2e2',
-                      border: '1px solid #fecaca',
-                      borderRadius: '8px',
-                      padding: '0.75rem',
-                      cursor: 'pointer',
-                      color: '#ef4444',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#fecaca';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fee2e2';
-                    }}
-                  >
-                    <X size={18} />
-                  </button>
+                      <button
+                        onClick={() => removeTask(task.id)}
+                        style={{
+                          background: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '8px',
+                          padding: '0.75rem',
+                          cursor: 'pointer',
+                          color: '#ef4444',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#fecaca';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#fee2e2';
+                        }}
+                      >
+                        <X size={18} />
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {isCompactLayout && (showDates || showCost) && (
@@ -2686,6 +2720,55 @@ export default function GanttChart() {
                         />
                       </div>
                     )}
+
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.35rem 0.45rem',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff'
+                      }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748b' }}>Color</span>
+                        <input
+                          type="color"
+                          value={task.color}
+                          onChange={(e) => updateTask(task.id, 'color', e.target.value)}
+                          style={{
+                            width: '36px',
+                            height: '30px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            background: task.color
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => removeTask(task.id)}
+                        style={{
+                          flex: 1,
+                          background: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '8px',
+                          padding: '0.55rem 0.75rem',
+                          cursor: 'pointer',
+                          color: '#ef4444',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem',
+                          fontSize: '0.82rem',
+                          fontWeight: '700'
+                        }}
+                      >
+                        <X size={14} />
+                        Remove Task
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -2708,11 +2791,11 @@ export default function GanttChart() {
                             style={{
                               background: '#f1f5f9',
                               borderRadius: '10px',
-                              padding: '1rem',
+                              padding: isCompactLayout ? '0.75rem' : '1rem',
                               marginBottom: '0.5rem',
                               display: 'grid',
                               gridTemplateColumns: editorGridColumns,
-                              gap: '0.75rem',
+                              gap: isCompactLayout ? '0.55rem' : '0.75rem',
                               alignItems: 'center',
                               border: '1px solid #e2e8f0',
                               borderLeft: `4px solid ${subTask.color}`,
@@ -2765,9 +2848,9 @@ export default function GanttChart() {
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
                             borderRadius: '6px',
-                            padding: '0.625rem 0.875rem',
+                            padding: isCompactLayout ? '0.55rem 0.65rem' : '0.625rem 0.875rem',
                             color: '#0f172a',
-                            fontSize: '0.9rem',
+                            fontSize: isCompactLayout ? '0.84rem' : '0.9rem',
                             fontWeight: '600',
                             outline: 'none',
                             transition: 'all 0.2s'
@@ -2787,7 +2870,7 @@ export default function GanttChart() {
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '0.25rem',
-                          width: '80px'
+                          width: isCompactLayout ? '68px' : '80px'
                         }}>
                           <input
                             type="number"
@@ -2795,13 +2878,13 @@ export default function GanttChart() {
                             value={rollup.days}
                             onChange={(e) => updateSubTaskDuration(task.id, subTask.id, e.target.value)}
                             style={{
-                              width: '60px',
+                              width: isCompactLayout ? '54px' : '60px',
                               background: '#ffffff',
                               border: '1px solid #cbd5e1',
                               borderRadius: '6px',
-                              padding: '0.625rem',
+                              padding: isCompactLayout ? '0.5rem' : '0.625rem',
                               color: '#0f172a',
-                              fontSize: '0.8rem',
+                              fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
                               textAlign: 'center',
                               fontWeight: '600',
                               outline: 'none'
@@ -2899,43 +2982,47 @@ export default function GanttChart() {
                           </div>
                         )}
 
-                        <input
-                          type="color"
-                          value={subTask.color}
-                          onChange={(e) => updateSubTask(task.id, subTask.id, 'color', e.target.value)}
-                          style={{
-                            width: '40px',
-                            height: '36px',
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            background: subTask.color
-                          }}
-                        />
+                        {showInlineEditorExtras && (
+                          <>
+                            <input
+                              type="color"
+                              value={subTask.color}
+                              onChange={(e) => updateSubTask(task.id, subTask.id, 'color', e.target.value)}
+                              style={{
+                                width: '40px',
+                                height: '36px',
+                                border: '2px solid #e2e8f0',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                background: subTask.color
+                              }}
+                            />
 
-                        <button
-                          onClick={() => removeSubTask(task.id, subTask.id)}
-                          style={{
-                            background: '#fee2e2',
-                            border: '1px solid #fecaca',
-                            borderRadius: '6px',
-                            padding: '0.625rem',
-                            cursor: 'pointer',
-                            color: '#ef4444',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#fecaca';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#fee2e2';
-                          }}
-                        >
-                          <X size={16} />
-                        </button>
+                            <button
+                              onClick={() => removeSubTask(task.id, subTask.id)}
+                              style={{
+                                background: '#fee2e2',
+                                border: '1px solid #fecaca',
+                                borderRadius: '6px',
+                                padding: '0.625rem',
+                                cursor: 'pointer',
+                                color: '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#fecaca';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#fee2e2';
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        )}
                           </div>
 
                           {isCompactLayout && (showDates || showCost) && (
@@ -3009,6 +3096,55 @@ export default function GanttChart() {
                                   />
                                 </div>
                               )}
+
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.45rem',
+                                  padding: '0.3rem 0.42rem',
+                                  borderRadius: '7px',
+                                  border: '1px solid #cbd5e1',
+                                  background: '#ffffff'
+                                }}>
+                                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Color</span>
+                                  <input
+                                    type="color"
+                                    value={subTask.color}
+                                    onChange={(e) => updateSubTask(task.id, subTask.id, 'color', e.target.value)}
+                                    style={{
+                                      width: '32px',
+                                      height: '26px',
+                                      border: '1px solid #d1d5db',
+                                      borderRadius: '5px',
+                                      cursor: 'pointer',
+                                      background: subTask.color
+                                    }}
+                                  />
+                                </div>
+
+                                <button
+                                  onClick={() => removeSubTask(task.id, subTask.id)}
+                                  style={{
+                                    flex: 1,
+                                    background: '#fee2e2',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: '7px',
+                                    padding: '0.48rem 0.6rem',
+                                    cursor: 'pointer',
+                                    color: '#ef4444',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.35rem',
+                                    fontSize: '0.76rem',
+                                    fontWeight: '700'
+                                  }}
+                                >
+                                  <X size={13} />
+                                  Remove Sub-task
+                                </button>
+                              </div>
                             </div>
                           )}
                         </React.Fragment>
@@ -3180,7 +3316,180 @@ export default function GanttChart() {
           </div>
 
           {/* Grid Layout: Tasks Column + Timeline */}
-          <div className="timeline-grid-scroll" style={{ overflowX: isCompactLayout ? 'hidden' : 'auto' }}>
+          {isCompactLayout ? (
+            <div className="mobile-timeline-board" style={{
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              background: '#f8fafc',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: '0.85rem 0.9rem',
+                background: '#f1f5f9',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem'
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Mobile Timeline
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', fontFamily: '"JetBrains Mono", monospace' }}>
+                  {timelineStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {timelineEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {tasks.map((task, index) => {
+                  const position = getTaskPosition(task);
+                  const duration = getBusinessDays(task.startDate, task.endDate, holidays);
+
+                  return (
+                    <div key={task.id} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+                      <div style={{
+                        padding: '0.75rem 0.85rem 0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+                          <span style={{ width: '4px', height: '18px', borderRadius: '999px', background: task.color, flex: '0 0 auto' }} />
+                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {task.name}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          color: '#334155',
+                          background: '#e2e8f0',
+                          borderRadius: '999px',
+                          padding: '0.2rem 0.5rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          flex: '0 0 auto'
+                        }}>
+                          {duration}d
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '0 0.85rem 0.78rem 0.85rem' }}>
+                        <div style={{
+                          position: 'relative',
+                          height: '12px',
+                          borderRadius: '999px',
+                          background: 'linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            position: 'absolute',
+                            left: position.left,
+                            width: position.width,
+                            minWidth: '8px',
+                            height: '100%',
+                            borderRadius: '999px',
+                            background: `linear-gradient(135deg, ${task.color} 0%, ${task.color}cc 100%)`,
+                            boxShadow: `0 3px 10px ${task.color}40`
+                          }} />
+                        </div>
+
+                        <div style={{
+                          marginTop: '0.4rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '0.72rem',
+                          color: '#64748b',
+                          fontFamily: '"JetBrains Mono", monospace'
+                        }}>
+                          <span>{new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span>{new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      </div>
+
+                      {task.expanded && task.subTasks.length > 0 && (
+                        <div style={{ padding: '0 0.85rem 0.75rem 0.85rem', display: 'grid', gap: '0.45rem' }}>
+                          {task.subTasks.map((subTask) => {
+                            const subPosition = getTaskPosition(subTask);
+                            const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+                            return (
+                              <div key={subTask.id} style={{
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                padding: '0.55rem'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
+                                    <span style={{ width: '3px', height: '14px', borderRadius: '999px', background: subTask.color, flex: '0 0 auto' }} />
+                                    <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {subTask.name}
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#475569', fontFamily: '"JetBrains Mono", monospace' }}>{subDuration}d</div>
+                                </div>
+                                <div style={{
+                                  position: 'relative',
+                                  height: '8px',
+                                  borderRadius: '999px',
+                                  background: '#dbe3ee',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    position: 'absolute',
+                                    left: subPosition.left,
+                                    width: subPosition.width,
+                                    minWidth: '6px',
+                                    height: '100%',
+                                    borderRadius: '999px',
+                                    background: `linear-gradient(135deg, ${subTask.color} 0%, ${subTask.color}bf 100%)`
+                                  }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {showTotals && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.8rem 0.9rem',
+                  background: '#ffffff',
+                  borderTop: '2px solid #e2e8f0',
+                  fontWeight: '800',
+                  fontSize: '0.82rem',
+                  color: '#0f172a'
+                }}>
+                  <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
+                  <span>{totalTopLevelTaskDaysLabel}</span>
+                </div>
+              )}
+
+              <div style={{
+                textAlign: 'center',
+                borderTop: '1px solid #e2e8f0',
+                padding: '0.8rem',
+                background: '#ffffff'
+              }}>
+                <p style={{
+                  fontSize: '0.78rem',
+                  color: '#94a3b8',
+                  fontWeight: '800',
+                  margin: 0
+                }}>
+                  Note: Prepared by Zoho SMBS Team
+                </p>
+              </div>
+            </div>
+          ) : (
+          <div className="timeline-grid-scroll" style={{ overflowX: 'auto' }}>
             <div
               className="timeline-grid"
               style={{
@@ -3827,6 +4136,7 @@ export default function GanttChart() {
             </div>
             </div>
           </div>
+          )}
         </div>
 
 
@@ -3908,6 +4218,8 @@ export default function GanttChart() {
           position: relative;
           z-index: 190;
           box-shadow: 0 0 0 5px rgba(14, 165, 233, 0.35), 0 20px 40px rgba(15, 23, 42, 0.2) !important;
+          outline: 3px solid rgba(14, 165, 233, 0.92);
+          outline-offset: 2px;
           border-radius: 14px;
           animation: tutorialPulse 1.6s ease-in-out infinite;
         }
@@ -3915,7 +4227,7 @@ export default function GanttChart() {
         .tutorial-focus-ring {
           position: fixed;
           pointer-events: none;
-          z-index: 185;
+          z-index: 330;
           border-radius: 16px;
           box-shadow:
             0 0 0 2px rgba(255, 255, 255, 0.92),
@@ -3942,7 +4254,7 @@ export default function GanttChart() {
         .welcome-overlay {
           position: fixed;
           inset: 0;
-          z-index: 210;
+          z-index: 320;
           background: linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(30, 41, 59, 0.5));
           backdrop-filter: blur(10px) saturate(1.1);
           -webkit-backdrop-filter: blur(10px) saturate(1.1);
@@ -3950,6 +4262,7 @@ export default function GanttChart() {
           align-items: center;
           justify-content: center;
           padding: 1rem;
+          overflow-y: auto;
         }
 
         .welcome-card {
@@ -3959,6 +4272,8 @@ export default function GanttChart() {
           border-radius: 24px;
           box-shadow: 0 35px 80px rgba(15, 23, 42, 0.34);
           padding: 1.5rem;
+          max-height: calc(100vh - 2rem);
+          overflow-y: auto;
         }
 
         .welcome-card-header h2 {
@@ -4034,13 +4349,15 @@ export default function GanttChart() {
           right: 1.1rem;
           bottom: 1.1rem;
           width: min(360px, calc(100vw - 2.2rem));
-          z-index: 205;
+          z-index: 340;
           background: rgba(15, 23, 42, 0.96);
           border: 1px solid rgba(100, 116, 139, 0.45);
           border-radius: 16px;
           box-shadow: 0 24px 50px rgba(2, 6, 23, 0.45);
           color: #e2e8f0;
           padding: 0.95rem;
+          max-height: min(48vh, 340px);
+          overflow-y: auto;
         }
 
         .tutorial-step-count {
@@ -4219,14 +4536,10 @@ export default function GanttChart() {
             justify-content: center !important;
           }
 
-          .task-editor-scroll,
-          .timeline-grid-scroll {
-            overflow-x: hidden !important;
-          }
-
           .welcome-card {
             padding: 1rem;
             border-radius: 18px;
+            max-height: calc(100vh - 1rem);
           }
 
           .welcome-card-header h2 {
@@ -4248,8 +4561,10 @@ export default function GanttChart() {
           .tutorial-coachmark {
             right: 0.6rem;
             left: 0.6rem;
-            bottom: 0.6rem;
+            top: calc(env(safe-area-inset-top, 0px) + 0.6rem);
+            bottom: auto;
             width: auto;
+            max-height: min(52vh, 360px);
           }
 
           .chart-logo-row {
