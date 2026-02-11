@@ -341,6 +341,11 @@ export default function GanttChart() {
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => !readStorageFlag(INTRO_BANNER_KEY));
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+  const [tutorialFocusRect, setTutorialFocusRect] = useState(null);
+  const [isCompactLayout, setIsCompactLayout] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 1024;
+  });
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -349,6 +354,8 @@ export default function GanttChart() {
   const modifyButtonRef = useRef(null);
   const addTaskButtonRef = useRef(null);
   const settingsButtonRef = useRef(null);
+  const companyUploadRef = useRef(null);
+  const holidayDateRef = useRef(null);
   const taskEditorRef = useRef(null);
   const timelineChartRef = useRef(null);
   const settingsPanelRef = useRef(null);
@@ -393,6 +400,18 @@ export default function GanttChart() {
       document.removeEventListener('mousedown', onMouseDown);
     };
   }, [showModifyMenu]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onResize = () => {
+      setIsCompactLayout(window.innerWidth <= 1024);
+    };
+
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const [tasks, setTasks] = useState([
     {
@@ -544,8 +563,15 @@ export default function GanttChart() {
     {
       id: 'title',
       title: 'Name your project',
-      body: 'Tap the project title to rename the tracker for your customer or team.',
+      body: 'Tap the title to rename your tracker for the project you are working on.',
       target: 'title',
+      panel: null
+    },
+    {
+      id: 'import',
+      title: 'Import an existing plan',
+      body: 'Use Import to load a previously exported JSON plan and continue from where you stopped.',
+      target: 'import',
       panel: null
     },
     {
@@ -556,38 +582,45 @@ export default function GanttChart() {
       panel: null
     },
     {
-      id: 'editor',
-      title: 'Edit dates and duration',
-      body: 'In the Tasks area, update dates, business-day duration, color, and optional cost.',
-      target: 'taskEditor',
-      panel: null
-    },
-    {
       id: 'modify-menu',
       title: 'Modify and export',
-      body: 'Open Modify Graph to toggle dates, quarters, totals, cost view, and export formats.',
+      body: 'Open Modify Graph to switch dates, quarters, totals, cost view, and export formats.',
       target: 'modifyMenu',
       panel: 'modify'
     },
     {
-      id: 'settings',
-      title: 'Branding and holidays',
-      body: 'Upload customer/company logos and configure holidays to get accurate business-day rollups.',
-      target: 'settingsPanel',
+      id: 'settings-button',
+      title: 'Open settings and branding',
+      body: 'Use this button to manage logos and holiday calendars for your timeline calculations.',
+      target: 'settingsButton',
+      panel: null
+    },
+    {
+      id: 'company-logo',
+      title: 'Upload your company logo',
+      body: 'Add your company logo so exports look professional and branded.',
+      target: 'companyUpload',
       panel: 'settings'
+    },
+    {
+      id: 'holiday-date',
+      title: 'Set holidays for business days',
+      body: 'Choose dates here to exclude non-working holidays from duration totals.',
+      target: 'holidayDate',
+      panel: 'settings'
+    },
+    {
+      id: 'editor',
+      title: 'Edit dates and duration',
+      body: 'In the Tasks area, update durations, dates, colors, and optional costs.',
+      target: 'taskEditor',
+      panel: null
     },
     {
       id: 'timeline',
       title: 'Read the timeline',
-      body: 'The right panel renders live Gantt bars for every task and subtask based on your dates.',
+      body: 'The timeline updates instantly as you edit tasks so you can track progress at a glance.',
       target: 'timeline',
-      panel: null
-    },
-    {
-      id: 'import',
-      title: 'Import existing plans',
-      body: 'Use Import to load a previously exported JSON and continue where you left off.',
-      target: 'import',
       panel: null
     }
   ]), []);
@@ -640,6 +673,23 @@ export default function GanttChart() {
     setTutorialStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
+  const getTutorialTargetElement = () => {
+    const elementMap = {
+      title: titleRef.current,
+      import: importButtonRef.current,
+      addTask: addTaskButtonRef.current,
+      modifyMenu: modifyButtonRef.current,
+      settingsButton: settingsButtonRef.current,
+      companyUpload: companyUploadRef.current,
+      holidayDate: holidayDateRef.current,
+      taskEditor: taskEditorRef.current,
+      timeline: timelineChartRef.current,
+      settingsPanel: settingsPanelRef.current
+    };
+
+    return elementMap[activeTutorialTarget] || null;
+  };
+
   useEffect(() => {
     if (!isTutorialActive || !activeTutorialStep) return;
 
@@ -654,25 +704,74 @@ export default function GanttChart() {
       setShowHolidayManager(false);
     }
 
-    const refMap = {
-      title: titleRef,
-      addTask: addTaskButtonRef,
-      taskEditor: taskEditorRef,
-      modifyMenu: modifyButtonRef,
-      settingsPanel: settingsPanelRef,
-      timeline: timelineChartRef,
-      import: importButtonRef
+    const timeoutId = window.setTimeout(() => {
+      const targetElement = getTutorialTargetElement();
+      if (!targetElement) return;
+
+      const rect = targetElement.getBoundingClientRect();
+      const isInView = rect.top >= 120 && rect.bottom <= window.innerHeight - 120;
+
+      if (!isInView) {
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 140);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTutorialStep, isTutorialActive]);
+
+  useEffect(() => {
+    if (!isTutorialActive) {
+      setTutorialFocusRect(null);
+      return;
+    }
+
+    let frameId = 0;
+
+    const updateFocusRect = () => {
+      const targetElement = getTutorialTargetElement();
+      if (!targetElement) {
+        setTutorialFocusRect(null);
+        return;
+      }
+
+      const rect = targetElement.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        setTutorialFocusRect(null);
+        return;
+      }
+
+      const pad = 8;
+      setTutorialFocusRect({
+        top: Math.max(8, rect.top - pad),
+        left: Math.max(8, rect.left - pad),
+        width: rect.width + (pad * 2),
+        height: rect.height + (pad * 2)
+      });
     };
 
-    const targetRef = refMap[activeTutorialStep.target];
-    if (targetRef?.current) {
-      targetRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'center'
-      });
-    }
-  }, [activeTutorialStep, isTutorialActive]);
+    const requestUpdate = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(updateFocusRect);
+    };
+
+    requestUpdate();
+
+    window.addEventListener('resize', requestUpdate);
+    window.addEventListener('scroll', requestUpdate, true);
+
+    const intervalId = window.setInterval(requestUpdate, 220);
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      window.clearInterval(intervalId);
+      window.removeEventListener('resize', requestUpdate);
+      window.removeEventListener('scroll', requestUpdate, true);
+    };
+  }, [isTutorialActive, activeTutorialTarget, showModifyMenu, showHolidayManager, isCompactLayout]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1164,23 +1263,43 @@ export default function GanttChart() {
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
 
-  const editorGridColumns = [
-    '36px',
-    'minmax(260px, 1fr)',
-    '92px',
-    ...(showDates ? ['150px', '150px'] : []),
-    ...(showCost ? ['140px'] : []),
-    '54px',
-    '44px'
-  ].join(' ');
+  const showDatesInEditor = showDates && !isCompactLayout;
+  const showCostInEditor = showCost && !isCompactLayout;
+  const showDatesInChart = showDates && !isCompactLayout;
+  const showCostInChart = showCost && !isCompactLayout;
+  const taskLabelColumnWidth = isCompactLayout ? 240 : 320;
 
-  const editorMinWidth = showDates
-    ? (showCost ? 1020 : 880)
-    : (showCost ? 720 : 560);
+  const chartGridTemplateColumns = showDatesInChart
+    ? (showCostInChart
+      ? `${taskLabelColumnWidth}px 200px 100px minmax(0, 1fr)`
+      : `${taskLabelColumnWidth}px 200px minmax(0, 1fr)`)
+    : (showCostInChart
+      ? `${taskLabelColumnWidth}px 100px minmax(0, 1fr)`
+      : `${taskLabelColumnWidth}px minmax(0, 1fr)`);
 
-  const chartGridMinWidth = showDates
-    ? (showCost ? 1240 : 1140)
-    : (showCost ? 1040 : 940);
+  const editorGridColumns = isCompactLayout
+    ? ['32px', 'minmax(150px, 1fr)', '84px', '52px', '44px'].join(' ')
+    : [
+      '36px',
+      'minmax(260px, 1fr)',
+      '92px',
+      ...(showDatesInEditor ? ['150px', '150px'] : []),
+      ...(showCostInEditor ? ['140px'] : []),
+      '54px',
+      '44px'
+    ].join(' ');
+
+  const editorMinWidth = isCompactLayout
+    ? 0
+    : (showDatesInEditor
+      ? (showCostInEditor ? 1020 : 880)
+      : (showCostInEditor ? 720 : 560));
+
+  const chartGridMinWidth = isCompactLayout
+    ? 0
+    : (showDatesInChart
+      ? (showCostInChart ? 1240 : 1140)
+      : (showCostInChart ? 1040 : 940));
 
   return (
     <div className="app-shell" style={{
@@ -1205,23 +1324,35 @@ export default function GanttChart() {
                 </div>
                 <h2>Welcome to your project tracker</h2>
                 <p>
-                  We can walk your users through all key features in under two minutes: planning,
-                  subtasks, timeline controls, branding, exports, and imports.
+                  We will guide you through the main features in under two minutes: rename your plan,
+                  import data, add tasks, upload logos, set holidays, and read the live timeline.
                 </p>
               </div>
 
               <div className="welcome-feature-grid">
                 <div>
-                  <h4>Hands-on flow</h4>
-                  <p>Users perform actions directly on live controls while the guide explains each step.</p>
+                  <h4>Rename project</h4>
+                  <p>Set your project name first so all exports and views stay aligned.</p>
                 </div>
                 <div>
-                  <h4>Skip anytime</h4>
-                  <p>The guide can be skipped instantly and restarted later from the Guide button.</p>
+                  <h4>Import JSON</h4>
+                  <p>Load an existing timeline to continue work without re-entering data.</p>
                 </div>
                 <div>
-                  <h4>Mobile friendly</h4>
-                  <p>Works on Android, iPhone, and tablets with responsive layouts and touch support.</p>
+                  <h4>Add tasks</h4>
+                  <p>Create phases and subtasks with business-day planning controls.</p>
+                </div>
+                <div>
+                  <h4>Upload company logo</h4>
+                  <p>Brand your exported timeline with customer and company logos.</p>
+                </div>
+                <div>
+                  <h4>Holiday calendar</h4>
+                  <p>Exclude holidays so duration calculations reflect real working days.</p>
+                </div>
+                <div>
+                  <h4>Live timeline + export</h4>
+                  <p>Review bars instantly and export as PNG, JPEG, PDF, or JSON.</p>
                 </div>
               </div>
 
@@ -1294,6 +1425,18 @@ export default function GanttChart() {
               </button>
             </div>
           </div>
+        )}
+
+        {isTutorialActive && tutorialFocusRect && (
+          <div
+            className="tutorial-focus-ring"
+            style={{
+              top: `${tutorialFocusRect.top}px`,
+              left: `${tutorialFocusRect.left}px`,
+              width: `${tutorialFocusRect.width}px`,
+              height: `${tutorialFocusRect.height}px`
+            }}
+          />
         )}
 
         {/* Header */}
@@ -1920,7 +2063,10 @@ export default function GanttChart() {
                           )}
                         </div>
 
-                        <label style={{
+                        <label
+                          ref={companyUploadRef}
+                          className={activeTutorialTarget === 'companyUpload' ? 'tutorial-target-active tutorial-settings-target' : 'tutorial-settings-target'}
+                          style={{
                           cursor: 'pointer',
                           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
                           border: '1px dashed rgba(148, 163, 184, 0.7)',
@@ -2054,6 +2200,8 @@ export default function GanttChart() {
 
                     <div className="holiday-input-row" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.9rem' }}>
                       <input
+                        ref={holidayDateRef}
+                        className={activeTutorialTarget === 'holidayDate' ? 'tutorial-target-active' : ''}
                         type="date"
                         value={newHoliday}
                         onChange={(e) => setNewHoliday(e.target.value)}
@@ -2209,13 +2357,13 @@ export default function GanttChart() {
                 <div />
                 <div>Task</div>
                 <div style={{ textAlign: 'center' }}>Days</div>
-                {showDates && (
+                {showDatesInEditor && (
                   <>
                     <div>Start</div>
                     <div>End</div>
                   </>
                 )}
-                {showCost && <div>Cost</div>}
+                {showCostInEditor && <div>Cost</div>}
                 <div style={{ textAlign: 'center' }}>Color</div>
                 <div />
               </div>
@@ -2347,7 +2495,7 @@ export default function GanttChart() {
                     )}
                   </div>
 
-                  {showDates && (
+                  {showDatesInEditor && (
                     <>
                       <input
                         type="date"
@@ -2387,7 +2535,7 @@ export default function GanttChart() {
                     </>
                   )}
 
-                  {showCost && (
+                  {showCostInEditor && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }}>{currency}</span>
@@ -2466,6 +2614,81 @@ export default function GanttChart() {
                   </button>
                 </div>
 
+                {isCompactLayout && (showDates || showCost) && (
+                  <div className="mobile-detail-card" style={{
+                    marginTop: '0.6rem',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.75rem',
+                    display: 'grid',
+                    gap: '0.6rem'
+                  }}>
+                    {showDates && (
+                      <div className="mobile-date-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                        <input
+                          type="date"
+                          value={task.startDate}
+                          onChange={(e) => updateTask(task.id, 'startDate', e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.65rem',
+                            color: '#0f172a',
+                            fontSize: '0.82rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            outline: 'none',
+                            colorScheme: 'light'
+                          }}
+                        />
+                        <input
+                          type="date"
+                          value={task.endDate}
+                          onChange={(e) => updateTask(task.id, 'endDate', e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.65rem',
+                            color: '#0f172a',
+                            fontSize: '0.82rem',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            outline: 'none',
+                            colorScheme: 'light'
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {showCost && (
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.82rem' }}>{currency}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={task.cost || ''}
+                          onChange={(e) => updateTask(task.id, 'cost', e.target.value)}
+                          placeholder="Cost"
+                          style={{
+                            width: '100%',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            padding: '0.65rem 0.55rem 0.65rem 1.9rem',
+                            color: '#0f172a',
+                            fontSize: '0.84rem',
+                            outline: 'none',
+                            fontWeight: '600'
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Sub-tasks */}
                 {task.expanded && (
                   <div style={{ marginTop: '0.75rem' }}>
@@ -2479,23 +2702,23 @@ export default function GanttChart() {
                       const runningCostOver = rollup.runningCost > parentCost;
 
                       return (
-                        <div
-                          key={subTask.id}
-                          className="subtask-row"
-                          style={{
-                            background: '#f1f5f9',
-                            borderRadius: '10px',
-                            padding: '1rem',
-                            marginBottom: '0.5rem',
-                            display: 'grid',
-                            gridTemplateColumns: editorGridColumns,
-                            gap: '0.75rem',
-                            alignItems: 'center',
-                            border: '1px solid #e2e8f0',
-                            borderLeft: `4px solid ${subTask.color}`,
-                            animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
-                          }}
-                        >
+                        <React.Fragment key={subTask.id}>
+                          <div
+                            className="subtask-row"
+                            style={{
+                              background: '#f1f5f9',
+                              borderRadius: '10px',
+                              padding: '1rem',
+                              marginBottom: '0.5rem',
+                              display: 'grid',
+                              gridTemplateColumns: editorGridColumns,
+                              gap: '0.75rem',
+                              alignItems: 'center',
+                              border: '1px solid #e2e8f0',
+                              borderLeft: `4px solid ${subTask.color}`,
+                              animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
+                            }}
+                          >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <div style={{
                             position: 'relative',
@@ -2599,7 +2822,7 @@ export default function GanttChart() {
                           </div>
                         </div>
 
-                        {showDates && (
+                        {showDatesInEditor && (
                           <>
                             <input
                               type="date"
@@ -2639,7 +2862,7 @@ export default function GanttChart() {
                           </>
                         )}
 
-                        {showCost && (
+                        {showCostInEditor && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <div style={{ position: 'relative' }}>
                               <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.75rem' }}>{currency}</span>
@@ -2713,7 +2936,82 @@ export default function GanttChart() {
                         >
                           <X size={16} />
                         </button>
-                        </div>
+                          </div>
+
+                          {isCompactLayout && (showDates || showCost) && (
+                            <div className="mobile-detail-card" style={{
+                              marginTop: '0.5rem',
+                              background: '#ffffff',
+                              border: '1px solid #dbe4ef',
+                              borderRadius: '8px',
+                              padding: '0.6rem',
+                              display: 'grid',
+                              gap: '0.55rem'
+                            }}>
+                              {showDates && (
+                                <div className="mobile-date-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                  <input
+                                    type="date"
+                                    value={subTask.startDate}
+                                    onChange={(e) => updateSubTask(task.id, subTask.id, 'startDate', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      background: '#ffffff',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '7px',
+                                      padding: '0.55rem',
+                                      color: '#0f172a',
+                                      fontSize: '0.78rem',
+                                      fontFamily: '"JetBrains Mono", monospace',
+                                      outline: 'none',
+                                      colorScheme: 'light'
+                                    }}
+                                  />
+                                  <input
+                                    type="date"
+                                    value={subTask.endDate}
+                                    onChange={(e) => updateSubTask(task.id, subTask.id, 'endDate', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      background: '#ffffff',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '7px',
+                                      padding: '0.55rem',
+                                      color: '#0f172a',
+                                      fontSize: '0.78rem',
+                                      fontFamily: '"JetBrains Mono", monospace',
+                                      outline: 'none',
+                                      colorScheme: 'light'
+                                    }}
+                                  />
+                                </div>
+                              )}
+
+                              {showCost && (
+                                <div style={{ position: 'relative' }}>
+                                  <span style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.72rem' }}>{currency}</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={subTask.cost || ''}
+                                    onChange={(e) => updateSubTask(task.id, subTask.id, 'cost', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      background: '#ffffff',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '7px',
+                                      padding: '0.55rem 0.5rem 0.55rem 1.35rem',
+                                      color: '#0f172a',
+                                      fontSize: '0.78rem',
+                                      outline: 'none',
+                                      fontWeight: '600'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </React.Fragment>
                       );
                     })}
 
@@ -2882,21 +3180,19 @@ export default function GanttChart() {
           </div>
 
           {/* Grid Layout: Tasks Column + Timeline */}
-          <div className="timeline-grid-scroll" style={{ overflowX: 'auto' }}>
+          <div className="timeline-grid-scroll" style={{ overflowX: isCompactLayout ? 'hidden' : 'auto' }}>
             <div
               className="timeline-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: showDates
-                  ? (showCost ? '320px 200px 100px 1fr' : '320px 200px 1fr')
-                  : (showCost ? '320px 100px 1fr' : '320px 1fr'),
+                gridTemplateColumns: chartGridTemplateColumns,
                 gap: '0',
                 background: '#f8fafc',
                 borderRadius: '16px',
                 overflow: 'hidden',
                 border: '1px solid #e2e8f0',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                minWidth: `${chartGridMinWidth}px`
+                minWidth: chartGridMinWidth ? `${chartGridMinWidth}px` : '100%'
               }}
             >
             {/* Tasks Column */}
@@ -3029,7 +3325,7 @@ export default function GanttChart() {
             </div>
 
             {/* Dates Column */}
-            {showDates && (
+            {showDatesInChart && (
               <div style={{
                 background: '#f8fafc',
                 borderRight: '1px solid #e2e8f0'
@@ -3127,7 +3423,7 @@ export default function GanttChart() {
             )}
 
             {/* Cost Column */}
-            {showCost && (
+            {showCostInChart && (
               <div style={{
                 background: '#f8fafc',
                 borderRight: '1px solid #e2e8f0'
@@ -3444,7 +3740,7 @@ export default function GanttChart() {
               }}>
                 {/* Label Column - Matches Task Column Width (320px) */}
                 <div style={{
-                  flex: '0 0 320px',
+                  flex: `0 0 ${taskLabelColumnWidth}px`,
                   padding: '1rem 1.5rem',
                   color: '#0f172a',
                   display: 'flex',
@@ -3460,7 +3756,7 @@ export default function GanttChart() {
                 </div>
 
                 {/* Duration Column - Matches Date Column Width (200px) */}
-                {showDates && (
+                {showDatesInChart && (
                   <div style={{
                     flex: '0 0 200px',
                     padding: '1rem',
@@ -3478,7 +3774,7 @@ export default function GanttChart() {
                 )}
 
                 {/* Cost Column - Matches Cost Column Width (100px) */}
-                {showCost && (
+                {showCostInChart && (
                   <div style={{
                     flex: '0 0 100px',
                     padding: '1rem',
@@ -3507,7 +3803,7 @@ export default function GanttChart() {
                   color: '#64748b',
                   fontSize: '0.9rem'
                 }}>
-                  {!showDates && totalTopLevelTaskDaysLabel}
+                  {!showDatesInChart && totalTopLevelTaskDaysLabel}
                 </div>
               </div>
             )}
@@ -3610,10 +3906,27 @@ export default function GanttChart() {
 
         .tutorial-target-active {
           position: relative;
-          z-index: 160;
-          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.22), 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+          z-index: 190;
+          box-shadow: 0 0 0 5px rgba(14, 165, 233, 0.35), 0 20px 40px rgba(15, 23, 42, 0.2) !important;
           border-radius: 14px;
           animation: tutorialPulse 1.6s ease-in-out infinite;
+        }
+
+        .tutorial-focus-ring {
+          position: fixed;
+          pointer-events: none;
+          z-index: 185;
+          border-radius: 16px;
+          box-shadow:
+            0 0 0 2px rgba(255, 255, 255, 0.92),
+            0 0 0 6px rgba(14, 165, 233, 0.45),
+            0 0 0 9999px rgba(15, 23, 42, 0.5),
+            0 26px 60px rgba(2, 6, 23, 0.55);
+          transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+        }
+
+        .tutorial-settings-target {
+          width: 100%;
         }
 
         @keyframes tutorialPulse {
@@ -3796,8 +4109,10 @@ export default function GanttChart() {
           .settings-overlay,
           .settings-panel,
           .tutorial-coachmark,
-          .welcome-card {
+          .welcome-card,
+          .tutorial-focus-ring {
             animation: none !important;
+            transition: none !important;
           }
         }
 
@@ -3840,6 +4155,8 @@ export default function GanttChart() {
           .header-controls {
             width: 100% !important;
             justify-content: flex-start !important;
+            flex-wrap: wrap !important;
+            overflow-x: visible !important;
           }
 
           .task-list-card,
@@ -3864,6 +4181,10 @@ export default function GanttChart() {
           .logos-grid {
             grid-template-columns: 1fr !important;
           }
+
+          .welcome-feature-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
 
         @media (max-width: 760px) {
@@ -3880,6 +4201,27 @@ export default function GanttChart() {
             font-size: 0.86rem !important;
             padding: 0 0.8rem !important;
             border-radius: 12px !important;
+          }
+
+          .header-controls {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: stretch;
+          }
+
+          .header-controls > div {
+            width: 100%;
+          }
+
+          .header-controls button,
+          .header-controls > div button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+
+          .task-editor-scroll,
+          .timeline-grid-scroll {
+            overflow-x: hidden !important;
           }
 
           .welcome-card {
@@ -3925,8 +4267,8 @@ export default function GanttChart() {
             grid-template-columns: 1fr !important;
           }
 
-          .timeline-grid {
-            min-width: 880px !important;
+          .mobile-date-row {
+            grid-template-columns: 1fr !important;
           }
 
           .settings-overlay {
