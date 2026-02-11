@@ -223,6 +223,13 @@ export default function GanttChart() {
     return formatDate(date);
   };
 
+  const isValidDateString = (value) => {
+    if (typeof value !== 'string') return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = getDateAtNoon(value);
+    return !Number.isNaN(date.getTime());
+  };
+
   const getLoginDateString = () => {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
@@ -564,7 +571,7 @@ export default function GanttChart() {
       if (e.key === 'Escape') setShowModifyMenu(false);
     };
 
-    const onMouseDown = (e) => {
+    const onPointerDown = (e) => {
       const el = modifyMenuRef.current;
       if (!el) return;
       if (el.contains(e.target)) return;
@@ -572,10 +579,10 @@ export default function GanttChart() {
     };
 
     document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('pointerdown', onPointerDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [showModifyMenu]);
 
@@ -893,22 +900,29 @@ export default function GanttChart() {
   ]);
 
   const addTask = () => {
-    const nextColor = DEFAULT_PALETTE[tasks.length % DEFAULT_PALETTE.length];
-    const lastTask = tasks[tasks.length - 1];
-    const startDate = lastTask ? addCalendarDays(lastTask.endDate, 1) : loginDateSeed;
-    const endDate = addBusinessDays(startDate, 7, holidays);
+    setTasks((prevTasks) => {
+      const nextColor = DEFAULT_PALETTE[prevTasks.length % DEFAULT_PALETTE.length];
+      const lastTask = prevTasks[prevTasks.length - 1];
+      const baseStartDate =
+        lastTask && isValidDateString(lastTask.endDate)
+          ? addCalendarDays(lastTask.endDate, 1)
+          : loginDateSeed;
+      const startDate = isValidDateString(baseStartDate) ? baseStartDate : loginDateSeed;
+      const endDate = addBusinessDays(startDate, 7, holidays);
 
-    const newTask = {
-      id: Date.now(),
-      name: 'New Task',
-      startDate,
-      endDate,
-      color: nextColor,
-      cost: 0,
-      expanded: true,
-      subTasks: []
-    };
-    setTasks([...tasks, newTask]);
+      const newTask = {
+        id: Date.now(),
+        name: 'New Task',
+        startDate,
+        endDate,
+        color: nextColor,
+        cost: 0,
+        expanded: true,
+        subTasks: []
+      };
+
+      return [...prevTasks, newTask];
+    });
   };
 
   const removeTask = (id) => {
@@ -969,26 +983,36 @@ export default function GanttChart() {
   };
 
   const addSubTask = (parentId) => {
-    const parent = tasks.find(t => t.id === parentId);
-    const subTaskColor = DEFAULT_PALETTE[(parent.subTasks.length + 1) % DEFAULT_PALETTE.length];
-    const lastSubTask = parent.subTasks[parent.subTasks.length - 1];
-    const startDate = lastSubTask ? addCalendarDays(lastSubTask.endDate, 1) : parent.startDate;
-    const endDate = addBusinessDays(startDate, 1, holidays);
+    setTasks((prevTasks) => {
+      const parent = prevTasks.find((t) => t.id === parentId);
+      if (!parent) return prevTasks;
 
-    const newSubTask = {
-      id: Date.now(),
-      name: 'New Sub-task',
-      startDate,
-      endDate,
-      color: subTaskColor,
-      cost: 0
-    };
+      const subTaskColor = DEFAULT_PALETTE[(parent.subTasks.length + 1) % DEFAULT_PALETTE.length];
+      const lastSubTask = parent.subTasks[parent.subTasks.length - 1];
+      const baseStartDate =
+        lastSubTask && isValidDateString(lastSubTask.endDate)
+          ? addCalendarDays(lastSubTask.endDate, 1)
+          : parent.startDate;
+      const startDate = isValidDateString(baseStartDate)
+        ? baseStartDate
+        : (isValidDateString(parent.startDate) ? parent.startDate : loginDateSeed);
+      const endDate = addBusinessDays(startDate, 1, holidays);
 
-    setTasks(tasks.map(task =>
-      task.id === parentId
-        ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
-        : task
-    ));
+      const newSubTask = {
+        id: Date.now(),
+        name: 'New Sub-task',
+        startDate,
+        endDate,
+        color: subTaskColor,
+        cost: 0
+      };
+
+      return prevTasks.map((task) =>
+        task.id === parentId
+          ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
+          : task
+      );
+    });
   };
 
   const removeSubTask = (parentId, subTaskId) => {
@@ -1671,7 +1695,7 @@ export default function GanttChart() {
                 className={activeTutorialTarget === 'modifyMenu' ? 'tutorial-target-active' : ''}
                 onClick={() => {
                   setShowHolidayManager(false);
-                  setShowModifyMenu(!showModifyMenu);
+                  setShowModifyMenu((prev) => !prev);
                 }}
                 style={{
                   background: showModifyMenu ? '#eef2ff' : '#f8fafc',
@@ -1691,7 +1715,8 @@ export default function GanttChart() {
                   whiteSpace: 'nowrap',
                   letterSpacing: '0.01em',
                   boxShadow: showModifyMenu ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  touchAction: 'manipulation'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = showModifyMenu ? '#eef2ff' : '#f1f5f9';
@@ -1928,7 +1953,8 @@ export default function GanttChart() {
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.01em',
                 boxShadow: '0 10px 22px rgba(37, 99, 235, 0.18)',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                touchAction: 'manipulation'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
@@ -4490,6 +4516,12 @@ export default function GanttChart() {
 
         .header-controls {
           -ms-overflow-style: none;
+        }
+
+        .header-controls,
+        .header-controls > div,
+        .header-controls button {
+          pointer-events: auto;
         }
 
         @media (max-width: 1150px) {
