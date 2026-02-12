@@ -4876,7 +4876,7 @@ export default function GanttChart() {
                             height: '100%',
                             borderRadius: '999px',
                             background: taskCompleted
-                              ? `repeating-linear-gradient(135deg, ${task.color}88 0, ${task.color}88 8px, ${task.color}66 8px, ${task.color}66 14px)`
+                              ? `linear-gradient(135deg, ${task.color}b3 0%, ${task.color}80 100%)`
                               : `linear-gradient(135deg, ${task.color} 0%, ${task.color}cc 100%)`,
                             boxShadow: taskCompleted ? 'none' : `0 3px 10px ${task.color}40`
                           }} />
@@ -5015,7 +5015,7 @@ export default function GanttChart() {
                                     height: '100%',
                                     borderRadius: '999px',
                                     background: subTaskCompleted
-                                      ? `repeating-linear-gradient(135deg, ${subTask.color}88 0, ${subTask.color}88 7px, ${subTask.color}66 7px, ${subTask.color}66 12px)`
+                                      ? `linear-gradient(135deg, ${subTask.color}aa 0%, ${subTask.color}78 100%)`
                                       : `linear-gradient(135deg, ${subTask.color} 0%, ${subTask.color}bf 100%)`
                                   }} />
                                 </div>
@@ -5598,7 +5598,7 @@ export default function GanttChart() {
                                 width: position.width,
                                 height: '36px',
                                 background: taskCompleted
-                                  ? `repeating-linear-gradient(135deg, ${task.color}88 0, ${task.color}88 9px, ${task.color}66 9px, ${task.color}66 16px)`
+                                  ? `linear-gradient(135deg, ${task.color}b3 0%, ${task.color}80 100%)`
                                   : `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
                                 borderRadius: '12px',
                                 boxShadow: taskCompleted ? 'none' : `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
@@ -5659,7 +5659,7 @@ export default function GanttChart() {
                                     width: subPosition.width,
                                     height: '28px',
                                     background: subTaskCompleted
-                                      ? `repeating-linear-gradient(135deg, ${subTask.color}88 0, ${subTask.color}88 8px, ${subTask.color}66 8px, ${subTask.color}66 14px)`
+                                      ? `linear-gradient(135deg, ${subTask.color}aa 0%, ${subTask.color}78 100%)`
                                       : `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
                                     borderRadius: '10px',
                                     boxShadow: subTaskCompleted ? 'none' : `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
