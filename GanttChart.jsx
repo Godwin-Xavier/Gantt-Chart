@@ -1975,9 +1975,9 @@ export default function GanttChart() {
         <div className="top-header" style={{
           marginBottom: '2.25rem',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1.5rem',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          gap: '0.95rem',
           position: 'relative',
           top: 'auto',
           zIndex: 1,
@@ -1998,15 +1998,15 @@ export default function GanttChart() {
               onKeyPress={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
               autoFocus
               style={{
-                fontSize: '2.5rem',
+                fontSize: 'clamp(1.35rem, 2.1vw, 2.35rem)',
                 fontWeight: '800',
                 color: '#000000',
                 background: 'transparent',
                 border: 'none',
                 borderBottom: '2px solid #000000',
                 outline: 'none',
-                padding: '0.5rem 0',
-                flex: 1
+                padding: '0.35rem 0',
+                width: '100%'
               }}
             />
           ) : (
@@ -2015,7 +2015,7 @@ export default function GanttChart() {
               className={`project-title ${activeTutorialTarget === 'title' ? 'tutorial-target-active' : ''}`}
               onClick={() => setIsEditingTitle(true)}
               style={{
-                fontSize: '2.5rem',
+                fontSize: 'clamp(1.35rem, 2.1vw, 2.35rem)',
                 fontWeight: '800',
                 color: '#000000',
                 margin: 0,
@@ -2024,8 +2024,9 @@ export default function GanttChart() {
                 alignItems: 'center',
                 gap: '1rem',
                 transition: 'opacity 0.2s',
-                flex: '1 1 auto',
+                flex: '0 1 auto',
                 minWidth: 0,
+                width: '100%',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -2046,15 +2047,15 @@ export default function GanttChart() {
               alignItems: isPhoneLayout ? 'stretch' : 'center',
               gap: '0.5rem',
               gridTemplateColumns: isPhoneLayout ? '1fr 1fr' : undefined,
-              flexWrap: isPhoneLayout ? 'wrap' : 'nowrap',
+              flexWrap: 'wrap',
               padding: '0.4rem',
               borderRadius: '18px',
               background: 'rgba(248, 250, 252, 0.92)',
               border: '1px solid rgba(226, 232, 240, 0.95)',
               boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
-              width: isPhoneLayout ? '100%' : 'auto',
-              flex: isPhoneLayout ? '1 1 auto' : '0 0 auto',
-              overflowX: isPhoneLayout ? 'visible' : 'visible',
+              width: '100%',
+              flex: '1 1 auto',
+              overflowX: 'visible',
               scrollbarWidth: 'none'
             }}
           >
