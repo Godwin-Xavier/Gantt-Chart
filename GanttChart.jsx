@@ -780,8 +780,16 @@ export default function GanttChart() {
     {
       id: 'title',
       title: 'Name your project',
-      body: 'Tap the title to rename the active project. This name is used in the planner, dashboard, and exports.',
+      body: 'Tap the title in the command center header to rename the active project. This name is used in the planner, dashboard, and exports.',
       target: 'title',
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'top-command-center',
+      title: 'Use the top command center',
+      body: 'The top bar is organized into workspace, action, and utility groups so key controls stay tidy on desktop, tablets, and phones.',
+      target: 'projectSwitcher',
       panel: null,
       view: 'planner'
     },
@@ -804,7 +812,7 @@ export default function GanttChart() {
     {
       id: 'project-switcher',
       title: 'Switch between projects',
-      body: 'Use this dropdown to jump between projects instantly. Every project keeps its own tasks, subtasks, and settings.',
+      body: 'Use the left workspace controls to jump between projects instantly. Every project keeps its own tasks, subtasks, and settings.',
       target: 'projectSwitcher',
       panel: null,
       view: 'planner'
@@ -812,7 +820,7 @@ export default function GanttChart() {
     {
       id: 'add-project',
       title: 'Create another project',
-      body: 'Click Add Project to create a new project workspace with its own task form and timeline.',
+      body: 'Click Add Project in the workspace controls to create a new project with its own task form and timeline.',
       target: 'addProjectButton',
       panel: null,
       view: 'planner'
@@ -820,7 +828,7 @@ export default function GanttChart() {
     {
       id: 'dashboard-button',
       title: 'Open portfolio dashboard',
-      body: 'Use Dashboard to view completion trends across all projects from one place.',
+      body: 'Use Dashboard from the utility controls to view completion trends across all projects from one place.',
       target: 'dashboardButton',
       panel: null,
       view: 'planner'
@@ -836,7 +844,7 @@ export default function GanttChart() {
     {
       id: 'import',
       title: 'Import an existing plan',
-      body: 'Use Import to load a previously exported JSON plan and continue from where you stopped.',
+      body: 'Use Import inside the action controls to load a previously exported JSON plan and continue from where you stopped.',
       target: 'import',
       panel: null,
       view: 'planner'
@@ -844,7 +852,7 @@ export default function GanttChart() {
     {
       id: 'add-task',
       title: 'Add task phases',
-      body: 'Use Add Task to create major phases. Each phase can hold many subtasks.',
+      body: 'Use Add Task in the action controls to create major phases. Each phase can hold many subtasks.',
       target: 'addTask',
       panel: null,
       view: 'planner'
@@ -860,7 +868,7 @@ export default function GanttChart() {
     {
       id: 'modify-menu',
       title: 'Modify and export',
-      body: 'Open Modify Graph to switch dates, quarters, totals, cost view, and export formats.',
+      body: 'Open Modify Graph from the action controls to switch dates, quarters, totals, cost view, and export formats.',
       target: 'modifyMenu',
       panel: 'modify',
       view: 'planner'
@@ -2323,6 +2331,87 @@ export default function GanttChart() {
       ? (showCostInChart ? 1240 : 1140)
       : (showCostInChart ? 1040 : 940));
 
+  const toolbarGroupBaseStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.45rem',
+    flexWrap: 'wrap',
+    padding: '0.42rem',
+    borderRadius: '14px',
+    border: '1px solid #dbe4ef',
+    background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.85)'
+  };
+
+  const toolbarButtonBaseStyle = {
+    height: '42px',
+    borderRadius: '11px',
+    padding: '0 0.95rem',
+    fontSize: '0.88rem',
+    fontWeight: '800',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.48rem',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.18s ease',
+    letterSpacing: '0.01em'
+  };
+
+  const toolbarButtonNeutralStyle = {
+    ...toolbarButtonBaseStyle,
+    background: '#ffffff',
+    color: '#0f172a',
+    border: '1px solid #cbd5e1'
+  };
+
+  const toolbarButtonPrimaryStyle = {
+    ...toolbarButtonBaseStyle,
+    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    color: '#ffffff',
+    border: '1px solid #1d4ed8',
+    boxShadow: '0 10px 18px rgba(37, 99, 235, 0.2)'
+  };
+
+  const toolbarButtonSuccessSoftStyle = {
+    ...toolbarButtonBaseStyle,
+    background: '#ecfdf5',
+    color: '#166534',
+    border: '1px solid #86efac'
+  };
+
+  const toolbarButtonAccentSoftStyle = {
+    ...toolbarButtonBaseStyle,
+    background: '#eff6ff',
+    color: '#1e40af',
+    border: '1px solid #bfdbfe'
+  };
+
+  const toolbarSelectStyle = {
+    width: '100%',
+    height: '42px',
+    borderRadius: '11px',
+    border: '1px solid #cbd5e1',
+    background: '#ffffff',
+    color: '#0f172a',
+    fontSize: '0.88rem',
+    fontWeight: '700',
+    padding: '0 0.75rem',
+    cursor: 'pointer'
+  };
+
+  const syncPillStyle = {
+    fontSize: '0.73rem',
+    fontWeight: '700',
+    color: '#64748b',
+    padding: '0.42rem 0.72rem',
+    borderRadius: '999px',
+    border: '1px solid #dbe4ef',
+    background: '#ffffff',
+    whiteSpace: 'nowrap'
+  };
+
   return (
     <div className="app-shell" style={{
       minHeight: '100vh',
@@ -2346,15 +2435,15 @@ export default function GanttChart() {
                 </div>
                 <h2>Welcome to your project tracker</h2>
                 <p>
-                  We will guide you through the latest workflow: manage multiple projects, update task statuses,
-                  track progress on the dashboard, and optionally sign in with Gmail/GitHub for cloud sync.
+                  We will guide you through the polished command-center workflow: manage projects quickly,
+                  update task statuses, track dashboard progress, and optionally sign in for cloud sync.
                 </p>
               </div>
 
               <div className="welcome-feature-grid">
                 <div>
-                  <h4>Multi-project workspace</h4>
-                  <p>Switch between projects or add a new one without losing any existing timeline data.</p>
+                  <h4>Command-center header</h4>
+                  <p>Use grouped controls for workspace, actions, and sync so navigation stays clear and fast.</p>
                 </div>
                 <div>
                   <h4>Status tracking</h4>
@@ -2467,15 +2556,15 @@ export default function GanttChart() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
-          gap: '0.95rem',
+          gap: '0.85rem',
           position: 'relative',
           top: 'auto',
           zIndex: 1,
-          padding: '1.1rem 1.25rem',
-          borderRadius: '22px',
-          background: '#ffffff',
+          padding: isPhoneLayout ? '0.9rem' : '1.1rem 1.2rem',
+          borderRadius: '20px',
+          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
           border: '1px solid rgba(226, 232, 240, 0.95)',
-          boxShadow: '0 12px 26px rgba(15, 23, 42, 0.07)'
+          boxShadow: '0 16px 34px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)'
         }}>
           {isEditingTitle ? (
             <input
@@ -2533,16 +2622,15 @@ export default function GanttChart() {
           <div
             className="header-controls"
             style={{
-              display: isPhoneLayout ? 'grid' : 'flex',
-              alignItems: isPhoneLayout ? 'stretch' : 'center',
-              gap: '0.5rem',
-              gridTemplateColumns: isPhoneLayout ? '1fr 1fr' : undefined,
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: '0.62rem',
               flexWrap: 'wrap',
-              padding: '0.4rem',
-              borderRadius: '18px',
-              background: 'rgba(248, 250, 252, 0.92)',
-              border: '1px solid rgba(226, 232, 240, 0.95)',
-              boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
+              padding: 0,
+              borderRadius: 0,
+              background: 'transparent',
+              border: 'none',
+              boxShadow: 'none',
               width: '100%',
               flex: '1 1 auto',
               overflowX: 'visible',
@@ -2550,25 +2638,22 @@ export default function GanttChart() {
             }}
           >
             <div
-              style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto' }}
-              className={activeTutorialTarget === 'projectSwitcher' ? 'tutorial-target-active' : ''}
+              className="toolbar-group workspace-group"
+              style={{
+                ...toolbarGroupBaseStyle,
+                flex: isPhoneLayout ? '1 1 100%' : '1.5 1 360px',
+                minWidth: isPhoneLayout ? '100%' : '320px'
+              }}
             >
+              <div
+                style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '1 1 220px' }}
+                className={`toolbar-select-wrap ${activeTutorialTarget === 'projectSwitcher' ? 'tutorial-target-active' : ''}`}
+              >
               <select
                 ref={projectSwitcherRef}
                 value={activeProjectId || ''}
                 onChange={(e) => switchProject(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '46px',
-                  borderRadius: '14px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  fontSize: '0.9rem',
-                  fontWeight: '700',
-                  padding: '0 0.85rem',
-                  cursor: 'pointer'
-                }}
+                style={toolbarSelectStyle}
                 aria-label="Select project"
               >
                 {dashboardProjects.map((project) => (
@@ -2577,124 +2662,98 @@ export default function GanttChart() {
                   </option>
                 ))}
               </select>
+              </div>
+
+              <button
+                type="button"
+                ref={addProjectButtonRef}
+                className={activeTutorialTarget === 'addProjectButton' ? 'tutorial-target-active' : ''}
+                onClick={addProject}
+                style={{
+                  ...toolbarButtonAccentSoftStyle,
+                  width: isPhoneLayout ? '100%' : 'auto'
+                }}
+                title="Add New Project"
+              >
+                <FolderPlus size={16} />
+                Add Project
+              </button>
             </div>
 
-            <button
-              type="button"
-              ref={addProjectButtonRef}
-              className={activeTutorialTarget === 'addProjectButton' ? 'tutorial-target-active' : ''}
-              onClick={addProject}
+            <div
+              className="toolbar-group utility-group"
               style={{
-                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                color: '#ffffff',
-                border: 'none',
-                height: '46px',
-                padding: '0 1rem',
-                borderRadius: '14px',
-                fontSize: '0.9rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap'
+                ...toolbarGroupBaseStyle,
+                flex: isPhoneLayout ? '1 1 100%' : '1 1 320px',
+                minWidth: isPhoneLayout ? '100%' : '280px',
+                marginLeft: isPhoneLayout ? 0 : 'auto'
               }}
-              title="Add New Project"
             >
-              <FolderPlus size={17} />
-              Add Project
-            </button>
+              <button
+                type="button"
+                ref={dashboardButtonRef}
+                className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
+                onClick={() => {
+                  setShowModifyMenu(false);
+                  setShowHolidayManager(false);
+                  navigateToView(isDashboardView ? 'planner' : 'dashboard');
+                }}
+                style={{
+                  ...(isDashboardView ? toolbarButtonPrimaryStyle : toolbarButtonNeutralStyle),
+                  width: isPhoneLayout ? '100%' : 'auto'
+                }}
+                title={isDashboardView ? 'Back to Planner' : 'Open Dashboard'}
+              >
+                <BarChart3 size={16} />
+                {isDashboardView ? 'Planner' : 'Dashboard'}
+              </button>
 
-            <button
-              type="button"
-              ref={dashboardButtonRef}
-              className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
-              onClick={() => {
-                setShowModifyMenu(false);
-                setShowHolidayManager(false);
-                navigateToView(isDashboardView ? 'planner' : 'dashboard');
-              }}
-              style={{
-                background: isDashboardView ? 'linear-gradient(135deg, #334155 0%, #1e293b 100%)' : '#f8fafc',
-                color: isDashboardView ? '#ffffff' : '#0f172a',
-                border: `1px solid ${isDashboardView ? '#334155' : '#e2e8f0'}`,
-                height: '46px',
-                padding: '0 1rem',
-                borderRadius: '14px',
-                fontSize: '0.9rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap'
-              }}
-              title={isDashboardView ? 'Back to Planner' : 'Open Dashboard'}
-            >
-              <BarChart3 size={17} />
-              {isDashboardView ? 'Planner' : 'Dashboard'}
-            </button>
+              <button
+                type="button"
+                ref={signInButtonRef}
+                className={activeTutorialTarget === 'signInButton' ? 'tutorial-target-active' : ''}
+                onClick={openSignInPrompt}
+                style={{
+                  ...(authSession.isAuthenticated ? toolbarButtonSuccessSoftStyle : toolbarButtonNeutralStyle),
+                  width: isPhoneLayout ? '100%' : 'auto'
+                }}
+                title={authSession.isAuthenticated ? 'Cloud sync connected' : 'Optional sign-in for cloud sync'}
+              >
+                {authSession.isAuthenticated ? <Cloud size={16} /> : <LogIn size={16} />}
+                {authSession.isAuthenticated ? 'Cloud Sync On' : 'Sign In (Optional)'}
+              </button>
 
-            <button
-              type="button"
-              ref={signInButtonRef}
-              className={activeTutorialTarget === 'signInButton' ? 'tutorial-target-active' : ''}
-              onClick={openSignInPrompt}
-              style={{
-                background: authSession.isAuthenticated
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : '#ffffff',
-                color: authSession.isAuthenticated ? '#ffffff' : '#0f172a',
-                border: authSession.isAuthenticated ? '1px solid #059669' : '1px solid #cbd5e1',
-                height: '46px',
-                padding: '0 1rem',
-                borderRadius: '14px',
-                fontSize: '0.88rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap',
-                boxShadow: authSession.isAuthenticated
-                  ? '0 10px 20px rgba(16, 185, 129, 0.22)'
-                  : '0 8px 18px rgba(15, 23, 42, 0.06)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = authSession.isAuthenticated
-                  ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                  : '#f8fafc';
-                e.currentTarget.style.borderColor = authSession.isAuthenticated ? '#047857' : '#94a3b8';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = authSession.isAuthenticated
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : '#ffffff';
-                e.currentTarget.style.borderColor = authSession.isAuthenticated ? '#059669' : '#cbd5e1';
-              }}
-              title={authSession.isAuthenticated ? 'Cloud sync connected' : 'Optional sign-in for cloud sync'}
-            >
-              {authSession.isAuthenticated ? <Cloud size={17} /> : <LogIn size={17} />}
-              {authSession.isAuthenticated ? 'Cloud Sync On' : 'Sign In (Optional)'}
-            </button>
+              <button
+                type="button"
+                onClick={openGuideIntro}
+                style={{
+                  ...toolbarButtonNeutralStyle,
+                  width: isPhoneLayout ? '100%' : 'auto'
+                }}
+                title="Start guided tutorial"
+              >
+                <BookOpenCheck size={16} />
+                Guide
+              </button>
 
-            {!isPhoneLayout && (
-              <div style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b', padding: '0 0.35rem', whiteSpace: 'nowrap' }}>
-                {savedAtLabel ? `Auto-saved ${savedAtLabel}` : 'Auto-save active'}
-                {authSession.isAuthenticated && cloudSyncState.isSaving && ' • Syncing cloud...'}
-                {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
-              </div>
-            )}
+              {!isPhoneLayout && (
+                <div className="toolbar-sync-pill" style={syncPillStyle}>
+                  {savedAtLabel ? `Auto-saved ${savedAtLabel}` : 'Auto-save active'}
+                  {authSession.isAuthenticated && cloudSyncState.isSaving && ' • Syncing cloud...'}
+                  {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
+                </div>
+              )}
+            </div>
 
             {!isDashboardView && (
-              <>
+              <div
+                className="toolbar-group action-group"
+                style={{
+                  ...toolbarGroupBaseStyle,
+                  flex: isPhoneLayout ? '1 1 100%' : '2 1 520px',
+                  minWidth: isPhoneLayout ? '100%' : '460px'
+                }}
+              >
             <button
               type="button"
               ref={importButtonRef}
@@ -2704,73 +2763,13 @@ export default function GanttChart() {
                 if (fileInputRef.current) fileInputRef.current.click();
               }}
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#fff',
-                border: 'none',
-                height: '46px',
-                padding: '0 1.15rem',
-                borderRadius: '14px',
-                fontSize: '0.98rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.01em',
-                boxShadow: '0 10px 22px rgba(16, 185, 129, 0.22)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 14px 28px rgba(16, 185, 129, 0.26)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 10px 22px rgba(16, 185, 129, 0.22)';
+                ...toolbarButtonSuccessSoftStyle,
+                width: isPhoneLayout ? '100%' : 'auto'
               }}
               title="Import JSON"
             >
-              <Upload size={18} strokeWidth={2.5} />
+              <Upload size={16} />
               Import
-            </button>
-
-            <button
-              type="button"
-              onClick={openGuideIntro}
-              style={{
-                background: '#f8fafc',
-                color: '#0f172a',
-                border: '1px solid #e2e8f0',
-                height: '46px',
-                padding: '0 1.05rem',
-                borderRadius: '14px',
-                fontSize: '0.95rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.01em',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f1f5f9';
-                e.currentTarget.style.borderColor = '#cbd5e1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#f8fafc';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-              }}
-              title="Start guided tutorial"
-            >
-              <BookOpenCheck size={17} />
-              Guide
             </button>
 
             <div ref={modifyMenuRef} style={{ position: 'relative', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto', width: isPhoneLayout ? '100%' : 'auto' }}>
@@ -2783,37 +2782,16 @@ export default function GanttChart() {
                   setShowModifyMenu((prev) => !prev);
                 }}
                 style={{
-                  background: showModifyMenu ? '#eef2ff' : '#f8fafc',
-                  border: `1px solid ${showModifyMenu ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0'}`,
-                  color: '#0f172a',
-                  height: '46px',
-                  padding: '0 1.05rem',
-                  borderRadius: '14px',
-                  fontSize: '0.98rem',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.55rem',
-                  justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                  ...toolbarButtonNeutralStyle,
+                  background: showModifyMenu ? '#eef2ff' : toolbarButtonNeutralStyle.background,
+                  border: showModifyMenu ? '1px solid rgba(99, 102, 241, 0.45)' : toolbarButtonNeutralStyle.border,
+                  color: showModifyMenu ? '#3730a3' : toolbarButtonNeutralStyle.color,
                   width: isPhoneLayout ? '100%' : 'auto',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.01em',
-                  boxShadow: showModifyMenu ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
-                  transition: 'all 0.2s',
-                  touchAction: 'manipulation'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = showModifyMenu ? '#eef2ff' : '#f1f5f9';
-                  e.currentTarget.style.borderColor = showModifyMenu ? 'rgba(99, 102, 241, 0.55)' : '#cbd5e1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = showModifyMenu ? '#eef2ff' : '#f8fafc';
-                  e.currentTarget.style.borderColor = showModifyMenu ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0';
+                  boxShadow: showModifyMenu ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none'
                 }}
                 aria-expanded={showModifyMenu}
               >
-                <Settings size={18} />
+                <Settings size={16} />
                 Modify Graph
                 <ChevronDown size={16} />
               </button>
@@ -3021,37 +2999,12 @@ export default function GanttChart() {
                 addTask();
               }}
               style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                color: 'white',
-                border: 'none',
-                height: '46px',
-                padding: '0 1.2rem',
-                borderRadius: '14px',
-                fontSize: '0.98rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
-                width: isPhoneLayout ? '100%' : 'auto',
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.01em',
-                boxShadow: '0 10px 22px rgba(37, 99, 235, 0.18)',
-                transition: 'all 0.2s',
-                touchAction: 'manipulation'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 14px 28px rgba(37, 99, 235, 0.22)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 10px 22px rgba(37, 99, 235, 0.18)';
+                ...toolbarButtonPrimaryStyle,
+                width: isPhoneLayout ? '100%' : 'auto'
               }}
               title="Add Task"
             >
-              <Plus size={18} strokeWidth={2.5} />
+              <Plus size={16} />
               Add Task
             </button>
 
@@ -3064,36 +3017,20 @@ export default function GanttChart() {
                 setShowHolidayManager((prev) => !prev);
               }}
               style={{
-                background: showHolidayManager ? '#eef2ff' : '#f8fafc',
-                border: `1px solid ${showHolidayManager ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0'}`,
-                height: '46px',
+                ...toolbarButtonNeutralStyle,
+                background: showHolidayManager ? '#eef2ff' : toolbarButtonNeutralStyle.background,
+                border: showHolidayManager ? '1px solid rgba(99, 102, 241, 0.45)' : toolbarButtonNeutralStyle.border,
+                color: showHolidayManager ? '#3730a3' : toolbarButtonNeutralStyle.color,
                 width: isPhoneLayout ? '100%' : '46px',
                 padding: isPhoneLayout ? '0 0.85rem' : 0,
                 gridColumn: isPhoneLayout ? '1 / -1' : 'auto',
-                borderRadius: '14px',
-                cursor: 'pointer',
-                color: showHolidayManager ? '#4f46e5' : '#64748b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 gap: isPhoneLayout ? '0.55rem' : 0,
-                boxShadow: showHolidayManager ? '0 10px 24px rgba(99, 102, 241, 0.12)' : 'none',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = showHolidayManager ? '#eef2ff' : '#f1f5f9';
-                e.currentTarget.style.borderColor = showHolidayManager ? 'rgba(99, 102, 241, 0.55)' : '#cbd5e1';
-                e.currentTarget.style.color = showHolidayManager ? '#4f46e5' : '#334155';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = showHolidayManager ? '#eef2ff' : '#f8fafc';
-                e.currentTarget.style.borderColor = showHolidayManager ? 'rgba(99, 102, 241, 0.45)' : '#e2e8f0';
-                e.currentTarget.style.color = showHolidayManager ? '#4f46e5' : '#64748b';
+                boxShadow: showHolidayManager ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none'
               }}
               title="Settings & Branding"
               aria-label="Settings & Branding"
             >
-              <Settings size={20} />
+              <Settings size={18} />
               {isPhoneLayout && <span style={{ fontWeight: '800', fontSize: '0.92rem' }}>Settings & Branding</span>}
             </button>
 
@@ -3104,7 +3041,15 @@ export default function GanttChart() {
               accept=".json"
               style={{ display: 'none' }}
             />
-              </>
+              </div>
+            )}
+
+            {isPhoneLayout && (
+              <div className="toolbar-sync-pill" style={{ ...syncPillStyle, width: '100%', textAlign: 'center' }}>
+                {savedAtLabel ? `Auto-saved ${savedAtLabel}` : 'Auto-save active'}
+                {authSession.isAuthenticated && cloudSyncState.isSaving && ' • Syncing cloud...'}
+                {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
+              </div>
             )}
           </div>
         </div>
@@ -6066,6 +6011,10 @@ export default function GanttChart() {
             overflow-x: visible !important;
           }
 
+          .header-controls .toolbar-group {
+            width: 100%;
+          }
+
           .task-list-card,
           .chart-card {
             border-radius: 18px !important;
@@ -6111,19 +6060,36 @@ export default function GanttChart() {
           }
 
           .header-controls {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            align-items: stretch;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.55rem !important;
+            align-items: stretch !important;
           }
 
-          .header-controls > div {
+          .header-controls > div,
+          .header-controls .toolbar-group {
             width: 100%;
           }
 
+          .header-controls .toolbar-group {
+            padding: 0.34rem !important;
+            border-radius: 12px !important;
+          }
+
+          .header-controls .toolbar-group .toolbar-select-wrap {
+            flex: 1 1 100% !important;
+          }
+
+          .header-controls .toolbar-group button,
+          .header-controls .toolbar-group > div button,
           .header-controls button,
           .header-controls > div button {
             width: 100% !important;
             justify-content: center !important;
+          }
+
+          .toolbar-sync-pill {
+            text-align: center;
           }
 
           .welcome-card {

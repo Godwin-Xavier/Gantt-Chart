@@ -16,16 +16,17 @@ The tutorial can always be restarted later from the **Guide** button in the head
 The in-app tutorial walks users through the main workflow step by step:
 
 1. Rename the project title
-2. Optional sign-in with Gmail/GitHub for cross-device sync
-3. Switch or add multiple projects
-4. Review the connected dashboard summary
-5. Add top-level tasks (phases)
-6. Update task and subtask statuses
-7. Edit duration, dates, colors, and optional costs
-8. Open **Modify Graph** for timeline toggles and export formats
-9. Open **Settings & Branding** to upload logos and manage holidays
-10. Review timeline bars and totals
-11. Import existing plans from JSON
+2. Understand the top command-center layout (workspace, actions, and utility controls)
+3. Optional sign-in with Gmail/GitHub for cross-device sync
+4. Switch or add multiple projects
+5. Review the connected dashboard summary
+6. Add top-level tasks (phases)
+7. Update task and subtask statuses
+8. Edit duration, dates, colors, and optional costs
+9. Open **Modify Graph** for timeline toggles and export formats
+10. Open **Settings & Branding** to upload logos and manage holidays
+11. Review timeline bars and totals
+12. Import existing plans from JSON
 
 Each step highlights the target area and keeps controls interactive so users can learn by doing.
 
@@ -65,7 +66,7 @@ Use **Import** to load a JSON backup and continue the same plan.
 
 The app is optimized for Android, iPhone, and tablets:
 
-- Header controls are horizontally scrollable on small screens
+- Header controls collapse into grouped command blocks for cleaner mobile/tablet usage
 - Large editor and timeline sections support horizontal scrolling for full visibility
 - Settings panel adapts to a mobile-friendly bottom sheet layout
 - Logo resize handles support touch and pointer input
