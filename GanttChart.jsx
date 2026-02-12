@@ -2302,6 +2302,15 @@ export default function GanttChart() {
       '44px'
     ].join(' ');
 
+  const editorRowGap = isCompactLayout ? '0.55rem' : '1rem';
+  const editorStatusControlSize = {
+    width: isCompactLayout ? '106px' : '124px',
+    height: isCompactLayout ? '38px' : '42px',
+    fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
+    borderRadius: isCompactLayout ? '8px' : '9px',
+    padding: isCompactLayout ? '0 0.5rem' : '0 0.55rem'
+  };
+
   const editorMinWidth = isCompactLayout
     ? 0
     : (showDatesInEditor
@@ -3797,7 +3806,7 @@ export default function GanttChart() {
                           padding: isCompactLayout ? '0.85rem' : '1.25rem',
                           display: 'grid',
                           gridTemplateColumns: editorGridColumns,
-                          gap: isCompactLayout ? '0.55rem' : '1rem',
+                          gap: editorRowGap,
                           alignItems: 'center',
                           border: '1px solid #e2e8f0',
                           borderLeft: `4px solid ${task.color}`
@@ -3852,15 +3861,15 @@ export default function GanttChart() {
                             value={taskStatus}
                             onChange={(e) => updateTaskStatus(task.id, e.target.value)}
                             style={{
-                              width: isCompactLayout ? '106px' : '124px',
-                              height: isCompactLayout ? '38px' : '42px',
-                              borderRadius: '9px',
+                              width: editorStatusControlSize.width,
+                              height: editorStatusControlSize.height,
+                              borderRadius: editorStatusControlSize.borderRadius,
                               border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
                               background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
                               color: taskStatus === STATUS_COMPLETED ? '#166534' : '#0f172a',
-                              fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
+                              fontSize: editorStatusControlSize.fontSize,
                               fontWeight: '700',
-                              padding: '0 0.5rem',
+                              padding: editorStatusControlSize.padding,
                               cursor: 'pointer'
                             }}
                             title="Task status"
@@ -4187,7 +4196,7 @@ export default function GanttChart() {
                                     marginBottom: '0.5rem',
                                     display: 'grid',
                                     gridTemplateColumns: editorGridColumns,
-                                    gap: isCompactLayout ? '0.55rem' : '0.75rem',
+                                    gap: editorRowGap,
                                     alignItems: 'center',
                                     border: '1px solid #e2e8f0',
                                     borderLeft: `4px solid ${subTask.color}`,
@@ -4264,15 +4273,15 @@ export default function GanttChart() {
                                       value={subTaskStatus}
                                       onChange={(e) => updateSubTaskStatus(task.id, subTask.id, e.target.value)}
                                       style={{
-                                        width: isCompactLayout ? '102px' : '120px',
-                                        height: isCompactLayout ? '34px' : '38px',
-                                        borderRadius: '8px',
+                                        width: editorStatusControlSize.width,
+                                        height: editorStatusControlSize.height,
+                                        borderRadius: editorStatusControlSize.borderRadius,
                                         border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
                                         background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
                                         color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#0f172a',
-                                        fontSize: isCompactLayout ? '0.72rem' : '0.78rem',
+                                        fontSize: editorStatusControlSize.fontSize,
                                         fontWeight: '700',
-                                        padding: '0 0.45rem',
+                                        padding: editorStatusControlSize.padding,
                                         cursor: 'pointer'
                                       }}
                                       title="Sub-task status"
