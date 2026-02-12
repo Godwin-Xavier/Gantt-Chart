@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Github, Cloud } from 'lucide-react';
 import DashboardView from './DashboardView';
 
 const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
 const LEGACY_APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
+const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH === 'true';
 
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
@@ -626,6 +627,8 @@ export default function GanttChart() {
   const [companyLogo, setCompanyLogo] = useState(null);
   const [companyLogoWidth, setCompanyLogoWidth] = useState(150);
   const [showModifyMenu, setShowModifyMenu] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => !readStorageFlag(INTRO_BANNER_KEY));
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
@@ -643,6 +646,8 @@ export default function GanttChart() {
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
   const titleRef = useRef(null);
+  const signInButtonRef = useRef(null);
+  const signInPanelRef = useRef(null);
   const projectSwitcherRef = useRef(null);
   const addProjectButtonRef = useRef(null);
   const dashboardButtonRef = useRef(null);
@@ -702,6 +707,24 @@ export default function GanttChart() {
   }, [showModifyMenu]);
 
   useEffect(() => {
+    if (!showSignInPrompt) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowSignInPrompt(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showSignInPrompt]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const onResize = () => {
@@ -742,6 +765,22 @@ export default function GanttChart() {
       body: 'Tap the title to rename the active project. This name is used in the planner, dashboard, and exports.',
       target: 'title',
       panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'optional-signin',
+      title: 'Optional cloud sign-in',
+      body: 'Use Sign In (Optional) to log in with Gmail or GitHub when you want real-time sync across devices. If you skip it, auto-save still works locally on this device.',
+      target: 'signInButton',
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'signin-providers',
+      title: 'Choose Gmail or GitHub when needed',
+      body: 'This step is optional. Pick Gmail or GitHub only when you want your project updates synced across devices as a single source of truth.',
+      target: 'signInPanel',
+      panel: 'signin',
       view: 'planner'
     },
     {
@@ -865,6 +904,7 @@ export default function GanttChart() {
     navigateToView('planner');
     setShowWelcomeBanner(false);
     markIntroSeen();
+    setShowSignInPrompt(false);
     setShowHolidayManager(false);
     setShowModifyMenu(false);
     setTutorialStepIndex(0);
@@ -874,6 +914,7 @@ export default function GanttChart() {
   const openGuideIntro = () => {
     navigateToView('planner');
     setIsTutorialActive(false);
+    setShowSignInPrompt(false);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
     setShowWelcomeBanner(true);
@@ -881,6 +922,7 @@ export default function GanttChart() {
 
   const skipTutorial = () => {
     setShowWelcomeBanner(false);
+    setShowSignInPrompt(false);
     setShowHolidayManager(false);
     setShowModifyMenu(false);
     setIsTutorialActive(false);
@@ -889,6 +931,7 @@ export default function GanttChart() {
 
   const completeTutorial = () => {
     setIsTutorialActive(false);
+    setShowSignInPrompt(false);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
     markIntroSeen();
@@ -910,6 +953,8 @@ export default function GanttChart() {
   const getTutorialTargetElement = () => {
     const elementMap = {
       title: titleRef.current,
+      signInButton: signInButtonRef.current,
+      signInPanel: signInPanelRef.current,
       projectSwitcher: projectSwitcherRef.current,
       addProjectButton: addProjectButtonRef.current,
       dashboardButton: dashboardButtonRef.current,
@@ -937,12 +982,21 @@ export default function GanttChart() {
       navigateToView(targetView);
     }
 
+    const shouldKeepSignInPromptOpen = activeTutorialStep.target === 'signInButton' || activeTutorialStep.panel === 'signin';
+    if (!shouldKeepSignInPromptOpen) {
+      setShowSignInPrompt(false);
+    }
+
     if (activeTutorialStep.panel === 'modify') {
       setShowHolidayManager(false);
       setShowModifyMenu(true);
     } else if (activeTutorialStep.panel === 'settings') {
       setShowModifyMenu(false);
       setShowHolidayManager(true);
+    } else if (activeTutorialStep.panel === 'signin') {
+      setShowHolidayManager(false);
+      setShowModifyMenu(false);
+      setShowSignInPrompt(true);
     } else {
       setShowModifyMenu(false);
       setShowHolidayManager(false);
@@ -1015,7 +1069,7 @@ export default function GanttChart() {
       window.removeEventListener('resize', requestUpdate);
       window.removeEventListener('scroll', requestUpdate, true);
     };
-  }, [isTutorialActive, activeTutorialTarget, showModifyMenu, showHolidayManager, isCompactLayout]);
+  }, [isTutorialActive, activeTutorialTarget, showModifyMenu, showHolidayManager, showSignInPrompt, isCompactLayout]);
 
   const buildActiveProjectSnapshot = () => ({
     projectTitle,
@@ -1228,6 +1282,32 @@ export default function GanttChart() {
   const openProjectFromDashboard = (projectId) => {
     switchProject(projectId);
     navigateToView('planner');
+  };
+
+  const openSignInPrompt = () => {
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    setAuthPromptMessage('');
+    setShowSignInPrompt(true);
+  };
+
+  const closeSignInPrompt = () => {
+    setShowSignInPrompt(false);
+    setAuthPromptMessage('');
+  };
+
+  const startOptionalSignIn = (provider) => {
+    const providerRoute = provider === 'google'
+      ? '/api/auth/signin/google'
+      : '/api/auth/signin/github';
+
+    if (!CLOUD_AUTH_ENABLED) {
+      setAuthPromptMessage('Cloud sign-in is optional and currently not configured in this deployment yet. Local auto-save remains active on this device.');
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+    window.location.assign(providerRoute);
   };
 
   const addTask = () => {
@@ -1921,7 +2001,7 @@ export default function GanttChart() {
                 <h2>Welcome to your project tracker</h2>
                 <p>
                   We will guide you through the latest workflow: manage multiple projects, update task statuses,
-                  track progress on the dashboard, and customize your timeline for exports.
+                  track progress on the dashboard, and optionally sign in with Gmail/GitHub for cloud sync.
                 </p>
               </div>
 
@@ -1939,8 +2019,8 @@ export default function GanttChart() {
                   <p>Monitor completion across all projects from one connected dashboard.</p>
                 </div>
                 <div>
-                  <h4>Import JSON</h4>
-                  <p>Load an existing timeline export and continue right where you stopped.</p>
+                  <h4>Optional sign-in sync</h4>
+                  <p>Sign in with Gmail or GitHub to keep one live source of truth across all your devices.</p>
                 </div>
                 <div>
                   <h4>Branding and holidays</h4>
@@ -2211,6 +2291,44 @@ export default function GanttChart() {
             >
               <BarChart3 size={17} />
               {isDashboardView ? 'Planner' : 'Dashboard'}
+            </button>
+
+            <button
+              type="button"
+              ref={signInButtonRef}
+              className={activeTutorialTarget === 'signInButton' ? 'tutorial-target-active' : ''}
+              onClick={openSignInPrompt}
+              style={{
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #cbd5e1',
+                height: '46px',
+                padding: '0 1rem',
+                borderRadius: '14px',
+                fontSize: '0.88rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 8px 18px rgba(15, 23, 42, 0.06)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#94a3b8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              title="Optional sign-in for cloud sync"
+            >
+              <LogIn size={17} />
+              Sign In (Optional)
             </button>
 
             {!isPhoneLayout && savedAtLabel && (
@@ -2634,6 +2752,147 @@ export default function GanttChart() {
             )}
           </div>
         </div>
+
+        {showSignInPrompt && (
+          <div
+            onClick={closeSignInPrompt}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(5px) saturate(1.08)',
+              WebkitBackdropFilter: 'blur(5px) saturate(1.08)',
+              zIndex: 90,
+              display: 'grid',
+              placeItems: 'center',
+              padding: '1.1rem',
+              animation: 'overlayFade 0.18s ease-out both'
+            }}
+          >
+            <div
+              ref={signInPanelRef}
+              className={activeTutorialTarget === 'signInPanel' ? 'tutorial-target-active' : ''}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '560px',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                borderRadius: '24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 35px 80px rgba(15, 23, 42, 0.22)',
+                padding: '1.25rem',
+                animation: 'popIn 0.2s ease-out both'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.9rem' }}>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.74rem', fontWeight: '800', color: '#0f766e', background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '999px', padding: '0.25rem 0.6rem' }}>
+                    <Cloud size={14} />
+                    Optional Cloud Sync
+                  </div>
+                  <h3 style={{ margin: '0.7rem 0 0.25rem 0', fontSize: '1.22rem', fontWeight: '800', color: '#0f172a' }}>
+                    Sign in only if you want cross-device sync
+                  </h3>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', fontWeight: '600', lineHeight: 1.55 }}>
+                    Stay in guest mode and continue with local auto-save, or sign in with Gmail/GitHub to sync updates across devices in real time.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeSignInPrompt}
+                  style={{
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  aria-label="Close sign-in options"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => startOptionalSignIn('google')}
+                  style={{
+                    height: '46px',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    fontSize: '0.9rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Mail size={17} />
+                  Continue with Gmail
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => startOptionalSignIn('github')}
+                  style={{
+                    height: '46px',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    fontSize: '0.9rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Github size={17} />
+                  Continue with GitHub
+                </button>
+              </div>
+
+              {authPromptMessage && (
+                <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.83rem', fontWeight: '700' }}>
+                  {authPromptMessage}
+                </div>
+              )}
+
+              <div style={{ marginTop: '0.9rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={closeSignInPrompt}
+                  style={{
+                    height: '42px',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#334155',
+                    fontSize: '0.86rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    padding: '0 0.9rem'
+                  }}
+                >
+                  Continue without sign-in
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings & Branding Drawer */}
         {!isDashboardView && showHolidayManager && (
