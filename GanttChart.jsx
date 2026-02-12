@@ -643,12 +643,17 @@ export default function GanttChart() {
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
   const titleRef = useRef(null);
+  const projectSwitcherRef = useRef(null);
+  const addProjectButtonRef = useRef(null);
+  const dashboardButtonRef = useRef(null);
   const importButtonRef = useRef(null);
   const modifyButtonRef = useRef(null);
   const addTaskButtonRef = useRef(null);
   const settingsButtonRef = useRef(null);
   const companyUploadRef = useRef(null);
   const holidayDateRef = useRef(null);
+  const statusColumnRef = useRef(null);
+  const dashboardPanelRef = useRef(null);
   const taskEditorRef = useRef(null);
   const timelineChartRef = useRef(null);
   const settingsPanelRef = useRef(null);
@@ -734,65 +739,114 @@ export default function GanttChart() {
     {
       id: 'title',
       title: 'Name your project',
-      body: 'Tap the title to rename your tracker for the project you are working on.',
+      body: 'Tap the title to rename the active project. This name is used in the planner, dashboard, and exports.',
       target: 'title',
-      panel: null
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'project-switcher',
+      title: 'Switch between projects',
+      body: 'Use this dropdown to jump between projects instantly. Every project keeps its own tasks, subtasks, and settings.',
+      target: 'projectSwitcher',
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'add-project',
+      title: 'Create another project',
+      body: 'Click Add Project to create a new project workspace with its own task form and timeline.',
+      target: 'addProjectButton',
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'dashboard-button',
+      title: 'Open portfolio dashboard',
+      body: 'Use Dashboard to view completion trends across all projects from one place.',
+      target: 'dashboardButton',
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'dashboard-overview',
+      title: 'Track cross-project completion',
+      body: 'This dashboard combines every project into one completion view with overall and per-project progress.',
+      target: 'dashboardPanel',
+      panel: null,
+      view: 'dashboard'
     },
     {
       id: 'import',
       title: 'Import an existing plan',
       body: 'Use Import to load a previously exported JSON plan and continue from where you stopped.',
       target: 'import',
-      panel: null
+      panel: null,
+      view: 'planner'
     },
     {
       id: 'add-task',
       title: 'Add task phases',
       body: 'Use Add Task to create major phases. Each phase can hold many subtasks.',
       target: 'addTask',
-      panel: null
+      panel: null,
+      view: 'planner'
+    },
+    {
+      id: 'status-controls',
+      title: 'Update task and subtask status',
+      body: 'Use the Status selectors to set items to In Progress or Completed. Completed subtasks are struck through, and parent tasks auto-complete when all subtasks are done.',
+      target: 'statusColumn',
+      panel: null,
+      view: 'planner'
     },
     {
       id: 'modify-menu',
       title: 'Modify and export',
       body: 'Open Modify Graph to switch dates, quarters, totals, cost view, and export formats.',
       target: 'modifyMenu',
-      panel: 'modify'
+      panel: 'modify',
+      view: 'planner'
     },
     {
       id: 'settings-button',
       title: 'Open settings and branding',
       body: 'Use this button to manage logos and holiday calendars for your timeline calculations.',
       target: 'settingsButton',
-      panel: null
+      panel: null,
+      view: 'planner'
     },
     {
       id: 'company-logo',
       title: 'Upload your company logo',
       body: 'Add your company logo so exports look professional and branded.',
       target: 'companyUpload',
-      panel: 'settings'
+      panel: 'settings',
+      view: 'planner'
     },
     {
       id: 'holiday-date',
       title: 'Set holidays for business days',
       body: 'Choose dates here to exclude non-working holidays from duration totals.',
       target: 'holidayDate',
-      panel: 'settings'
+      panel: 'settings',
+      view: 'planner'
     },
     {
       id: 'editor',
       title: 'Edit dates and duration',
-      body: 'In the Tasks area, update durations, dates, colors, and optional costs.',
+      body: 'In the Tasks area, update names, durations, dates, status, colors, and optional costs with auto-save always on.',
       target: 'taskEditor',
-      panel: null
+      panel: null,
+      view: 'planner'
     },
     {
       id: 'timeline',
       title: 'Read the timeline',
-      body: 'The timeline updates instantly as you edit tasks so you can track progress at a glance.',
+      body: 'The timeline updates instantly as you edit. Completed tasks and subtasks are visually muted and struck through for clear tracking.',
       target: 'timeline',
-      panel: null
+      panel: null,
+      view: 'planner'
     }
   ]), []);
 
@@ -856,8 +910,13 @@ export default function GanttChart() {
   const getTutorialTargetElement = () => {
     const elementMap = {
       title: titleRef.current,
+      projectSwitcher: projectSwitcherRef.current,
+      addProjectButton: addProjectButtonRef.current,
+      dashboardButton: dashboardButtonRef.current,
+      dashboardPanel: dashboardPanelRef.current,
       import: importButtonRef.current,
       addTask: addTaskButtonRef.current,
+      statusColumn: statusColumnRef.current,
       modifyMenu: modifyButtonRef.current,
       settingsButton: settingsButtonRef.current,
       companyUpload: companyUploadRef.current,
@@ -872,6 +931,11 @@ export default function GanttChart() {
 
   useEffect(() => {
     if (!isTutorialActive || !activeTutorialStep) return;
+
+    const targetView = activeTutorialStep.view === 'dashboard' ? 'dashboard' : 'planner';
+    if (currentView !== targetView) {
+      navigateToView(targetView);
+    }
 
     if (activeTutorialStep.panel === 'modify') {
       setShowHolidayManager(false);
@@ -898,10 +962,10 @@ export default function GanttChart() {
           inline: 'nearest'
         });
       }
-    }, 140);
+    }, 180);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeTutorialStep, isTutorialActive]);
+  }, [activeTutorialStep, isTutorialActive, currentView]);
 
   useEffect(() => {
     if (!isTutorialActive) {
@@ -1856,35 +1920,35 @@ export default function GanttChart() {
                 </div>
                 <h2>Welcome to your project tracker</h2>
                 <p>
-                  We will guide you through the main features in under two minutes: rename your plan,
-                  import data, add tasks, upload logos, set holidays, and read the live timeline.
+                  We will guide you through the latest workflow: manage multiple projects, update task statuses,
+                  track progress on the dashboard, and customize your timeline for exports.
                 </p>
               </div>
 
               <div className="welcome-feature-grid">
                 <div>
-                  <h4>Rename project</h4>
-                  <p>Set your project name first so all exports and views stay aligned.</p>
+                  <h4>Multi-project workspace</h4>
+                  <p>Switch between projects or add a new one without losing any existing timeline data.</p>
+                </div>
+                <div>
+                  <h4>Status tracking</h4>
+                  <p>Set each task and subtask to In Progress or Completed with automatic strike-through updates.</p>
+                </div>
+                <div>
+                  <h4>Dashboard overview</h4>
+                  <p>Monitor completion across all projects from one connected dashboard.</p>
                 </div>
                 <div>
                   <h4>Import JSON</h4>
-                  <p>Load an existing timeline to continue work without re-entering data.</p>
+                  <p>Load an existing timeline export and continue right where you stopped.</p>
                 </div>
                 <div>
-                  <h4>Add tasks</h4>
-                  <p>Create phases and subtasks with business-day planning controls.</p>
+                  <h4>Branding and holidays</h4>
+                  <p>Upload logos and configure holidays so timelines and exports reflect real business plans.</p>
                 </div>
                 <div>
-                  <h4>Upload company logo</h4>
-                  <p>Brand your exported timeline with customer and company logos.</p>
-                </div>
-                <div>
-                  <h4>Holiday calendar</h4>
-                  <p>Exclude holidays so duration calculations reflect real working days.</p>
-                </div>
-                <div>
-                  <h4>Live timeline + export</h4>
-                  <p>Review bars instantly and export as PNG, JPEG, PDF, or JSON.</p>
+                  <h4>Auto-save + export</h4>
+                  <p>Every change saves automatically and can be exported as PNG, JPEG, PDF, or JSON.</p>
                 </div>
               </div>
 
@@ -2059,8 +2123,12 @@ export default function GanttChart() {
               scrollbarWidth: 'none'
             }}
           >
-            <div style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto' }}>
+            <div
+              style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto' }}
+              className={activeTutorialTarget === 'projectSwitcher' ? 'tutorial-target-active' : ''}
+            >
               <select
+                ref={projectSwitcherRef}
                 value={activeProjectId || ''}
                 onChange={(e) => switchProject(e.target.value)}
                 style={{
@@ -2087,6 +2155,8 @@ export default function GanttChart() {
 
             <button
               type="button"
+              ref={addProjectButtonRef}
+              className={activeTutorialTarget === 'addProjectButton' ? 'tutorial-target-active' : ''}
               onClick={addProject}
               style={{
                 background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
@@ -2113,6 +2183,8 @@ export default function GanttChart() {
 
             <button
               type="button"
+              ref={dashboardButtonRef}
+              className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
               onClick={() => {
                 setShowModifyMenu(false);
                 setShowHolidayManager(false);
@@ -2959,13 +3031,18 @@ export default function GanttChart() {
         )}
 
         {isDashboardView ? (
-          <DashboardView
-            projectSummaries={projectSummaries}
-            overallCompletion={overallCompletion}
-            totalProjects={dashboardProjects.length}
-            completedProjects={completedProjects}
-            onOpenProject={openProjectFromDashboard}
-          />
+          <div
+            ref={dashboardPanelRef}
+            className={activeTutorialTarget === 'dashboardPanel' ? 'tutorial-target-active' : ''}
+          >
+            <DashboardView
+              projectSummaries={projectSummaries}
+              overallCompletion={overallCompletion}
+              totalProjects={dashboardProjects.length}
+              completedProjects={completedProjects}
+              onOpenProject={openProjectFromDashboard}
+            />
+          </div>
         ) : (
           <>
         {/* Task List */}
@@ -3014,7 +3091,13 @@ export default function GanttChart() {
               }}>
                 <div />
                 <div>Task</div>
-                <div style={{ textAlign: 'center' }}>Status</div>
+                <div
+                  ref={statusColumnRef}
+                  className={activeTutorialTarget === 'statusColumn' ? 'tutorial-target-active' : ''}
+                  style={{ textAlign: 'center' }}
+                >
+                  Status
+                </div>
                 <div style={{ textAlign: 'center' }}>Days</div>
                 {showInlineEditorExtras && showDatesInEditor && (
                   <>
