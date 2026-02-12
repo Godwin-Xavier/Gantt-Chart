@@ -860,7 +860,7 @@ export default function GanttChart() {
     {
       id: 'status-controls',
       title: 'Update task and subtask status',
-      body: 'Use the Status selectors to set items to In Progress or Completed. Completed subtasks are struck through, and parent tasks auto-complete when all subtasks are done.',
+      body: 'Use the Status selectors to set items to In Progress or Completed. On phones, status selectors are also available directly in the mobile timeline cards. Completed subtasks are struck through, and parent tasks auto-complete when all subtasks are done.',
       target: 'statusColumn',
       panel: null,
       view: 'planner'
@@ -4759,40 +4759,91 @@ export default function GanttChart() {
                     <div key={task.id} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff', opacity: taskCompleted ? 0.78 : 1 }}>
                       <div style={{
                         padding: '0.75rem 0.85rem 0.5rem',
-                        display: 'flex',
+                        display: 'grid',
+                        gridTemplateColumns: isPhoneLayout ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) auto',
+                        rowGap: isPhoneLayout ? '0.45rem' : 0,
+                        columnGap: '0.75rem',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.75rem'
+                        justifyContent: 'space-between'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: isPhoneLayout ? 'flex-start' : 'center',
+                          gap: '0.55rem',
+                          minWidth: 0,
+                          gridColumn: isPhoneLayout ? '1 / -1' : '1 / 2'
+                        }}>
                           <span style={{ width: '4px', height: '18px', borderRadius: '999px', background: task.color, flex: '0 0 auto' }} />
-                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: taskCompleted ? 'line-through' : 'none' }}>
+                          <div style={{
+                            fontSize: isPhoneLayout ? '0.82rem' : '0.86rem',
+                            fontWeight: '800',
+                            color: '#0f172a',
+                            whiteSpace: isPhoneLayout ? 'normal' : 'nowrap',
+                            overflow: isPhoneLayout ? 'visible' : 'hidden',
+                            textOverflow: isPhoneLayout ? 'clip' : 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: isPhoneLayout ? 3 : 1,
+                            WebkitBoxOrient: 'vertical',
+                            lineHeight: 1.35,
+                            wordBreak: 'break-word',
+                            textDecoration: taskCompleted ? 'line-through' : 'none'
+                          }}>
                             {task.name}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flex: '0 0 auto' }}>
-                          <select
-                            value={taskStatus}
-                            onChange={(event) => updateTaskStatus(task.id, event.target.value)}
-                            style={{
-                              height: '26px',
-                              borderRadius: '999px',
-                              border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
-                              background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
-                              color: taskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
-                              padding: '0 0.5rem',
-                              fontSize: '0.67rem',
-                              fontWeight: '800',
-                              cursor: 'pointer'
-                            }}
-                            aria-label={`Status for ${task.name}`}
-                          >
-                            {STATUS_OPTIONS.map((statusOption) => (
-                              <option key={statusOption.value} value={statusOption.value}>
-                                {statusOption.label}
-                              </option>
-                            ))}
-                          </select>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          flex: '0 0 auto',
+                          width: isPhoneLayout ? '100%' : 'auto',
+                          gridColumn: isPhoneLayout ? '1 / -1' : '2 / 3',
+                          justifyContent: isPhoneLayout ? 'flex-end' : 'flex-start'
+                        }}>
+                          {isPhoneLayout ? (
+                            <select
+                              value={taskStatus}
+                              onChange={(event) => updateTaskStatus(task.id, event.target.value)}
+                              style={{
+                                width: '108px',
+                                height: '28px',
+                                borderRadius: '999px',
+                                border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                                color: taskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
+                                padding: '0 0.5rem',
+                                fontSize: '0.65rem',
+                                fontWeight: '800',
+                                cursor: 'pointer'
+                              }}
+                              aria-label={`Status for ${task.name}`}
+                            >
+                              {STATUS_OPTIONS.map((statusOption) => (
+                                <option key={statusOption.value} value={statusOption.value}>
+                                  {statusOption.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div
+                              style={{
+                                height: '26px',
+                                borderRadius: '999px',
+                                border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                                color: taskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
+                                padding: '0 0.5rem',
+                                fontSize: '0.67rem',
+                                fontWeight: '800',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                whiteSpace: 'nowrap'
+                              }}
+                              aria-label={`Status badge for ${task.name}`}
+                            >
+                              {taskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                            </div>
+                          )}
 
                           <div style={{
                             fontSize: '0.74rem',
@@ -4859,36 +4910,92 @@ export default function GanttChart() {
                                 padding: '0.55rem',
                                 opacity: subTaskCompleted ? 0.78 : 1
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
+                                <div style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: isPhoneLayout ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) auto',
+                                  rowGap: isPhoneLayout ? '0.35rem' : 0,
+                                  columnGap: '0.5rem',
+                                  alignItems: 'center',
+                                  marginBottom: '0.35rem'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: isPhoneLayout ? 'flex-start' : 'center',
+                                    gap: '0.45rem',
+                                    minWidth: 0,
+                                    gridColumn: isPhoneLayout ? '1 / -1' : '1 / 2'
+                                  }}>
                                     <span style={{ width: '3px', height: '14px', borderRadius: '999px', background: subTask.color, flex: '0 0 auto' }} />
-                                    <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: subTaskCompleted ? 'line-through' : 'none' }}>
+                                    <div style={{
+                                      fontSize: isPhoneLayout ? '0.74rem' : '0.78rem',
+                                      fontWeight: '700',
+                                      color: '#0f172a',
+                                      whiteSpace: isPhoneLayout ? 'normal' : 'nowrap',
+                                      overflow: isPhoneLayout ? 'visible' : 'hidden',
+                                      textOverflow: isPhoneLayout ? 'clip' : 'ellipsis',
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: isPhoneLayout ? 3 : 1,
+                                      WebkitBoxOrient: 'vertical',
+                                      lineHeight: 1.35,
+                                      wordBreak: 'break-word',
+                                      textDecoration: subTaskCompleted ? 'line-through' : 'none'
+                                    }}>
                                       {subTask.name}
                                     </div>
                                   </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: '0 0 auto' }}>
-                                    <select
-                                      value={subTaskStatus}
-                                      onChange={(event) => updateSubTaskStatus(task.id, subTask.id, event.target.value)}
-                                      style={{
-                                        height: '24px',
-                                        borderRadius: '999px',
-                                        border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
-                                        background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
-                                        color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
-                                        padding: '0 0.45rem',
-                                        fontSize: '0.64rem',
-                                        fontWeight: '800',
-                                        cursor: 'pointer'
-                                      }}
-                                      aria-label={`Status for ${subTask.name}`}
-                                    >
-                                      {STATUS_OPTIONS.map((statusOption) => (
-                                        <option key={statusOption.value} value={statusOption.value}>
-                                          {statusOption.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    flex: '0 0 auto',
+                                    width: isPhoneLayout ? '100%' : 'auto',
+                                    gridColumn: isPhoneLayout ? '1 / -1' : '2 / 3',
+                                    justifyContent: isPhoneLayout ? 'flex-end' : 'flex-start'
+                                  }}>
+                                    {isPhoneLayout ? (
+                                      <select
+                                        value={subTaskStatus}
+                                        onChange={(event) => updateSubTaskStatus(task.id, subTask.id, event.target.value)}
+                                        style={{
+                                          width: '104px',
+                                          height: '26px',
+                                          borderRadius: '999px',
+                                          border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                          background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                                          color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
+                                          padding: '0 0.45rem',
+                                          fontSize: '0.62rem',
+                                          fontWeight: '800',
+                                          cursor: 'pointer'
+                                        }}
+                                        aria-label={`Status for ${subTask.name}`}
+                                      >
+                                        {STATUS_OPTIONS.map((statusOption) => (
+                                          <option key={statusOption.value} value={statusOption.value}>
+                                            {statusOption.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <div
+                                        style={{
+                                          height: '24px',
+                                          borderRadius: '999px',
+                                          border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                          background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                                          color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
+                                          padding: '0 0.45rem',
+                                          fontSize: '0.64rem',
+                                          fontWeight: '800',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                        aria-label={`Status badge for ${subTask.name}`}
+                                      >
+                                        {subTaskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                                      </div>
+                                    )}
 
                                     <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#475569', fontFamily: '"JetBrains Mono", monospace' }}>{subDuration}d</div>
                                   </div>
@@ -5064,9 +5171,7 @@ export default function GanttChart() {
                               {task.name}
                             </div>
 
-                            <select
-                              value={taskStatus}
-                              onChange={(event) => updateTaskStatus(task.id, event.target.value)}
+                            <div
                               style={{
                                 height: '28px',
                                 borderRadius: '999px',
@@ -5076,17 +5181,15 @@ export default function GanttChart() {
                                 padding: '0 0.55rem',
                                 fontSize: '0.66rem',
                                 fontWeight: '800',
-                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                whiteSpace: 'nowrap',
                                 flex: '0 0 auto'
                               }}
-                              aria-label={`Status for ${task.name}`}
+                              aria-label={`Status badge for ${task.name}`}
                             >
-                              {STATUS_OPTIONS.map((statusOption) => (
-                                <option key={statusOption.value} value={statusOption.value}>
-                                  {statusOption.label}
-                                </option>
-                              ))}
-                            </select>
+                              {taskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                            </div>
                           </div>
                         </div>
 
@@ -5149,9 +5252,7 @@ export default function GanttChart() {
                                 {subTask.name}
                               </div>
 
-                              <select
-                                value={subTaskStatus}
-                                onChange={(event) => updateSubTaskStatus(task.id, subTask.id, event.target.value)}
+                              <div
                                 style={{
                                   height: '24px',
                                   borderRadius: '999px',
@@ -5161,17 +5262,15 @@ export default function GanttChart() {
                                   padding: '0 0.45rem',
                                   fontSize: '0.62rem',
                                   fontWeight: '800',
-                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  whiteSpace: 'nowrap',
                                   flex: '0 0 auto'
                                 }}
-                                aria-label={`Status for ${subTask.name}`}
+                                aria-label={`Status badge for ${subTask.name}`}
                               >
-                                {STATUS_OPTIONS.map((statusOption) => (
-                                  <option key={statusOption.value} value={statusOption.value}>
-                                    {statusOption.label}
-                                  </option>
-                                ))}
-                              </select>
+                                {subTaskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                              </div>
                             </div>
                           </div>
                           );
