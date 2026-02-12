@@ -7,7 +7,7 @@ const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
 const LEGACY_APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
-const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH === 'true';
+const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH !== 'false';
 
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
@@ -629,6 +629,20 @@ export default function GanttChart() {
   const [showModifyMenu, setShowModifyMenu] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [authPromptMessage, setAuthPromptMessage] = useState('');
+  const [authSession, setAuthSession] = useState({
+    isLoading: true,
+    isAuthenticated: false,
+    user: null,
+    providers: {
+      google: false,
+      github: false
+    }
+  });
+  const [cloudSyncState, setCloudSyncState] = useState({
+    isSaving: false,
+    lastSyncedAt: null,
+    error: ''
+  });
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => !readStorageFlag(INTRO_BANNER_KEY));
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
@@ -665,6 +679,10 @@ export default function GanttChart() {
   const scriptLoaderRef = useRef({});
   const lastHydratedProjectIdRef = useRef(null);
   const isHydratingProjectRef = useRef(false);
+  const cloudRevisionRef = useRef(null);
+  const cloudReadyRef = useRef(false);
+  const skipCloudSaveRef = useRef(false);
+  const cloudPollInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!showHolidayManager) return;
@@ -1099,6 +1117,39 @@ export default function GanttChart() {
     ));
   };
 
+  const buildWorkspacePayload = (collection = projects) => {
+    const projectsToPersist = saveActiveProjectIntoCollection(collection).map((project) => createProjectRecord(project));
+    return {
+      schemaVersion: 3,
+      activeProjectId,
+      projects: projectsToPersist,
+      savedAt: new Date().toISOString()
+    };
+  };
+
+  const applyWorkspacePayload = (payload) => {
+    if (!payload || typeof payload !== 'object') return false;
+    if (!Array.isArray(payload.projects) || payload.projects.length === 0) return false;
+
+    const loadedProjects = payload.projects.map((project) => createProjectRecord(project));
+    const nextActiveId = loadedProjects.some((project) => project.id === payload.activeProjectId)
+      ? payload.activeProjectId
+      : loadedProjects[0].id;
+
+    setProjects(loadedProjects);
+    lastHydratedProjectIdRef.current = null;
+    setActiveProjectId(nextActiveId);
+
+    if (typeof payload.savedAt === 'string') {
+      const parsedDate = new Date(payload.savedAt);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        setLastSavedAt(parsedDate);
+      }
+    }
+
+    return true;
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -1106,14 +1157,7 @@ export default function GanttChart() {
       const raw = window.localStorage.getItem(APP_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
-          const loadedProjects = parsed.projects.map((project) => createProjectRecord(project));
-          const nextActiveId = loadedProjects.some((project) => project.id === parsed.activeProjectId)
-            ? parsed.activeProjectId
-            : loadedProjects[0].id;
-          setProjects(loadedProjects);
-          lastHydratedProjectIdRef.current = null;
-          setActiveProjectId(nextActiveId);
+        if (applyWorkspacePayload(parsed)) {
           return;
         }
       }
@@ -1129,9 +1173,12 @@ export default function GanttChart() {
               ? normalizeTaskTree(legacyParsed.tasks)
               : normalizeTaskTree(buildDefaultTasks(loginDateSeed))
           });
-          setProjects([migratedProject]);
-          lastHydratedProjectIdRef.current = null;
-          setActiveProjectId(migratedProject.id);
+          applyWorkspacePayload({
+            schemaVersion: 3,
+            activeProjectId: migratedProject.id,
+            projects: [migratedProject],
+            savedAt: new Date().toISOString()
+          });
           return;
         }
       }
@@ -1143,9 +1190,12 @@ export default function GanttChart() {
       projectTitle: 'Project 1',
       tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
     });
-    setProjects([starterProject]);
-    lastHydratedProjectIdRef.current = null;
-    setActiveProjectId(starterProject.id);
+    applyWorkspacePayload({
+      schemaVersion: 3,
+      activeProjectId: starterProject.id,
+      projects: [starterProject],
+      savedAt: new Date().toISOString()
+    });
   }, [loginDateSeed]);
 
   useEffect(() => {
@@ -1214,13 +1264,7 @@ export default function GanttChart() {
 
     const timeoutId = window.setTimeout(() => {
       try {
-        const projectsToPersist = saveActiveProjectIntoCollection(projects).map((project) => createProjectRecord(project));
-        const payload = {
-          schemaVersion: 3,
-          activeProjectId,
-          projects: projectsToPersist,
-          savedAt: new Date().toISOString()
-        };
+        const payload = buildWorkspacePayload(projects);
         window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(payload));
         setLastSavedAt(new Date());
       } catch (error) {
@@ -1246,6 +1290,252 @@ export default function GanttChart() {
     currency,
     loginDateSeed
   ]);
+
+  const pullWorkspaceFromCloud = async (applyIfNewerOnly = true) => {
+    const response = await fetch('/api/workspace', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return false;
+      }
+      throw new Error(`Cloud workspace fetch failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    if (!payload?.workspace || !payload?.updatedAt) {
+      cloudReadyRef.current = true;
+      return false;
+    }
+
+    const remoteTimestamp = new Date(payload.updatedAt).getTime();
+    const localTimestamp = cloudRevisionRef.current ? new Date(cloudRevisionRef.current).getTime() : 0;
+
+    if (applyIfNewerOnly && Number.isFinite(remoteTimestamp) && Number.isFinite(localTimestamp) && remoteTimestamp <= localTimestamp) {
+      cloudReadyRef.current = true;
+      return false;
+    }
+
+    const applied = applyWorkspacePayload(payload.workspace);
+    if (applied) {
+      skipCloudSaveRef.current = true;
+      cloudRevisionRef.current = payload.updatedAt;
+      cloudReadyRef.current = true;
+      setCloudSyncState((prev) => ({
+        ...prev,
+        lastSyncedAt: new Date(payload.updatedAt),
+        error: ''
+      }));
+    }
+
+    return applied;
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const query = new URLSearchParams(window.location.search);
+    const authResult = query.get('auth');
+    const authDetail = query.get('detail');
+
+    if (authResult === 'success') {
+      setAuthPromptMessage('Signed in successfully. Cloud sync is now available across your devices.');
+      setShowSignInPrompt(false);
+    } else if (authResult === 'error') {
+      setAuthPromptMessage(authDetail === 'state_mismatch'
+        ? 'Could not verify sign-in request. Please try again.'
+        : 'Sign-in failed. Please try again.');
+      setShowSignInPrompt(true);
+    }
+
+    if (authResult) {
+      query.delete('auth');
+      query.delete('detail');
+      const nextQueryString = query.toString();
+      const nextUrl = `${window.location.pathname}${nextQueryString ? `?${nextQueryString}` : ''}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let cancelled = false;
+
+    const loadSessionAndCloud = async () => {
+      try {
+        const sessionResponse = await fetch('/api/auth/session', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store'
+        });
+
+        if (!sessionResponse.ok) {
+          throw new Error(`Session lookup failed (${sessionResponse.status})`);
+        }
+
+        const sessionPayload = await sessionResponse.json();
+        if (cancelled) return;
+
+        const providers = sessionPayload?.providers || { google: false, github: false };
+        const isAuthenticated = Boolean(sessionPayload?.authenticated && sessionPayload?.user);
+
+        setAuthSession({
+          isLoading: false,
+          isAuthenticated,
+          user: isAuthenticated ? sessionPayload.user : null,
+          providers
+        });
+
+        if (isAuthenticated) {
+          try {
+            await pullWorkspaceFromCloud(false);
+          } catch (cloudError) {
+            if (!cancelled) {
+              setCloudSyncState((prev) => ({
+                ...prev,
+                error: 'Signed in, but cloud workspace could not be loaded right now.'
+              }));
+            }
+          } finally {
+            cloudReadyRef.current = true;
+          }
+        } else {
+          cloudReadyRef.current = false;
+          cloudRevisionRef.current = null;
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        setAuthSession({
+          isLoading: false,
+          isAuthenticated: false,
+          user: null,
+          providers: { google: false, github: false }
+        });
+
+        setCloudSyncState((prev) => ({
+          ...prev,
+          error: 'Cloud sign-in endpoints are not configured yet in this deployment.'
+        }));
+      }
+    };
+
+    loadSessionAndCloud();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authSession.isAuthenticated || !authSession.user) return;
+    if (!cloudReadyRef.current) return;
+    if (!activeProjectId) return;
+    if (!Array.isArray(projects) || projects.length === 0) return;
+    if (isHydratingProjectRef.current) return;
+
+    if (skipCloudSaveRef.current) {
+      skipCloudSaveRef.current = false;
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setCloudSyncState((prev) => ({ ...prev, isSaving: true, error: '' }));
+
+        const workspacePayload = buildWorkspacePayload(projects);
+        const response = await fetch('/api/workspace', {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ workspace: workspacePayload })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Cloud save failed (${response.status})`);
+        }
+
+        const savePayload = await response.json();
+        if (typeof savePayload?.updatedAt === 'string') {
+          cloudRevisionRef.current = savePayload.updatedAt;
+          setCloudSyncState((prev) => ({
+            ...prev,
+            isSaving: false,
+            lastSyncedAt: new Date(savePayload.updatedAt),
+            error: ''
+          }));
+        } else {
+          setCloudSyncState((prev) => ({ ...prev, isSaving: false, error: '' }));
+        }
+      } catch (error) {
+        setCloudSyncState((prev) => ({
+          ...prev,
+          isSaving: false,
+          error: 'Local save succeeded, but cloud sync failed temporarily.'
+        }));
+      }
+    }, 650);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    authSession.isAuthenticated,
+    authSession.user,
+    projects,
+    activeProjectId,
+    projectTitle,
+    tasks,
+    holidays,
+    customerLogo,
+    customerLogoWidth,
+    companyLogo,
+    companyLogoWidth,
+    showDates,
+    showQuarters,
+    showCost,
+    showTotals,
+    currency,
+    loginDateSeed
+  ]);
+
+  useEffect(() => {
+    if (!authSession.isAuthenticated || !authSession.user) return;
+
+    const pollForRemoteChanges = async () => {
+      if (cloudPollInFlightRef.current) return;
+      cloudPollInFlightRef.current = true;
+
+      try {
+        await pullWorkspaceFromCloud(true);
+      } catch {
+        // Silent by design; save path already surfaces persistent errors.
+      } finally {
+        cloudPollInFlightRef.current = false;
+      }
+    };
+
+    pollForRemoteChanges();
+
+    const intervalId = window.setInterval(pollForRemoteChanges, 7000);
+    const onFocus = () => pollForRemoteChanges();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') pollForRemoteChanges();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [authSession.isAuthenticated, authSession.user]);
 
   const switchProject = (projectId) => {
     if (!projectId || projectId === activeProjectId) return;
@@ -1287,7 +1577,11 @@ export default function GanttChart() {
   const openSignInPrompt = () => {
     setShowModifyMenu(false);
     setShowHolidayManager(false);
-    setAuthPromptMessage('');
+    if (authSession.isAuthenticated && authSession.user?.email) {
+      setAuthPromptMessage(`Signed in as ${authSession.user.email}. Your updates are syncing across devices.`);
+    } else {
+      setAuthPromptMessage('');
+    }
     setShowSignInPrompt(true);
   };
 
@@ -1296,13 +1590,53 @@ export default function GanttChart() {
     setAuthPromptMessage('');
   };
 
+  const signOutFromCloud = async () => {
+    try {
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch {
+      // Ignore network errors and reset local auth state below.
+    }
+
+    setAuthSession((prev) => ({
+      ...prev,
+      isAuthenticated: false,
+      user: null
+    }));
+    cloudReadyRef.current = false;
+    cloudRevisionRef.current = null;
+    setCloudSyncState({
+      isSaving: false,
+      lastSyncedAt: null,
+      error: ''
+    });
+    setAuthPromptMessage('Signed out. Local auto-save remains active on this device.');
+    setShowSignInPrompt(false);
+  };
+
   const startOptionalSignIn = (provider) => {
     const providerRoute = provider === 'google'
       ? '/api/auth/signin/google'
       : '/api/auth/signin/github';
 
     if (!CLOUD_AUTH_ENABLED) {
-      setAuthPromptMessage('Cloud sign-in is optional and currently not configured in this deployment yet. Local auto-save remains active on this device.');
+      setAuthPromptMessage('Cloud sync is disabled for this deployment. Local auto-save remains active on this device.');
+      return;
+    }
+
+    if (authSession.isLoading) {
+      setAuthPromptMessage('Checking cloud sign-in availability. Please wait a moment and try again.');
+      return;
+    }
+
+    const providerConfigured = provider === 'google'
+      ? Boolean(authSession.providers.google)
+      : Boolean(authSession.providers.github);
+
+    if (!providerConfigured) {
+      setAuthPromptMessage(`${provider === 'google' ? 'Gmail' : 'GitHub'} sign-in is not configured yet for this deployment.`);
       return;
     }
 
@@ -1936,6 +2270,9 @@ export default function GanttChart() {
   const savedAtLabel = lastSavedAt
     ? lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
+  const cloudSyncedLabel = cloudSyncState.lastSyncedAt
+    ? cloudSyncState.lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   const showDatesInEditor = showDates && !isCompactLayout;
   const showCostInEditor = showCost && !isCompactLayout;
@@ -2299,9 +2636,11 @@ export default function GanttChart() {
               className={activeTutorialTarget === 'signInButton' ? 'tutorial-target-active' : ''}
               onClick={openSignInPrompt}
               style={{
-                background: '#ffffff',
-                color: '#0f172a',
-                border: '1px solid #cbd5e1',
+                background: authSession.isAuthenticated
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : '#ffffff',
+                color: authSession.isAuthenticated ? '#ffffff' : '#0f172a',
+                border: authSession.isAuthenticated ? '1px solid #059669' : '1px solid #cbd5e1',
                 height: '46px',
                 padding: '0 1rem',
                 borderRadius: '14px',
@@ -2314,26 +2653,34 @@ export default function GanttChart() {
                 justifyContent: isPhoneLayout ? 'center' : 'flex-start',
                 width: isPhoneLayout ? '100%' : 'auto',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 8px 18px rgba(15, 23, 42, 0.06)',
+                boxShadow: authSession.isAuthenticated
+                  ? '0 10px 20px rgba(16, 185, 129, 0.22)'
+                  : '0 8px 18px rgba(15, 23, 42, 0.06)',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f8fafc';
-                e.currentTarget.style.borderColor = '#94a3b8';
+                e.currentTarget.style.background = authSession.isAuthenticated
+                  ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                  : '#f8fafc';
+                e.currentTarget.style.borderColor = authSession.isAuthenticated ? '#047857' : '#94a3b8';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#ffffff';
-                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.background = authSession.isAuthenticated
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : '#ffffff';
+                e.currentTarget.style.borderColor = authSession.isAuthenticated ? '#059669' : '#cbd5e1';
               }}
-              title="Optional sign-in for cloud sync"
+              title={authSession.isAuthenticated ? 'Cloud sync connected' : 'Optional sign-in for cloud sync'}
             >
-              <LogIn size={17} />
-              Sign In (Optional)
+              {authSession.isAuthenticated ? <Cloud size={17} /> : <LogIn size={17} />}
+              {authSession.isAuthenticated ? 'Cloud Sync On' : 'Sign In (Optional)'}
             </button>
 
-            {!isPhoneLayout && savedAtLabel && (
-              <div style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b', padding: '0 0.35rem' }}>
-                Auto-saved {savedAtLabel}
+            {!isPhoneLayout && (
+              <div style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b', padding: '0 0.35rem', whiteSpace: 'nowrap' }}>
+                {savedAtLabel ? `Auto-saved ${savedAtLabel}` : 'Auto-save active'}
+                {authSession.isAuthenticated && cloudSyncState.isSaving && ' • Syncing cloud...'}
+                {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
               </div>
             )}
 
@@ -2819,55 +3166,97 @@ export default function GanttChart() {
                 </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
-                <button
-                  type="button"
-                  onClick={() => startOptionalSignIn('google')}
-                  style={{
-                    height: '46px',
-                    borderRadius: '12px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#0f172a',
-                    fontSize: '0.9rem',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <Mail size={17} />
-                  Continue with Gmail
-                </button>
+              {authSession.isAuthenticated && authSession.user ? (
+                <div style={{ marginTop: '1rem', border: '1px solid #c7d2fe', borderRadius: '12px', background: '#eef2ff', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4338ca' }}>
+                    Connected Account
+                  </div>
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.95rem', fontWeight: '800', color: '#1e1b4b' }}>
+                    {authSession.user.displayName || authSession.user.email}
+                  </div>
+                  <div style={{ marginTop: '0.1rem', fontSize: '0.82rem', fontWeight: '700', color: '#4c1d95' }}>
+                    {authSession.user.email}
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => startOptionalSignIn('github')}
-                  style={{
-                    height: '46px',
-                    borderRadius: '12px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#0f172a',
-                    fontSize: '0.9rem',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <Github size={17} />
-                  Continue with GitHub
-                </button>
-              </div>
+                  <div style={{ marginTop: '0.7rem', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={signOutFromCloud}
+                      style={{
+                        height: '40px',
+                        borderRadius: '10px',
+                        border: '1px solid #a5b4fc',
+                        background: '#ffffff',
+                        color: '#312e81',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        padding: '0 0.8rem'
+                      }}
+                    >
+                      Sign out from cloud sync
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => startOptionalSignIn('google')}
+                    disabled={authSession.isLoading || !authSession.providers.google}
+                    style={{
+                      height: '46px',
+                      borderRadius: '12px',
+                      border: authSession.providers.google ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                      background: authSession.providers.google ? '#ffffff' : '#f8fafc',
+                      color: authSession.providers.google ? '#0f172a' : '#94a3b8',
+                      fontSize: '0.9rem',
+                      fontWeight: '800',
+                      cursor: authSession.providers.google ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Mail size={17} />
+                    Continue with Gmail
+                  </button>
 
-              {authPromptMessage && (
+                  <button
+                    type="button"
+                    onClick={() => startOptionalSignIn('github')}
+                    disabled={authSession.isLoading || !authSession.providers.github}
+                    style={{
+                      height: '46px',
+                      borderRadius: '12px',
+                      border: authSession.providers.github ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                      background: authSession.providers.github ? '#ffffff' : '#f8fafc',
+                      color: authSession.providers.github ? '#0f172a' : '#94a3b8',
+                      fontSize: '0.9rem',
+                      fontWeight: '800',
+                      cursor: authSession.providers.github ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Github size={17} />
+                    Continue with GitHub
+                  </button>
+                </div>
+              )}
+
+              {authSession.isLoading && (
+                <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.83rem', fontWeight: '700' }}>
+                  Checking sign-in providers...
+                </div>
+              )}
+
+              {(authPromptMessage || cloudSyncState.error) && (
                 <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.83rem', fontWeight: '700' }}>
-                  {authPromptMessage}
+                  {authPromptMessage || cloudSyncState.error}
                 </div>
               )}
 
@@ -2887,7 +3276,7 @@ export default function GanttChart() {
                     padding: '0 0.9rem'
                   }}
                 >
-                  Continue without sign-in
+                  {authSession.isAuthenticated ? 'Close' : 'Continue without sign-in'}
                 </button>
               </div>
             </div>

@@ -16,12 +16,16 @@ The tutorial can always be restarted later from the **Guide** button in the head
 The in-app tutorial walks users through the main workflow step by step:
 
 1. Rename the project title
-2. Add top-level tasks (phases)
-3. Edit duration, dates, colors, and optional costs
-4. Open **Modify Graph** for timeline toggles and export formats
-5. Open **Settings & Branding** to upload logos and manage holidays
-6. Review timeline bars and totals
-7. Import existing plans from JSON
+2. Optional sign-in with Gmail/GitHub for cross-device sync
+3. Switch or add multiple projects
+4. Review the connected dashboard summary
+5. Add top-level tasks (phases)
+6. Update task and subtask statuses
+7. Edit duration, dates, colors, and optional costs
+8. Open **Modify Graph** for timeline toggles and export formats
+9. Open **Settings & Branding** to upload logos and manage holidays
+10. Review timeline bars and totals
+11. Import existing plans from JSON
 
 Each step highlights the target area and keeps controls interactive so users can learn by doing.
 
@@ -77,3 +81,21 @@ Workspace data is automatically saved in browser local storage, including:
 - Display preferences
 
 Users can still export JSON for backup or transfer.
+
+## 6) Optional cloud sync (Gmail / GitHub)
+
+The app supports optional sign-in for users who want one shared workspace across multiple devices.
+
+- If a user stays in guest mode, local auto-save continues to work on that device.
+- If a user signs in with Gmail or GitHub, their workspace is synced to the cloud.
+- Each signed-in account has isolated data (multi-tenant): users only see their own workspace.
+
+Required environment variables for deployment:
+
+- `DATABASE_URL` (Neon Postgres)
+- `AUTH_SECRET` (long random secret)
+- `APP_URL` (production app URL)
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
