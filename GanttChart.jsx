@@ -788,7 +788,7 @@ export default function GanttChart() {
     {
       id: 'top-command-center',
       title: 'Use the top command center',
-      body: 'The top bar is organized into workspace, action, and utility groups so key controls stay tidy on desktop, tablets, and phones.',
+      body: 'The top bar is organized into workspace, action, and utility groups. It automatically reflows for desktop, tablets, and phones so controls stay clean and easy to tap.',
       target: 'projectSwitcher',
       panel: null,
       view: 'planner'
@@ -2297,8 +2297,12 @@ export default function GanttChart() {
       ? `${taskLabelColumnWidth}px 100px minmax(0, 1fr)`
       : `${taskLabelColumnWidth}px minmax(0, 1fr)`);
 
+  const compactEditorGridColumns = isPhoneLayout
+    ? ['26px', 'minmax(0, 1fr)', '104px'].join(' ')
+    : ['30px', 'minmax(0, 1fr)', '112px', '78px'].join(' ');
+
   const editorGridColumns = isCompactLayout
-    ? ['30px', 'minmax(0, 1fr)', '112px', '78px'].join(' ')
+    ? compactEditorGridColumns
     : [
       '36px',
       'minmax(260px, 1fr)',
@@ -2310,11 +2314,11 @@ export default function GanttChart() {
       '44px'
     ].join(' ');
 
-  const editorRowGap = isCompactLayout ? '0.55rem' : '1rem';
+  const editorRowGap = isPhoneLayout ? '0.65rem' : (isCompactLayout ? '0.55rem' : '1rem');
   const editorStatusControlSize = {
-    width: isCompactLayout ? '106px' : '124px',
+    width: isPhoneLayout ? '102px' : (isCompactLayout ? '106px' : '124px'),
     height: isCompactLayout ? '38px' : '42px',
-    fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
+    fontSize: isPhoneLayout ? '0.76rem' : (isCompactLayout ? '0.74rem' : '0.8rem'),
     borderRadius: isCompactLayout ? '8px' : '9px',
     padding: isCompactLayout ? '0 0.5rem' : '0 0.55rem'
   };
@@ -3748,7 +3752,7 @@ export default function GanttChart() {
                         style={{
                           background: '#f8fafc',
                           borderRadius: '12px',
-                          padding: isCompactLayout ? '0.85rem' : '1.25rem',
+                          padding: isPhoneLayout ? '0.72rem' : (isCompactLayout ? '0.85rem' : '1.25rem'),
                           display: 'grid',
                           gridTemplateColumns: editorGridColumns,
                           gap: editorRowGap,
@@ -3779,12 +3783,14 @@ export default function GanttChart() {
                           value={task.name}
                           onChange={(e) => updateTask(task.id, 'name', e.target.value)}
                           style={{
+                            width: '100%',
+                            minWidth: 0,
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
                             borderRadius: '8px',
-                            padding: isCompactLayout ? '0.65rem 0.7rem' : '0.75rem 1rem',
+                            padding: isPhoneLayout ? '0.62rem 0.68rem' : (isCompactLayout ? '0.65rem 0.7rem' : '0.75rem 1rem'),
                             color: '#000000',
-                            fontSize: isCompactLayout ? '0.95rem' : '1rem',
+                            fontSize: isPhoneLayout ? '0.9rem' : (isCompactLayout ? '0.95rem' : '1rem'),
                             fontWeight: '700',
                             textDecoration: isTaskCompleted ? 'line-through' : 'none',
                             opacity: isTaskCompleted ? 0.7 : 1,
@@ -3829,10 +3835,12 @@ export default function GanttChart() {
 
                         <div style={{
                           display: 'flex',
-                          flexDirection: 'column',
+                          flexDirection: isPhoneLayout ? 'row' : 'column',
                           alignItems: 'center',
-                          gap: '0.25rem',
-                          width: isCompactLayout ? '70px' : '80px'
+                          justifyContent: isPhoneLayout ? 'flex-end' : 'center',
+                          gap: isPhoneLayout ? '0.45rem' : '0.25rem',
+                          width: isPhoneLayout ? '100%' : (isCompactLayout ? '70px' : '80px'),
+                          gridColumn: isPhoneLayout ? '2 / 4' : 'auto'
                         }}>
                           <input
                             type="number"
@@ -3840,13 +3848,13 @@ export default function GanttChart() {
                             value={parentDays}
                             onChange={(e) => updateTaskDuration(task.id, e.target.value)}
                             style={{
-                              width: isCompactLayout ? '56px' : '60px',
+                              width: isPhoneLayout ? '64px' : (isCompactLayout ? '56px' : '60px'),
                               background: '#ffffff',
                               border: '1px solid #cbd5e1',
                               borderRadius: '8px',
-                              padding: isCompactLayout ? '0.6rem' : '0.75rem',
+                              padding: isPhoneLayout ? '0.52rem' : (isCompactLayout ? '0.6rem' : '0.75rem'),
                               color: '#0f172a',
-                              fontSize: isCompactLayout ? '0.82rem' : '0.875rem',
+                              fontSize: isPhoneLayout ? '0.8rem' : (isCompactLayout ? '0.82rem' : '0.875rem'),
                               textAlign: 'center',
                               fontWeight: '600',
                               outline: 'none'
@@ -3861,7 +3869,8 @@ export default function GanttChart() {
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontWeight: '700',
                                 color: daysOver ? '#ef4444' : '#64748b',
-                                lineHeight: 1
+                                lineHeight: 1,
+                                whiteSpace: 'nowrap'
                               }}
                             >
                               sum {totalSubDays}d
@@ -3994,13 +4003,14 @@ export default function GanttChart() {
 
                       {isCompactLayout && (showDates || showCost) && (
                         <div className="mobile-detail-card" style={{
-                          marginTop: '0.6rem',
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          padding: '0.75rem',
+                          marginTop: '0.65rem',
+                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                          border: '1px solid #dbe4ef',
+                          borderRadius: '12px',
+                          padding: isPhoneLayout ? '0.7rem' : '0.75rem',
                           display: 'grid',
-                          gap: '0.6rem'
+                          gap: '0.65rem',
+                          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.9)'
                         }}>
                           {showDates && (
                             <div className="mobile-date-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
@@ -4015,7 +4025,7 @@ export default function GanttChart() {
                                   borderRadius: '8px',
                                   padding: '0.65rem',
                                   color: '#0f172a',
-                                  fontSize: '0.82rem',
+                                  fontSize: '0.84rem',
                                   fontFamily: '"JetBrains Mono", monospace',
                                   outline: 'none',
                                   colorScheme: 'light'
@@ -4032,7 +4042,7 @@ export default function GanttChart() {
                                   borderRadius: '8px',
                                   padding: '0.65rem',
                                   color: '#0f172a',
-                                  fontSize: '0.82rem',
+                                  fontSize: '0.84rem',
                                   fontFamily: '"JetBrains Mono", monospace',
                                   outline: 'none',
                                   colorScheme: 'light'
@@ -4057,7 +4067,7 @@ export default function GanttChart() {
                                   borderRadius: '8px',
                                   padding: '0.65rem 0.55rem 0.65rem 1.9rem',
                                   color: '#0f172a',
-                                  fontSize: '0.84rem',
+                                  fontSize: '0.86rem',
                                   outline: 'none',
                                   fontWeight: '600'
                                 }}
@@ -4065,7 +4075,7 @@ export default function GanttChart() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -4094,7 +4104,7 @@ export default function GanttChart() {
                             <button
                               onClick={() => removeTask(task.id)}
                               style={{
-                                flex: 1,
+                                flex: '1 1 170px',
                                 background: '#fee2e2',
                                 border: '1px solid #fecaca',
                                 borderRadius: '8px',
@@ -4137,7 +4147,7 @@ export default function GanttChart() {
                                   style={{
                                     background: isSubTaskCompleted ? '#f8fafc' : '#f1f5f9',
                                     borderRadius: '10px',
-                                    padding: isCompactLayout ? '0.75rem' : '1rem',
+                                    padding: isPhoneLayout ? '0.66rem' : (isCompactLayout ? '0.75rem' : '1rem'),
                                     marginBottom: '0.5rem',
                                     display: 'grid',
                                     gridTemplateColumns: editorGridColumns,
@@ -4192,12 +4202,14 @@ export default function GanttChart() {
                                     onChange={(e) => updateSubTask(task.id, subTask.id, 'name', e.target.value)}
                                     placeholder="Sub-task name"
                                     style={{
+                                      width: '100%',
+                                      minWidth: 0,
                                       background: '#ffffff',
                                       border: '1px solid #cbd5e1',
                                       borderRadius: '6px',
-                                      padding: isCompactLayout ? '0.55rem 0.65rem' : '0.625rem 0.875rem',
+                                      padding: isPhoneLayout ? '0.58rem 0.64rem' : (isCompactLayout ? '0.55rem 0.65rem' : '0.625rem 0.875rem'),
                                       color: '#0f172a',
-                                      fontSize: isCompactLayout ? '0.84rem' : '0.9rem',
+                                      fontSize: isPhoneLayout ? '0.88rem' : (isCompactLayout ? '0.84rem' : '0.9rem'),
                                       fontWeight: '600',
                                       textDecoration: isSubTaskCompleted ? 'line-through' : 'none',
                                       outline: 'none',
@@ -4241,10 +4253,12 @@ export default function GanttChart() {
 
                                   <div style={{
                                     display: 'flex',
-                                    flexDirection: 'column',
+                                    flexDirection: isPhoneLayout ? 'row' : 'column',
                                     alignItems: 'center',
-                                    gap: '0.25rem',
-                                    width: isCompactLayout ? '68px' : '80px'
+                                    justifyContent: isPhoneLayout ? 'flex-end' : 'center',
+                                    gap: isPhoneLayout ? '0.45rem' : '0.25rem',
+                                    width: isPhoneLayout ? '100%' : (isCompactLayout ? '68px' : '80px'),
+                                    gridColumn: isPhoneLayout ? '2 / 4' : 'auto'
                                   }}>
                                     <input
                                       type="number"
@@ -4252,13 +4266,13 @@ export default function GanttChart() {
                                       value={rollup.days}
                                       onChange={(e) => updateSubTaskDuration(task.id, subTask.id, e.target.value)}
                                       style={{
-                                        width: isCompactLayout ? '54px' : '60px',
+                                        width: isPhoneLayout ? '62px' : (isCompactLayout ? '54px' : '60px'),
                                         background: '#ffffff',
                                         border: '1px solid #cbd5e1',
                                         borderRadius: '6px',
-                                        padding: isCompactLayout ? '0.5rem' : '0.625rem',
+                                        padding: isPhoneLayout ? '0.48rem' : (isCompactLayout ? '0.5rem' : '0.625rem'),
                                         color: '#0f172a',
-                                        fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
+                                        fontSize: isPhoneLayout ? '0.78rem' : (isCompactLayout ? '0.74rem' : '0.8rem'),
                                         textAlign: 'center',
                                         fontWeight: '600',
                                         outline: 'none'
@@ -4272,7 +4286,8 @@ export default function GanttChart() {
                                         fontFamily: '"JetBrains Mono", monospace',
                                         fontWeight: '800',
                                         color: runningDaysOver ? '#ef4444' : '#64748b',
-                                        lineHeight: 1
+                                        lineHeight: 1,
+                                        whiteSpace: 'nowrap'
                                       }}
                                     >
                                       run {rollup.runningDays}d
@@ -4401,13 +4416,14 @@ export default function GanttChart() {
 
                                 {isCompactLayout && (showDates || showCost) && (
                                   <div className="mobile-detail-card" style={{
-                                    marginTop: '0.5rem',
-                                    background: '#ffffff',
+                                    marginTop: '0.55rem',
+                                    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
                                     border: '1px solid #dbe4ef',
-                                    borderRadius: '8px',
-                                    padding: '0.6rem',
+                                    borderRadius: '10px',
+                                    padding: isPhoneLayout ? '0.64rem' : '0.6rem',
                                     display: 'grid',
-                                    gap: '0.55rem'
+                                    gap: '0.58rem',
+                                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.9)'
                                   }}>
                                     {showDates && (
                                       <div className="mobile-date-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -4422,7 +4438,7 @@ export default function GanttChart() {
                                             borderRadius: '7px',
                                             padding: '0.55rem',
                                             color: '#0f172a',
-                                            fontSize: '0.78rem',
+                                            fontSize: '0.8rem',
                                             fontFamily: '"JetBrains Mono", monospace',
                                             outline: 'none',
                                             colorScheme: 'light'
@@ -4439,7 +4455,7 @@ export default function GanttChart() {
                                             borderRadius: '7px',
                                             padding: '0.55rem',
                                             color: '#0f172a',
-                                            fontSize: '0.78rem',
+                                            fontSize: '0.8rem',
                                             fontFamily: '"JetBrains Mono", monospace',
                                             outline: 'none',
                                             colorScheme: 'light'
@@ -4463,7 +4479,7 @@ export default function GanttChart() {
                                             borderRadius: '7px',
                                             padding: '0.55rem 0.5rem 0.55rem 1.35rem',
                                             color: '#0f172a',
-                                            fontSize: '0.78rem',
+                                            fontSize: '0.8rem',
                                             outline: 'none',
                                             fontWeight: '600'
                                           }}
@@ -4471,7 +4487,7 @@ export default function GanttChart() {
                                       </div>
                                     )}
 
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                       <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -4500,7 +4516,7 @@ export default function GanttChart() {
                                       <button
                                         onClick={() => removeSubTask(task.id, subTask.id)}
                                         style={{
-                                          flex: 1,
+                                          flex: '1 1 160px',
                                           background: '#fee2e2',
                                           border: '1px solid #fecaca',
                                           borderRadius: '7px',
@@ -4527,16 +4543,18 @@ export default function GanttChart() {
 
                           {task.subTasks.length > 0 && (
                             <div style={{
-                              padding: '0.75rem 1rem',
+                              padding: isPhoneLayout ? '0.65rem 0.75rem' : '0.75rem 1rem',
                               marginTop: '0.25rem',
                               marginBottom: '0.5rem',
                               background: '#ffffff',
                               borderRadius: '10px',
                               border: '1px solid #e2e8f0',
                               display: 'flex',
+                              flexDirection: isPhoneLayout ? 'column' : 'row',
                               justifyContent: 'space-between',
-                              alignItems: 'center',
-                              fontSize: '0.85rem',
+                              alignItems: isPhoneLayout ? 'flex-start' : 'center',
+                              gap: isPhoneLayout ? '0.45rem' : '0.75rem',
+                              fontSize: isPhoneLayout ? '0.8rem' : '0.85rem',
                               fontWeight: '700'
                             }}>
                               <>
@@ -6088,8 +6106,25 @@ export default function GanttChart() {
             justify-content: center !important;
           }
 
+          .task-row,
+          .subtask-row {
+            box-shadow: none !important;
+            transform: none !important;
+          }
+
+          .task-row input[type="text"],
+          .subtask-row input[type="text"] {
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
           .toolbar-sync-pill {
             text-align: center;
+            font-size: 0.72rem !important;
+          }
+
+          .mobile-detail-card {
+            border-radius: 12px !important;
           }
 
           .welcome-card {

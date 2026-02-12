@@ -67,6 +67,7 @@ Use **Import** to load a JSON backup and continue the same plan.
 The app is optimized for Android, iPhone, and tablets:
 
 - Header controls collapse into grouped command blocks for cleaner mobile/tablet usage
+- Task and subtask rows prioritize readable name fields with touch-friendly status/duration controls
 - Large editor and timeline sections support horizontal scrolling for full visibility
 - Settings panel adapts to a mobile-friendly bottom sheet layout
 - Logo resize handles support touch and pointer input
