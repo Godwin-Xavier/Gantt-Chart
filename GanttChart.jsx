@@ -1,10 +1,20 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus } from 'lucide-react';
+import DashboardView from './DashboardView';
 
-const APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
+const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
+const LEGACY_APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
+
+const STATUS_IN_PROGRESS = 'in_progress';
+const STATUS_COMPLETED = 'completed';
+
+const STATUS_OPTIONS = [
+  { value: STATUS_IN_PROGRESS, label: 'In Progress' },
+  { value: STATUS_COMPLETED, label: 'Completed' }
+];
 
 const DEFAULT_TASK_BLUEPRINT = [
   {
@@ -149,6 +159,43 @@ const writeStorageFlag = (key, value) => {
   }
 };
 
+const normalizeStatus = (value) => (value === STATUS_COMPLETED ? STATUS_COMPLETED : STATUS_IN_PROGRESS);
+
+const areAllSubTasksCompleted = (subTasks = []) => (
+  subTasks.length > 0 && subTasks.every((subTask) => normalizeStatus(subTask.status) === STATUS_COMPLETED)
+);
+
+const normalizeTaskTree = (tasks = []) => {
+  if (!Array.isArray(tasks)) return [];
+
+  return tasks.map((task) => {
+    const normalizedSubTasks = Array.isArray(task.subTasks)
+      ? task.subTasks.map((subTask) => ({
+        ...subTask,
+        status: normalizeStatus(subTask.status)
+      }))
+      : [];
+
+    const normalizedTaskStatus = normalizedSubTasks.length > 0
+      ? (areAllSubTasksCompleted(normalizedSubTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS)
+      : normalizeStatus(task.status);
+
+    return {
+      ...task,
+      status: normalizedTaskStatus,
+      subTasks: normalizedSubTasks
+    };
+  });
+};
+
+const getTaskCompletionStatus = (task) => {
+  if (!task) return STATUS_IN_PROGRESS;
+  if (Array.isArray(task.subTasks) && task.subTasks.length > 0) {
+    return areAllSubTasksCompleted(task.subTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS;
+  }
+  return normalizeStatus(task.status);
+};
+
 export default function GanttChart() {
   // Robust date helpers using Local Noon to avoid timezone/DST issues
   const getDateAtNoon = (dateStr) => {
@@ -255,7 +302,8 @@ export default function GanttChart() {
           startDate: subStartDate,
           endDate: subEndDate,
           color: subTask.color,
-          cost: subTask.cost
+          cost: subTask.cost,
+          status: STATUS_IN_PROGRESS
         };
       });
 
@@ -268,6 +316,7 @@ export default function GanttChart() {
         endDate,
         color: task.color,
         cost: task.cost,
+        status: STATUS_IN_PROGRESS,
         expanded: true,
         subTasks: builtSubTasks
       };
@@ -503,7 +552,65 @@ export default function GanttChart() {
 
   const loginDateSeed = useMemo(() => getLoginDateString(), []);
 
+  const getRouteFromPath = () => {
+    if (typeof window === 'undefined') return 'planner';
+    const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    return normalizedPath === '/dashboard' ? 'dashboard' : 'planner';
+  };
+
+  const navigateToView = (nextView) => {
+    if (typeof window === 'undefined') return;
+    const nextPath = nextView === 'dashboard' ? '/dashboard' : '/';
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+    setCurrentView(nextView);
+  };
+
+  const createProjectId = () => `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const createProjectName = (existingProjects) => {
+    const used = new Set((existingProjects || []).map((project) => project.projectTitle));
+    let index = 1;
+    while (used.has(`Project ${index}`)) {
+      index += 1;
+    }
+    return `Project ${index}`;
+  };
+
+  const createProjectRecord = (overrides = {}) => {
+    const projectLoginSeed = typeof overrides.loginDateSeed === 'string' ? overrides.loginDateSeed : loginDateSeed;
+    const fallbackTasks = normalizeTaskTree(buildDefaultTasks(projectLoginSeed));
+    const nextTasks = Array.isArray(overrides.tasks)
+      ? normalizeTaskTree(overrides.tasks)
+      : fallbackTasks;
+
+    return {
+      id: typeof overrides.id === 'string' && overrides.id.length > 0 ? overrides.id : createProjectId(),
+      projectTitle: typeof overrides.projectTitle === 'string' && overrides.projectTitle.trim().length > 0
+        ? overrides.projectTitle
+        : 'My Project Timeline',
+      tasks: nextTasks,
+      holidays: Array.isArray(overrides.holidays) ? overrides.holidays : [],
+      customerLogo: typeof overrides.customerLogo === 'string' || overrides.customerLogo === null ? overrides.customerLogo : null,
+      customerLogoWidth: typeof overrides.customerLogoWidth === 'number' ? overrides.customerLogoWidth : 150,
+      companyLogo: typeof overrides.companyLogo === 'string' || overrides.companyLogo === null ? overrides.companyLogo : null,
+      companyLogoWidth: typeof overrides.companyLogoWidth === 'number' ? overrides.companyLogoWidth : 150,
+      showDates: typeof overrides.showDates === 'boolean' ? overrides.showDates : true,
+      showQuarters: typeof overrides.showQuarters === 'boolean' ? overrides.showQuarters : false,
+      showCost: typeof overrides.showCost === 'boolean' ? overrides.showCost : false,
+      showTotals: typeof overrides.showTotals === 'boolean' ? overrides.showTotals : true,
+      currency: typeof overrides.currency === 'string' && overrides.currency.length > 0 ? overrides.currency : '$',
+      loginDateSeed: projectLoginSeed,
+      updatedAt: typeof overrides.updatedAt === 'string' ? overrides.updatedAt : new Date().toISOString()
+    };
+  };
+
   const [projectTitle, setProjectTitle] = useState('My Project Timeline');
+  const [currentView, setCurrentView] = useState(() => getRouteFromPath());
+  const [projects, setProjects] = useState([]);
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDates, setShowDates] = useState(true);
@@ -531,6 +638,7 @@ export default function GanttChart() {
     if (typeof window === 'undefined') return false;
     return window.innerWidth <= 760;
   });
+  const [tasks, setTasks] = useState(() => normalizeTaskTree(buildDefaultTasks(loginDateSeed)));
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -545,6 +653,8 @@ export default function GanttChart() {
   const timelineChartRef = useRef(null);
   const settingsPanelRef = useRef(null);
   const scriptLoaderRef = useRef({});
+  const lastHydratedProjectIdRef = useRef(null);
+  const isHydratingProjectRef = useRef(false);
 
   useEffect(() => {
     if (!showHolidayManager) return;
@@ -599,7 +709,16 @@ export default function GanttChart() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const [tasks, setTasks] = useState(() => buildDefaultTasks(loginDateSeed));
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPopState = () => {
+      setCurrentView(getRouteFromPath());
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   // Auto-scroll to bottom when a new task is added
   useEffect(() => {
@@ -689,6 +808,7 @@ export default function GanttChart() {
   };
 
   const startTutorial = () => {
+    navigateToView('planner');
     setShowWelcomeBanner(false);
     markIntroSeen();
     setShowHolidayManager(false);
@@ -698,6 +818,7 @@ export default function GanttChart() {
   };
 
   const openGuideIntro = () => {
+    navigateToView('planner');
     setIsTutorialActive(false);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
@@ -832,68 +953,93 @@ export default function GanttChart() {
     };
   }, [isTutorialActive, activeTutorialTarget, showModifyMenu, showHolidayManager, isCompactLayout]);
 
+  const buildActiveProjectSnapshot = () => ({
+    projectTitle,
+    tasks: normalizeTaskTree(tasks),
+    holidays,
+    customerLogo,
+    customerLogoWidth,
+    companyLogo,
+    companyLogoWidth,
+    showDates,
+    showQuarters,
+    showCost,
+    showTotals,
+    currency,
+    loginDateSeed,
+    updatedAt: new Date().toISOString()
+  });
+
+  const saveActiveProjectIntoCollection = (collection = []) => {
+    if (!activeProjectId) return collection;
+    const snapshot = buildActiveProjectSnapshot();
+
+    return collection.map((project) => (
+      project.id === activeProjectId
+        ? { ...project, ...snapshot }
+        : project
+    ));
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     try {
       const raw = window.localStorage.getItem(APP_STORAGE_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return;
-
-      if (typeof parsed.projectTitle === 'string') setProjectTitle(parsed.projectTitle);
-      if (Array.isArray(parsed.tasks)) {
-        if (parsed.loginDateSeed === loginDateSeed) {
-          setTasks(parsed.tasks);
-        } else {
-          setTasks(buildDefaultTasks(loginDateSeed));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+          const loadedProjects = parsed.projects.map((project) => createProjectRecord(project));
+          const nextActiveId = loadedProjects.some((project) => project.id === parsed.activeProjectId)
+            ? parsed.activeProjectId
+            : loadedProjects[0].id;
+          setProjects(loadedProjects);
+          lastHydratedProjectIdRef.current = null;
+          setActiveProjectId(nextActiveId);
+          return;
         }
       }
-      if (Array.isArray(parsed.holidays)) setHolidays(parsed.holidays);
-      if (typeof parsed.customerLogo === 'string' || parsed.customerLogo === null) setCustomerLogo(parsed.customerLogo);
-      if (typeof parsed.customerLogoWidth === 'number') setCustomerLogoWidth(parsed.customerLogoWidth);
-      if (typeof parsed.companyLogo === 'string' || parsed.companyLogo === null) setCompanyLogo(parsed.companyLogo);
-      if (typeof parsed.companyLogoWidth === 'number') setCompanyLogoWidth(parsed.companyLogoWidth);
-      if (typeof parsed.showDates === 'boolean') setShowDates(parsed.showDates);
-      if (typeof parsed.showQuarters === 'boolean') setShowQuarters(parsed.showQuarters);
-      if (typeof parsed.showCost === 'boolean') setShowCost(parsed.showCost);
-      if (typeof parsed.showTotals === 'boolean') setShowTotals(parsed.showTotals);
-      if (typeof parsed.currency === 'string' && parsed.currency.length > 0) setCurrency(parsed.currency);
+
+      const legacyRaw = window.localStorage.getItem(LEGACY_APP_STORAGE_KEY);
+      if (legacyRaw) {
+        const legacyParsed = JSON.parse(legacyRaw);
+        if (legacyParsed && typeof legacyParsed === 'object') {
+          const migratedProject = createProjectRecord({
+            ...legacyParsed,
+            id: createProjectId(),
+            tasks: Array.isArray(legacyParsed.tasks)
+              ? normalizeTaskTree(legacyParsed.tasks)
+              : normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+          });
+          setProjects([migratedProject]);
+          lastHydratedProjectIdRef.current = null;
+          setActiveProjectId(migratedProject.id);
+          return;
+        }
+      }
     } catch (error) {
       console.warn('Failed to restore saved workspace', error);
     }
+
+    const starterProject = createProjectRecord({
+      projectTitle: 'Project 1',
+      tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+    });
+    setProjects([starterProject]);
+    lastHydratedProjectIdRef.current = null;
+    setActiveProjectId(starterProject.id);
   }, [loginDateSeed]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!activeProjectId || isHydratingProjectRef.current) return;
+    if (lastHydratedProjectIdRef.current !== activeProjectId) return;
 
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const workspace = {
-          projectTitle,
-          tasks,
-          holidays,
-          customerLogo,
-          customerLogoWidth,
-          companyLogo,
-          companyLogoWidth,
-          showDates,
-          showQuarters,
-          showCost,
-          showTotals,
-          currency,
-          loginDateSeed
-        };
-
-        window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(workspace));
-      } catch (error) {
-        console.warn('Failed to persist workspace', error);
-      }
-    }, 220);
-
-    return () => window.clearTimeout(timeoutId);
+    setProjects((prevProjects) => {
+      if (!Array.isArray(prevProjects) || prevProjects.length === 0) return prevProjects;
+      return saveActiveProjectIntoCollection(prevProjects);
+    });
   }, [
+    activeProjectId,
     projectTitle,
     tasks,
     holidays,
@@ -908,6 +1054,117 @@ export default function GanttChart() {
     currency,
     loginDateSeed
   ]);
+
+  useEffect(() => {
+    if (!activeProjectId || !Array.isArray(projects) || projects.length === 0) return;
+    if (lastHydratedProjectIdRef.current === activeProjectId) return;
+
+    const selectedProject = projects.find((project) => project.id === activeProjectId) || projects[0];
+    if (!selectedProject) return;
+
+    isHydratingProjectRef.current = true;
+    setProjectTitle(selectedProject.projectTitle);
+    setTasks(normalizeTaskTree(selectedProject.tasks));
+    setHolidays(Array.isArray(selectedProject.holidays) ? selectedProject.holidays : []);
+    setCustomerLogo(typeof selectedProject.customerLogo === 'string' || selectedProject.customerLogo === null ? selectedProject.customerLogo : null);
+    setCustomerLogoWidth(typeof selectedProject.customerLogoWidth === 'number' ? selectedProject.customerLogoWidth : 150);
+    setCompanyLogo(typeof selectedProject.companyLogo === 'string' || selectedProject.companyLogo === null ? selectedProject.companyLogo : null);
+    setCompanyLogoWidth(typeof selectedProject.companyLogoWidth === 'number' ? selectedProject.companyLogoWidth : 150);
+    setShowDates(typeof selectedProject.showDates === 'boolean' ? selectedProject.showDates : true);
+    setShowQuarters(typeof selectedProject.showQuarters === 'boolean' ? selectedProject.showQuarters : false);
+    setShowCost(typeof selectedProject.showCost === 'boolean' ? selectedProject.showCost : false);
+    setShowTotals(typeof selectedProject.showTotals === 'boolean' ? selectedProject.showTotals : true);
+    setCurrency(typeof selectedProject.currency === 'string' && selectedProject.currency.length > 0 ? selectedProject.currency : '$');
+    setNewHoliday('');
+    setShowHolidayManager(false);
+    setShowModifyMenu(false);
+
+    lastHydratedProjectIdRef.current = selectedProject.id;
+
+    if (selectedProject.id !== activeProjectId) {
+      setActiveProjectId(selectedProject.id);
+    }
+
+    window.setTimeout(() => {
+      isHydratingProjectRef.current = false;
+    }, 0);
+  }, [activeProjectId, projects]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!Array.isArray(projects) || projects.length === 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const projectsToPersist = saveActiveProjectIntoCollection(projects).map((project) => createProjectRecord(project));
+        const payload = {
+          schemaVersion: 3,
+          activeProjectId,
+          projects: projectsToPersist,
+          savedAt: new Date().toISOString()
+        };
+        window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(payload));
+        setLastSavedAt(new Date());
+      } catch (error) {
+        console.warn('Failed to persist workspace', error);
+      }
+    }, 220);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    projects,
+    activeProjectId,
+    projectTitle,
+    tasks,
+    holidays,
+    customerLogo,
+    customerLogoWidth,
+    companyLogo,
+    companyLogoWidth,
+    showDates,
+    showQuarters,
+    showCost,
+    showTotals,
+    currency,
+    loginDateSeed
+  ]);
+
+  const switchProject = (projectId) => {
+    if (!projectId || projectId === activeProjectId) return;
+    setProjects((prevProjects) => saveActiveProjectIntoCollection(prevProjects));
+    lastHydratedProjectIdRef.current = null;
+    setIsEditingTitle(false);
+    setActiveProjectId(projectId);
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+  };
+
+  const addProject = () => {
+    let newProjectId = null;
+
+    setProjects((prevProjects) => {
+      const withSnapshot = saveActiveProjectIntoCollection(prevProjects);
+      const newProject = createProjectRecord({
+        id: createProjectId(),
+        projectTitle: createProjectName(withSnapshot),
+        tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+      });
+      newProjectId = newProject.id;
+      return [...withSnapshot, newProject];
+    });
+
+    if (newProjectId) {
+      lastHydratedProjectIdRef.current = null;
+      setIsEditingTitle(false);
+      setActiveProjectId(newProjectId);
+      navigateToView('planner');
+    }
+  };
+
+  const openProjectFromDashboard = (projectId) => {
+    switchProject(projectId);
+    navigateToView('planner');
+  };
 
   const addTask = () => {
     setTasks((prevTasks) => {
@@ -927,6 +1184,7 @@ export default function GanttChart() {
         endDate,
         color: nextColor,
         cost: 0,
+        status: STATUS_IN_PROGRESS,
         expanded: true,
         subTasks: []
       };
@@ -943,13 +1201,31 @@ export default function GanttChart() {
     setTasks(tasks.map(task => {
       if (task.id !== id) return task;
 
-      let updates = { [field]: value };
+      return { ...task, [field]: value };
+    }));
+  };
 
-      // If start date changes, we might want to keep duration? 
-      // Or if end date changes, duration updates automatically by render logic.
-      // But if we want to support "Duration" Input, we need to handle it specifically.
+  const updateTaskStatus = (id, status) => {
+    const nextStatus = normalizeStatus(status);
 
-      return { ...task, ...updates };
+    setTasks(tasks.map((task) => {
+      if (task.id !== id) return task;
+
+      if (Array.isArray(task.subTasks) && task.subTasks.length > 0) {
+        return {
+          ...task,
+          status: nextStatus,
+          subTasks: task.subTasks.map((subTask) => ({
+            ...subTask,
+            status: nextStatus
+          }))
+        };
+      }
+
+      return {
+        ...task,
+        status: nextStatus
+      };
     }));
   };
 
@@ -971,6 +1247,26 @@ export default function GanttChart() {
           const newEndDate = addBusinessDays(st.startDate, parseInt(duration) || 1, holidays);
           return { ...st, endDate: newEndDate };
         })
+      };
+    }));
+  };
+
+  const updateSubTaskStatus = (parentId, subTaskId, status) => {
+    const nextStatus = normalizeStatus(status);
+
+    setTasks(tasks.map((task) => {
+      if (task.id !== parentId) return task;
+
+      const nextSubTasks = task.subTasks.map((subTask) => (
+        subTask.id === subTaskId
+          ? { ...subTask, status: nextStatus }
+          : subTask
+      ));
+
+      return {
+        ...task,
+        status: areAllSubTasksCompleted(nextSubTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS,
+        subTasks: nextSubTasks
       };
     }));
   };
@@ -1014,12 +1310,18 @@ export default function GanttChart() {
         startDate,
         endDate,
         color: subTaskColor,
-        cost: 0
+        cost: 0,
+        status: STATUS_IN_PROGRESS
       };
 
       return prevTasks.map((task) =>
         task.id === parentId
-          ? { ...task, subTasks: [...task.subTasks, newSubTask], expanded: true }
+          ? {
+            ...task,
+            status: STATUS_IN_PROGRESS,
+            subTasks: [...task.subTasks, newSubTask],
+            expanded: true
+          }
           : task
       );
     });
@@ -1028,7 +1330,17 @@ export default function GanttChart() {
   const removeSubTask = (parentId, subTaskId) => {
     setTasks(tasks.map(task =>
       task.id === parentId
-        ? { ...task, subTasks: task.subTasks.filter(st => st.id !== subTaskId) }
+        ? (() => {
+          const remainingSubTasks = task.subTasks.filter((subTask) => subTask.id !== subTaskId);
+          const nextTaskStatus = remainingSubTasks.length > 0
+            ? (areAllSubTasksCompleted(remainingSubTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS)
+            : normalizeStatus(task.status);
+          return {
+            ...task,
+            status: nextTaskStatus,
+            subTasks: remainingSubTasks
+          };
+        })()
         : task
     ));
   };
@@ -1060,30 +1372,47 @@ export default function GanttChart() {
 
   const importChart = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (Array.isArray(data.tasks)) setTasks(data.tasks);
-          if (typeof data.projectTitle === 'string') setProjectTitle(data.projectTitle);
-          if (Array.isArray(data.holidays)) setHolidays(data.holidays);
-          if (data.customerLogo !== undefined) setCustomerLogo(data.customerLogo);
-          if (typeof data.customerLogoWidth === 'number') setCustomerLogoWidth(data.customerLogoWidth);
-          if (data.companyLogo !== undefined) setCompanyLogo(data.companyLogo);
-          if (typeof data.companyLogoWidth === 'number') setCompanyLogoWidth(data.companyLogoWidth);
-          if (data.showDates !== undefined) setShowDates(data.showDates);
-          if (data.showQuarters !== undefined) setShowQuarters(data.showQuarters);
-          if (data.showCost !== undefined) setShowCost(data.showCost);
-          if (data.showTotals !== undefined) setShowTotals(data.showTotals);
-          if (typeof data.currency === 'string' && data.currency.length > 0) setCurrency(data.currency);
-        } catch (error) {
-          console.error('Error importing chart:', error);
-          alert('Failed to import chart. Invalid JSON file.');
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+
+        if (Array.isArray(data.projects) && data.projects.length > 0) {
+          const importedProjects = data.projects.map((project) => createProjectRecord(project));
+          const nextActiveId = importedProjects.some((project) => project.id === data.activeProjectId)
+            ? data.activeProjectId
+            : importedProjects[0].id;
+
+          setProjects(importedProjects);
+          lastHydratedProjectIdRef.current = null;
+          setActiveProjectId(nextActiveId);
+          setShowModifyMenu(false);
+          setShowHolidayManager(false);
+          return;
         }
-      };
-      reader.readAsText(file);
-    }
+
+        if (Array.isArray(data.tasks)) setTasks(normalizeTaskTree(data.tasks));
+        if (typeof data.projectTitle === 'string') setProjectTitle(data.projectTitle);
+        if (Array.isArray(data.holidays)) setHolidays(data.holidays);
+        if (typeof data.customerLogo === 'string' || data.customerLogo === null) setCustomerLogo(data.customerLogo);
+        if (typeof data.customerLogoWidth === 'number') setCustomerLogoWidth(data.customerLogoWidth);
+        if (typeof data.companyLogo === 'string' || data.companyLogo === null) setCompanyLogo(data.companyLogo);
+        if (typeof data.companyLogoWidth === 'number') setCompanyLogoWidth(data.companyLogoWidth);
+        if (typeof data.showDates === 'boolean') setShowDates(data.showDates);
+        if (typeof data.showQuarters === 'boolean') setShowQuarters(data.showQuarters);
+        if (typeof data.showCost === 'boolean') setShowCost(data.showCost);
+        if (typeof data.showTotals === 'boolean') setShowTotals(data.showTotals);
+        if (typeof data.currency === 'string' && data.currency.length > 0) setCurrency(data.currency);
+      } catch (error) {
+        console.error('Error importing chart:', error);
+        alert('Failed to import chart. Invalid JSON file.');
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const loadExternalScript = (src, globalCheck) => {
@@ -1141,19 +1470,24 @@ export default function GanttChart() {
 
     try {
       if (format === 'json') {
+        const projectsSnapshot = saveActiveProjectIntoCollection(projects);
+        const activeProject = projectsSnapshot.find((project) => project.id === activeProjectId) || null;
         const data = {
-          projectTitle,
-          tasks,
-          holidays,
-          customerLogo,
-          customerLogoWidth,
-          companyLogo,
-          companyLogoWidth,
-          showDates,
-          showQuarters,
-          showCost,
-          showTotals,
-          currency,
+          schemaVersion: 3,
+          activeProjectId,
+          projects: projectsSnapshot,
+          projectTitle: activeProject ? activeProject.projectTitle : projectTitle,
+          tasks: activeProject ? activeProject.tasks : normalizeTaskTree(tasks),
+          holidays: activeProject ? activeProject.holidays : holidays,
+          customerLogo: activeProject ? activeProject.customerLogo : customerLogo,
+          customerLogoWidth: activeProject ? activeProject.customerLogoWidth : customerLogoWidth,
+          companyLogo: activeProject ? activeProject.companyLogo : companyLogo,
+          companyLogoWidth: activeProject ? activeProject.companyLogoWidth : companyLogoWidth,
+          showDates: activeProject ? activeProject.showDates : showDates,
+          showQuarters: activeProject ? activeProject.showQuarters : showQuarters,
+          showCost: activeProject ? activeProject.showCost : showCost,
+          showTotals: activeProject ? activeProject.showTotals : showTotals,
+          currency: activeProject ? activeProject.currency : currency,
           exportedAt: new Date().toISOString()
         };
         const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
@@ -1354,6 +1688,111 @@ export default function GanttChart() {
   );
   const totalTopLevelTaskDaysLabel = tasks.length === 0 ? '-' : `${totalTopLevelTaskDays} Days`;
 
+  const dashboardProjects = useMemo(() => {
+    if (!Array.isArray(projects)) return [];
+
+    return projects.map((project) => {
+      if (project.id !== activeProjectId) return project;
+
+      return {
+        ...project,
+        projectTitle,
+        tasks: normalizeTaskTree(tasks),
+        holidays,
+        customerLogo,
+        customerLogoWidth,
+        companyLogo,
+        companyLogoWidth,
+        showDates,
+        showQuarters,
+        showCost,
+        showTotals,
+        currency,
+        loginDateSeed
+      };
+    });
+  }, [
+    projects,
+    activeProjectId,
+    projectTitle,
+    tasks,
+    holidays,
+    customerLogo,
+    customerLogoWidth,
+    companyLogo,
+    companyLogoWidth,
+    showDates,
+    showQuarters,
+    showCost,
+    showTotals,
+    currency,
+    loginDateSeed
+  ]);
+
+  const getProjectCompletionStats = (projectTasks = []) => {
+    if (!Array.isArray(projectTasks) || projectTasks.length === 0) {
+      return {
+        totalUnits: 0,
+        completedUnits: 0,
+        completionPercent: 0
+      };
+    }
+
+    let totalUnits = 0;
+    let completedUnits = 0;
+
+    projectTasks.forEach((task) => {
+      const subTasks = Array.isArray(task.subTasks) ? task.subTasks : [];
+      if (subTasks.length > 0) {
+        totalUnits += subTasks.length;
+        completedUnits += subTasks.filter((subTask) => normalizeStatus(subTask.status) === STATUS_COMPLETED).length;
+      } else {
+        totalUnits += 1;
+        completedUnits += getTaskCompletionStatus(task) === STATUS_COMPLETED ? 1 : 0;
+      }
+    });
+
+    const completionPercent = totalUnits > 0 ? (completedUnits / totalUnits) * 100 : 0;
+
+    return {
+      totalUnits,
+      completedUnits,
+      completionPercent
+    };
+  };
+
+  const projectSummaries = useMemo(() => (
+    dashboardProjects.map((project) => ({
+      id: project.id,
+      projectTitle: project.projectTitle,
+      ...getProjectCompletionStats(project.tasks)
+    }))
+  ), [dashboardProjects]);
+
+  const totalPortfolioUnits = useMemo(
+    () => projectSummaries.reduce((sum, summary) => sum + summary.totalUnits, 0),
+    [projectSummaries]
+  );
+
+  const completedPortfolioUnits = useMemo(
+    () => projectSummaries.reduce((sum, summary) => sum + summary.completedUnits, 0),
+    [projectSummaries]
+  );
+
+  const overallCompletion = totalPortfolioUnits > 0
+    ? (completedPortfolioUnits / totalPortfolioUnits) * 100
+    : 0;
+
+  const completedProjects = useMemo(
+    () => projectSummaries.filter((summary) => summary.totalUnits > 0 && summary.completedUnits === summary.totalUnits).length,
+    [projectSummaries]
+  );
+
+  const isDashboardView = currentView === 'dashboard';
+  const savedAtLabel = lastSavedAt
+    ? lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
+
   const showDatesInEditor = showDates && !isCompactLayout;
   const showCostInEditor = showCost && !isCompactLayout;
   const showDatesInChart = showDates && !isCompactLayout;
@@ -1370,10 +1809,11 @@ export default function GanttChart() {
       : `${taskLabelColumnWidth}px minmax(0, 1fr)`);
 
   const editorGridColumns = isCompactLayout
-    ? ['30px', 'minmax(0, 1fr)', '78px'].join(' ')
+    ? ['30px', 'minmax(0, 1fr)', '112px', '78px'].join(' ')
     : [
       '36px',
       'minmax(260px, 1fr)',
+      '132px',
       '92px',
       ...(showDatesInEditor ? ['150px', '150px'] : []),
       ...(showCostInEditor ? ['140px'] : []),
@@ -1384,8 +1824,8 @@ export default function GanttChart() {
   const editorMinWidth = isCompactLayout
     ? 0
     : (showDatesInEditor
-      ? (showCostInEditor ? 1020 : 880)
-      : (showCostInEditor ? 720 : 560));
+      ? (showCostInEditor ? 1160 : 1020)
+      : (showCostInEditor ? 860 : 700));
 
   const chartGridMinWidth = isCompactLayout
     ? 0
@@ -1618,6 +2058,96 @@ export default function GanttChart() {
               scrollbarWidth: 'none'
             }}
           >
+            <div style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '0 0 auto' }}>
+              <select
+                value={activeProjectId || ''}
+                onChange={(e) => switchProject(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  borderRadius: '14px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  fontSize: '0.9rem',
+                  fontWeight: '700',
+                  padding: '0 0.85rem',
+                  cursor: 'pointer'
+                }}
+                aria-label="Select project"
+              >
+                {dashboardProjects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.projectTitle}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={addProject}
+              style={{
+                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                color: '#ffffff',
+                border: 'none',
+                height: '46px',
+                padding: '0 1rem',
+                borderRadius: '14px',
+                fontSize: '0.9rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
+                whiteSpace: 'nowrap'
+              }}
+              title="Add New Project"
+            >
+              <FolderPlus size={17} />
+              Add Project
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowModifyMenu(false);
+                setShowHolidayManager(false);
+                navigateToView(isDashboardView ? 'planner' : 'dashboard');
+              }}
+              style={{
+                background: isDashboardView ? 'linear-gradient(135deg, #334155 0%, #1e293b 100%)' : '#f8fafc',
+                color: isDashboardView ? '#ffffff' : '#0f172a',
+                border: `1px solid ${isDashboardView ? '#334155' : '#e2e8f0'}`,
+                height: '46px',
+                padding: '0 1rem',
+                borderRadius: '14px',
+                fontSize: '0.9rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                justifyContent: isPhoneLayout ? 'center' : 'flex-start',
+                width: isPhoneLayout ? '100%' : 'auto',
+                whiteSpace: 'nowrap'
+              }}
+              title={isDashboardView ? 'Back to Planner' : 'Open Dashboard'}
+            >
+              <BarChart3 size={17} />
+              {isDashboardView ? 'Planner' : 'Dashboard'}
+            </button>
+
+            {!isPhoneLayout && savedAtLabel && (
+              <div style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b', padding: '0 0.35rem' }}>
+                Auto-saved {savedAtLabel}
+              </div>
+            )}
+
+            {!isDashboardView && (
+              <>
             <button
               type="button"
               ref={importButtonRef}
@@ -2027,11 +2557,13 @@ export default function GanttChart() {
               accept=".json"
               style={{ display: 'none' }}
             />
+              </>
+            )}
           </div>
         </div>
 
         {/* Settings & Branding Drawer */}
-        {showHolidayManager && (
+        {!isDashboardView && showHolidayManager && (
           <div
             className="settings-overlay"
             onClick={() => setShowHolidayManager(false)}
@@ -2425,6 +2957,16 @@ export default function GanttChart() {
           </div>
         )}
 
+        {isDashboardView ? (
+          <DashboardView
+            projectSummaries={projectSummaries}
+            overallCompletion={overallCompletion}
+            totalProjects={dashboardProjects.length}
+            completedProjects={completedProjects}
+            onOpenProject={openProjectFromDashboard}
+          />
+        ) : (
+          <>
         {/* Task List */}
         <div
           ref={taskEditorRef}
@@ -2471,6 +3013,7 @@ export default function GanttChart() {
               }}>
                 <div />
                 <div>Task</div>
+                <div style={{ textAlign: 'center' }}>Status</div>
                 <div style={{ textAlign: 'center' }}>Days</div>
                 {showInlineEditorExtras && showDatesInEditor && (
                   <>
@@ -2485,6 +3028,8 @@ export default function GanttChart() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {tasks.map((task, index) => {
+                  const taskStatus = getTaskCompletionStatus(task);
+                  const isTaskCompleted = taskStatus === STATUS_COMPLETED;
                   const parentDays = getBusinessDays(task.startDate, task.endDate, holidays);
                   const parentCost = Number(task.cost) || 0;
 
@@ -2555,6 +3100,8 @@ export default function GanttChart() {
                             color: '#000000',
                             fontSize: isCompactLayout ? '0.95rem' : '1rem',
                             fontWeight: '700',
+                            textDecoration: isTaskCompleted ? 'line-through' : 'none',
+                            opacity: isTaskCompleted ? 0.7 : 1,
                             outline: 'none',
                             transition: 'all 0.2s'
                           }}
@@ -2567,6 +3114,32 @@ export default function GanttChart() {
                             e.currentTarget.style.borderColor = '#cbd5e1';
                           }}
                         />
+
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <select
+                            value={taskStatus}
+                            onChange={(e) => updateTaskStatus(task.id, e.target.value)}
+                            style={{
+                              width: isCompactLayout ? '106px' : '124px',
+                              height: isCompactLayout ? '38px' : '42px',
+                              borderRadius: '9px',
+                              border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                              background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                              color: taskStatus === STATUS_COMPLETED ? '#166534' : '#0f172a',
+                              fontSize: isCompactLayout ? '0.74rem' : '0.8rem',
+                              fontWeight: '700',
+                              padding: '0 0.5rem',
+                              cursor: 'pointer'
+                            }}
+                            title="Task status"
+                          >
+                            {STATUS_OPTIONS.map((statusOption) => (
+                              <option key={statusOption.value} value={statusOption.value}>
+                                {statusOption.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
                         <div style={{
                           display: 'flex',
@@ -2861,6 +3434,8 @@ export default function GanttChart() {
                       {task.expanded && (
                         <div style={{ marginTop: '0.75rem' }}>
                           {task.subTasks.map((subTask, subIndex) => {
+                            const subTaskStatus = normalizeStatus(subTask.status);
+                            const isSubTaskCompleted = subTaskStatus === STATUS_COMPLETED;
                             const rollup = subTaskRollups[subIndex] || {
                               days: getBusinessDays(subTask.startDate, subTask.endDate, holidays),
                               runningDays: 0,
@@ -2874,7 +3449,7 @@ export default function GanttChart() {
                                 <div
                                   className="subtask-row"
                                   style={{
-                                    background: '#f1f5f9',
+                                    background: isSubTaskCompleted ? '#f8fafc' : '#f1f5f9',
                                     borderRadius: '10px',
                                     padding: isCompactLayout ? '0.75rem' : '1rem',
                                     marginBottom: '0.5rem',
@@ -2884,6 +3459,7 @@ export default function GanttChart() {
                                     alignItems: 'center',
                                     border: '1px solid #e2e8f0',
                                     borderLeft: `4px solid ${subTask.color}`,
+                                    opacity: isSubTaskCompleted ? 0.78 : 1,
                                     animation: `slideIn 0.2s ease-out ${subIndex * 0.03}s both`
                                   }}
                                 >
@@ -2937,6 +3513,7 @@ export default function GanttChart() {
                                       color: '#0f172a',
                                       fontSize: isCompactLayout ? '0.84rem' : '0.9rem',
                                       fontWeight: '600',
+                                      textDecoration: isSubTaskCompleted ? 'line-through' : 'none',
                                       outline: 'none',
                                       transition: 'all 0.2s'
                                     }}
@@ -2949,6 +3526,32 @@ export default function GanttChart() {
                                       e.currentTarget.style.borderColor = '#cbd5e1';
                                     }}
                                   />
+
+                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <select
+                                      value={subTaskStatus}
+                                      onChange={(e) => updateSubTaskStatus(task.id, subTask.id, e.target.value)}
+                                      style={{
+                                        width: isCompactLayout ? '102px' : '120px',
+                                        height: isCompactLayout ? '34px' : '38px',
+                                        borderRadius: '8px',
+                                        border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                        background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
+                                        color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#0f172a',
+                                        fontSize: isCompactLayout ? '0.72rem' : '0.78rem',
+                                        fontWeight: '700',
+                                        padding: '0 0.45rem',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Sub-task status"
+                                    >
+                                      {STATUS_OPTIONS.map((statusOption) => (
+                                        <option key={statusOption.value} value={statusOption.value}>
+                                          {statusOption.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
 
                                   <div style={{
                                     display: 'flex',
@@ -3429,9 +4032,10 @@ export default function GanttChart() {
                 {tasks.map((task, index) => {
                   const position = getTaskPosition(task);
                   const duration = getBusinessDays(task.startDate, task.endDate, holidays);
+                  const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
 
                   return (
-                    <div key={task.id} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+                    <div key={task.id} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff', opacity: taskCompleted ? 0.78 : 1 }}>
                       <div style={{
                         padding: '0.75rem 0.85rem 0.5rem',
                         display: 'flex',
@@ -3441,7 +4045,7 @@ export default function GanttChart() {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
                           <span style={{ width: '4px', height: '18px', borderRadius: '999px', background: task.color, flex: '0 0 auto' }} />
-                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: taskCompleted ? 'line-through' : 'none' }}>
                             {task.name}
                           </div>
                         </div>
@@ -3474,8 +4078,10 @@ export default function GanttChart() {
                             minWidth: '8px',
                             height: '100%',
                             borderRadius: '999px',
-                            background: `linear-gradient(135deg, ${task.color} 0%, ${task.color}cc 100%)`,
-                            boxShadow: `0 3px 10px ${task.color}40`
+                            background: taskCompleted
+                              ? `repeating-linear-gradient(135deg, ${task.color}88 0, ${task.color}88 8px, ${task.color}66 8px, ${task.color}66 14px)`
+                              : `linear-gradient(135deg, ${task.color} 0%, ${task.color}cc 100%)`,
+                            boxShadow: taskCompleted ? 'none' : `0 3px 10px ${task.color}40`
                           }} />
                         </div>
 
@@ -3497,17 +4103,19 @@ export default function GanttChart() {
                           {task.subTasks.map((subTask) => {
                             const subPosition = getTaskPosition(subTask);
                             const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+                            const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
                             return (
                               <div key={subTask.id} style={{
                                 background: '#f8fafc',
                                 border: '1px solid #e2e8f0',
                                 borderRadius: '10px',
-                                padding: '0.55rem'
+                                padding: '0.55rem',
+                                opacity: subTaskCompleted ? 0.78 : 1
                               }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
                                     <span style={{ width: '3px', height: '14px', borderRadius: '999px', background: subTask.color, flex: '0 0 auto' }} />
-                                    <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: subTaskCompleted ? 'line-through' : 'none' }}>
                                       {subTask.name}
                                     </div>
                                   </div>
@@ -3527,7 +4135,9 @@ export default function GanttChart() {
                                     minWidth: '6px',
                                     height: '100%',
                                     borderRadius: '999px',
-                                    background: `linear-gradient(135deg, ${subTask.color} 0%, ${subTask.color}bf 100%)`
+                                    background: subTaskCompleted
+                                      ? `repeating-linear-gradient(135deg, ${subTask.color}88 0, ${subTask.color}88 7px, ${subTask.color}66 7px, ${subTask.color}66 12px)`
+                                      : `linear-gradient(135deg, ${subTask.color} 0%, ${subTask.color}bf 100%)`
                                   }} />
                                 </div>
                               </div>
@@ -3623,7 +4233,10 @@ export default function GanttChart() {
                     gap: '0',
                     padding: '1rem 0 0 0'
                   }}>
-                    {tasks.map((task, index) => (
+                    {tasks.map((task, index) => {
+                      const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
+
+                      return (
                       <div key={task.id}>
                         {/* Main Task Name */}
                         <div
@@ -3634,6 +4247,7 @@ export default function GanttChart() {
                             padding: '0.5rem 1.5rem',
                             background: '#ffffff',
                             borderBottom: '1px solid #e2e8f0',
+                            opacity: taskCompleted ? 0.78 : 1,
                             animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                             transition: 'all 0.2s'
                           }}
@@ -3658,6 +4272,7 @@ export default function GanttChart() {
                             fontSize: '0.95rem',
                             fontWeight: '800',
                             color: '#000000',
+                            textDecoration: taskCompleted ? 'line-through' : 'none',
                             flex: 1,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -3669,7 +4284,10 @@ export default function GanttChart() {
                         </div>
 
                         {/* Sub-task Names */}
-                        {task.expanded && task.subTasks.map((subTask, subIndex) => (
+                        {task.expanded && task.subTasks.map((subTask, subIndex) => {
+                          const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
+
+                          return (
                           <div
                             key={subTask.id}
                             style={{
@@ -3679,6 +4297,7 @@ export default function GanttChart() {
                               padding: '0.5rem 1.5rem 0.5rem 3.5rem',
                               background: '#f8fafc',
                               borderBottom: '1px solid #e2e8f0',
+                              opacity: subTaskCompleted ? 0.78 : 1,
                               animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
                               transition: 'all 0.2s'
                             }}
@@ -3703,6 +4322,7 @@ export default function GanttChart() {
                               fontSize: '0.85rem',
                               fontWeight: '700',
                               color: '#0f172a',
+                              textDecoration: subTaskCompleted ? 'line-through' : 'none',
                               flex: 1,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -3712,9 +4332,11 @@ export default function GanttChart() {
                               {subTask.name}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -4009,6 +4631,7 @@ export default function GanttChart() {
                     {tasks.map((task, index) => {
                       const position = getTaskPosition(task);
                       const duration = getBusinessDays(task.startDate, task.endDate, holidays);
+                      const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
 
                       return (
                         <div key={task.id}>
@@ -4020,6 +4643,7 @@ export default function GanttChart() {
                               minHeight: '56px',
                               background: '#ffffff',
                               borderBottom: '1px solid #e2e8f0',
+                              opacity: taskCompleted ? 0.76 : 1,
                               animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
                               display: 'flex',
                               alignItems: 'center'
@@ -4032,9 +4656,11 @@ export default function GanttChart() {
                                 left: position.left,
                                 width: position.width,
                                 height: '36px',
-                                background: `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
+                                background: taskCompleted
+                                  ? `repeating-linear-gradient(135deg, ${task.color}88 0, ${task.color}88 9px, ${task.color}66 9px, ${task.color}66 16px)`
+                                  : `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
                                 borderRadius: '12px',
-                                boxShadow: `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
+                                boxShadow: taskCompleted ? 'none' : `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
                                 border: `1.5px solid ${task.color}`,
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 cursor: 'default',
@@ -4044,11 +4670,13 @@ export default function GanttChart() {
                                 overflow: 'visible'
                               }}
                               onMouseEnter={(e) => {
+                                if (taskCompleted) return;
                                 e.currentTarget.style.transform = 'scale(1.05)';
                                 e.currentTarget.style.boxShadow = `0 8px 24px ${task.color}45, 0 4px 8px ${task.color}30`;
                                 e.currentTarget.style.zIndex = '10';
                               }}
                               onMouseLeave={(e) => {
+                                if (taskCompleted) return;
                                 e.currentTarget.style.transform = 'scale(1)';
                                 e.currentTarget.style.boxShadow = `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`;
                                 e.currentTarget.style.zIndex = '1';
@@ -4065,6 +4693,7 @@ export default function GanttChart() {
                           {task.expanded && task.subTasks.map((subTask, subIndex) => {
                             const subPosition = getTaskPosition(subTask);
                             const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+                            const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
 
                             return (
                               <div
@@ -4075,6 +4704,7 @@ export default function GanttChart() {
                                   minHeight: '44px',
                                   background: '#f8fafc',
                                   borderBottom: '1px solid #e2e8f0',
+                                  opacity: subTaskCompleted ? 0.76 : 1,
                                   animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
                                   display: 'flex',
                                   alignItems: 'center'
@@ -4087,9 +4717,11 @@ export default function GanttChart() {
                                     left: subPosition.left,
                                     width: subPosition.width,
                                     height: '28px',
-                                    background: `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
+                                    background: subTaskCompleted
+                                      ? `repeating-linear-gradient(135deg, ${subTask.color}88 0, ${subTask.color}88 8px, ${subTask.color}66 8px, ${subTask.color}66 14px)`
+                                      : `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
                                     borderRadius: '10px',
-                                    boxShadow: `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
+                                    boxShadow: subTaskCompleted ? 'none' : `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
                                     border: `1.5px solid ${subTask.color}cc`,
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     cursor: 'default',
@@ -4099,11 +4731,13 @@ export default function GanttChart() {
                                     overflow: 'visible'
                                   }}
                                   onMouseEnter={(e) => {
+                                    if (subTaskCompleted) return;
                                     e.currentTarget.style.transform = 'scale(1.08)';
                                     e.currentTarget.style.boxShadow = `0 6px 18px ${subTask.color}40, 0 2px 6px ${subTask.color}25`;
                                     e.currentTarget.style.zIndex = '10';
                                   }}
                                   onMouseLeave={(e) => {
+                                    if (subTaskCompleted) return;
                                     e.currentTarget.style.transform = 'scale(1)';
                                     e.currentTarget.style.boxShadow = `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`;
                                     e.currentTarget.style.zIndex = '1';
@@ -4223,6 +4857,8 @@ export default function GanttChart() {
             </div>
           )}
         </div>
+          </>
+        )}
 
 
 
