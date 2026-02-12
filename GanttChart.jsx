@@ -900,7 +900,7 @@ export default function GanttChart() {
     {
       id: 'editor',
       title: 'Edit dates and duration',
-      body: 'In the Tasks area, update names, durations, dates, status, colors, and optional costs with auto-save always on.',
+      body: 'In the Tasks area, update names, durations, dates, status, colors, and optional costs with auto-save always on. On phones and tablets, these fields are auto-grouped for easy tapping.',
       target: 'taskEditor',
       panel: null,
       view: 'planner'
@@ -3783,6 +3783,7 @@ export default function GanttChart() {
                           value={task.name}
                           onChange={(e) => updateTask(task.id, 'name', e.target.value)}
                           style={{
+                            gridColumn: isPhoneLayout ? '2 / 4' : 'auto',
                             width: '100%',
                             minWidth: 0,
                             background: '#ffffff',
@@ -3807,7 +3808,13 @@ export default function GanttChart() {
                           }}
                         />
 
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: isPhoneLayout ? 'flex-start' : 'center',
+                          gridColumn: isPhoneLayout ? '2 / 3' : 'auto',
+                          gridRow: isPhoneLayout ? '2' : 'auto',
+                          width: isPhoneLayout ? '100%' : 'auto'
+                        }}>
                           <select
                             value={taskStatus}
                             onChange={(e) => updateTaskStatus(task.id, e.target.value)}
@@ -3840,7 +3847,8 @@ export default function GanttChart() {
                           justifyContent: isPhoneLayout ? 'flex-end' : 'center',
                           gap: isPhoneLayout ? '0.45rem' : '0.25rem',
                           width: isPhoneLayout ? '100%' : (isCompactLayout ? '70px' : '80px'),
-                          gridColumn: isPhoneLayout ? '2 / 4' : 'auto'
+                          gridColumn: isPhoneLayout ? '3 / 4' : 'auto',
+                          gridRow: isPhoneLayout ? '2' : 'auto'
                         }}>
                           <input
                             type="number"
@@ -4202,6 +4210,7 @@ export default function GanttChart() {
                                     onChange={(e) => updateSubTask(task.id, subTask.id, 'name', e.target.value)}
                                     placeholder="Sub-task name"
                                     style={{
+                                      gridColumn: isPhoneLayout ? '2 / 4' : 'auto',
                                       width: '100%',
                                       minWidth: 0,
                                       background: '#ffffff',
@@ -4225,7 +4234,13 @@ export default function GanttChart() {
                                     }}
                                   />
 
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: isPhoneLayout ? 'flex-start' : 'center',
+                                    gridColumn: isPhoneLayout ? '2 / 3' : 'auto',
+                                    gridRow: isPhoneLayout ? '2' : 'auto',
+                                    width: isPhoneLayout ? '100%' : 'auto'
+                                  }}>
                                     <select
                                       value={subTaskStatus}
                                       onChange={(e) => updateSubTaskStatus(task.id, subTask.id, e.target.value)}
@@ -4258,7 +4273,8 @@ export default function GanttChart() {
                                     justifyContent: isPhoneLayout ? 'flex-end' : 'center',
                                     gap: isPhoneLayout ? '0.45rem' : '0.25rem',
                                     width: isPhoneLayout ? '100%' : (isCompactLayout ? '68px' : '80px'),
-                                    gridColumn: isPhoneLayout ? '2 / 4' : 'auto'
+                                    gridColumn: isPhoneLayout ? '3 / 4' : 'auto',
+                                    gridRow: isPhoneLayout ? '2' : 'auto'
                                   }}>
                                     <input
                                       type="number"
@@ -6058,6 +6074,27 @@ export default function GanttChart() {
 
           .welcome-feature-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (min-width: 761px) and (max-width: 980px) {
+          .header-controls {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.6rem !important;
+          }
+
+          .header-controls .workspace-group {
+            grid-column: 1 / -1;
+          }
+
+          .header-controls .utility-group,
+          .header-controls .action-group {
+            min-width: 0 !important;
+          }
+
+          .header-controls .toolbar-group button {
+            min-width: 0;
           }
         }
 
