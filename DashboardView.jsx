@@ -497,7 +497,8 @@ export default function DashboardView({
   completedProjects,
   onOpenProject,
   isPhoneLayout,
-  isCompactLayout
+  isCompactLayout,
+  downloadButtonRef
 }) {
   const [taskFilter, setTaskFilter] = useState('all');
   const [isDownloadingSnapshot, setIsDownloadingSnapshot] = useState(false);
@@ -623,6 +624,7 @@ export default function DashboardView({
         </div>
         <button
           type="button"
+          ref={downloadButtonRef}
           onClick={downloadDashboardSnapshot}
           disabled={isDownloadingSnapshot}
           style={{

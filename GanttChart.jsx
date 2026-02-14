@@ -664,7 +664,10 @@ export default function GanttChart() {
   const signInPanelRef = useRef(null);
   const projectSwitcherRef = useRef(null);
   const addProjectButtonRef = useRef(null);
+  const deleteProjectButtonRef = useRef(null);
+  const viewSwitchRef = useRef(null);
   const dashboardButtonRef = useRef(null);
+  const dashboardDownloadButtonRef = useRef(null);
   const importButtonRef = useRef(null);
   const modifyButtonRef = useRef(null);
   const addTaskButtonRef = useRef(null);
@@ -776,144 +779,172 @@ export default function GanttChart() {
     }
   }, [tasks.length]);
 
-  const tutorialSteps = useMemo(() => ([
-    {
-      id: 'title',
-      title: 'Name your project',
-      body: 'Tap the title in the command center header to rename the active project. This name is used in the planner, dashboard, and exports.',
-      target: 'title',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'top-command-center',
-      title: 'Use the top command center',
-      body: 'The top bar is organized into workspace, action, and utility groups. It automatically reflows for desktop, tablets, and phones so controls stay clean and easy to tap.',
-      target: 'projectSwitcher',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'optional-signin',
-      title: 'Optional cloud sign-in',
-      body: 'Use Sign In (Optional) to log in with Gmail or GitHub when you want real-time sync across devices. If you skip it, auto-save still works locally on this device.',
-      target: 'signInButton',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'signin-providers',
-      title: 'Choose Gmail or GitHub when needed',
-      body: 'This step is optional. Pick Gmail or GitHub only when you want your project updates synced across devices as a single source of truth.',
-      target: 'signInPanel',
-      panel: 'signin',
-      view: 'planner'
-    },
-    {
-      id: 'project-switcher',
-      title: 'Switch between projects',
-      body: 'Use the left workspace controls to jump between projects instantly. Every project keeps its own tasks, subtasks, and settings.',
-      target: 'projectSwitcher',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'add-project',
-      title: 'Create another project',
-      body: 'Click Add Project in the workspace controls to create a new project with its own task form and timeline.',
-      target: 'addProjectButton',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'dashboard-button',
-      title: 'Open portfolio dashboard',
-      body: 'Use Dashboard from the utility controls to view completion trends across all projects from one place.',
-      target: 'dashboardButton',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'dashboard-overview',
-      title: 'Track cross-project completion',
-      body: 'This dashboard combines every project into one completion view with overall and per-project progress.',
-      target: 'dashboardPanel',
-      panel: null,
-      view: 'dashboard'
-    },
-    {
-      id: 'import',
-      title: 'Import an existing plan',
-      body: 'Use Import inside the action controls to load a previously exported JSON plan and continue from where you stopped.',
-      target: 'import',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'add-task',
-      title: 'Add task phases',
-      body: 'Use Add Task in the action controls to create major phases. Each phase can hold many subtasks.',
-      target: 'addTask',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'status-controls',
-      title: 'Update task and subtask status',
-      body: 'Use the Status selectors to set items to In Progress or Completed. On phones, status selectors are also available directly in the mobile timeline cards. Completed subtasks are struck through, and parent tasks auto-complete when all subtasks are done.',
-      target: 'statusColumn',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'modify-menu',
-      title: 'Modify and export',
-      body: 'Open Modify Graph from the action controls to switch dates, quarters, totals, cost view, and export formats.',
-      target: 'modifyMenu',
-      panel: 'modify',
-      view: 'planner'
-    },
-    {
-      id: 'settings-button',
-      title: 'Open settings and branding',
-      body: 'Use this button to manage logos and holiday calendars for your timeline calculations.',
-      target: 'settingsButton',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'company-logo',
-      title: 'Upload your company logo',
-      body: 'Add your company logo so exports look professional and branded.',
-      target: 'companyUpload',
-      panel: 'settings',
-      view: 'planner'
-    },
-    {
-      id: 'holiday-date',
-      title: 'Set holidays for business days',
-      body: 'Choose dates here to exclude non-working holidays from duration totals.',
-      target: 'holidayDate',
-      panel: 'settings',
-      view: 'planner'
-    },
-    {
-      id: 'editor',
-      title: 'Edit dates and duration',
-      body: 'In the Tasks area, update names, durations, dates, status, colors, and optional costs with auto-save always on. On phones and tablets, these fields are auto-grouped for easy tapping.',
-      target: 'taskEditor',
-      panel: null,
-      view: 'planner'
-    },
-    {
-      id: 'timeline',
-      title: 'Read the timeline',
-      body: 'The timeline updates instantly as you edit. Completed tasks and subtasks are visually muted and struck through for clear tracking.',
-      target: 'timeline',
-      panel: null,
-      view: 'planner'
-    }
-  ]), []);
+  const tutorialSteps = useMemo(() => {
+    const actionWord = isPhoneLayout ? 'Tap' : 'Click';
+
+    return [
+      {
+        id: 'title',
+        title: 'Name your project',
+        body: `${actionWord} the title in the command center header to rename the active project. This name is used in planner, dashboard, and exports.`,
+        target: 'title',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'top-command-center',
+        title: 'Use the command center',
+        body: 'The top controls are grouped into workspace, utility, and planner actions. Desktop keeps them in clean rows, while phones stack them into touch-friendly blocks with the same features.',
+        target: 'projectSwitcher',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'project-switcher',
+        title: 'Switch between projects',
+        body: `${actionWord} the project selector to move between projects instantly. Each project keeps its own tasks, subtasks, status, and settings.`,
+        target: 'projectSwitcher',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'add-project',
+        title: 'Create another project',
+        body: `${actionWord} Add Project to create a new workspace with its own plan and timeline.`,
+        target: 'addProjectButton',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'delete-project',
+        title: 'Delete a project safely',
+        body: `${actionWord} Delete Project when you want to remove the selected project. The app asks for confirmation and protects your workspace by keeping at least one starter project.`,
+        target: 'deleteProjectButton',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'view-switch',
+        title: 'Switch views without layout jump',
+        body: `${actionWord} Planner or Dashboard here to switch modes smoothly. This switch stays in the same place on desktop and mobile so navigation feels consistent.`,
+        target: 'viewSwitch',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'optional-signin',
+        title: 'Optional cloud sign-in',
+        body: `${actionWord} Sign In (Optional) only when you want cloud sync across devices. If you skip sign-in, local auto-save still keeps your plan on this device.`,
+        target: 'signInButton',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'signin-providers',
+        title: 'Connect Google when needed',
+        body: 'This step is optional. Use Google sign-in only if you want one synced source of truth across devices.',
+        target: 'signInPanel',
+        panel: 'signin',
+        view: 'planner'
+      },
+      {
+        id: 'import',
+        title: 'Import an existing plan',
+        body: `${actionWord} Import to load a previously exported JSON file and continue where you left off.`,
+        target: 'import',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'add-task',
+        title: 'Add task phases',
+        body: `${actionWord} Add Task to create major phases. Each phase can hold multiple subtasks with their own dates and status.`,
+        target: 'addTask',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'status-controls',
+        title: 'Update task and subtask status',
+        body: 'Use Status selectors to mark work as In Progress or Completed. On phones, status is also easy to update from compact cards and timeline rows.',
+        target: 'statusColumn',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'modify-menu',
+        title: 'Modify graph and export',
+        body: `${actionWord} Modify Graph to control dates, quarters, totals, cost view, and planner export formats.`,
+        target: 'modifyMenu',
+        panel: 'modify',
+        view: 'planner'
+      },
+      {
+        id: 'settings-button',
+        title: 'Open settings and branding',
+        body: `${actionWord} this settings button to manage logos and holiday calendars used in your business-day calculations and exports.`,
+        target: 'settingsButton',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'company-logo',
+        title: 'Upload your company logo',
+        body: `${actionWord} the company logo uploader so exported visuals look branded and professional.`,
+        target: 'companyUpload',
+        panel: 'settings',
+        view: 'planner'
+      },
+      {
+        id: 'holiday-date',
+        title: 'Set holidays for business days',
+        body: `${actionWord} holiday dates to exclude non-working days from duration totals and planning calculations.`,
+        target: 'holidayDate',
+        panel: 'settings',
+        view: 'planner'
+      },
+      {
+        id: 'editor',
+        title: 'Edit dates and duration',
+        body: 'In the Tasks area, update names, durations, dates, status, colors, and optional costs with auto-save always on. Desktop shows full rows while phones auto-group fields for easy tapping.',
+        target: 'taskEditor',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'timeline',
+        title: 'Read the timeline',
+        body: 'The timeline updates instantly as you edit. Completed tasks and subtasks are visually muted and struck through for clear progress tracking.',
+        target: 'timeline',
+        panel: null,
+        view: 'planner'
+      },
+      {
+        id: 'dashboard-action-state',
+        title: 'Dashboard keeps controls consistent',
+        body: 'When you switch to Dashboard, planner action buttons stay visible in the same place but become disabled. This keeps mobile and desktop layouts stable while making mode changes obvious.',
+        target: 'import',
+        panel: null,
+        view: 'dashboard'
+      },
+      {
+        id: 'dashboard-overview',
+        title: 'Track cross-project completion',
+        body: 'Dashboard combines every project into one completion view with overall metrics, filters, and expandable project breakdowns.',
+        target: 'dashboardPanel',
+        panel: null,
+        view: 'dashboard'
+      },
+      {
+        id: 'dashboard-download',
+        title: 'Download one share-ready image',
+        body: `${actionWord} Download Snapshot to export a single image that includes projects, tasks, subtasks, and statuses for quick sharing.`,
+        target: 'dashboardDownload',
+        panel: null,
+        view: 'dashboard'
+      }
+    ];
+  }, [isPhoneLayout]);
 
   const activeTutorialStep = isTutorialActive ? tutorialSteps[tutorialStepIndex] : null;
   const activeTutorialTarget = activeTutorialStep?.target || null;
@@ -983,8 +1014,11 @@ export default function GanttChart() {
       signInPanel: signInPanelRef.current,
       projectSwitcher: projectSwitcherRef.current,
       addProjectButton: addProjectButtonRef.current,
+      deleteProjectButton: deleteProjectButtonRef.current,
+      viewSwitch: viewSwitchRef.current,
       dashboardButton: dashboardButtonRef.current,
       dashboardPanel: dashboardPanelRef.current,
+      dashboardDownload: dashboardDownloadButtonRef.current,
       import: importButtonRef.current,
       addTask: addTaskButtonRef.current,
       statusColumn: statusColumnRef.current,
@@ -2609,34 +2643,34 @@ export default function GanttChart() {
                 <h2>Welcome to your project tracker</h2>
                 <p>
                   We will guide you through the polished command-center workflow: manage projects quickly,
-                  update task statuses, track dashboard progress, and optionally sign in for cloud sync.
+                  switch smoothly between planner and dashboard on any device, and share progress with one snapshot.
                 </p>
               </div>
 
               <div className="welcome-feature-grid">
                 <div>
                   <h4>Command-center header</h4>
-                  <p>Use grouped controls for workspace, actions, and sync so navigation stays clear and fast.</p>
+                  <p>Use grouped controls for workspace, view switch, actions, and sync with a stable layout on desktop and mobile.</p>
                 </div>
                 <div>
                   <h4>Status tracking</h4>
                   <p>Set each task and subtask to In Progress or Completed with automatic strike-through updates.</p>
                 </div>
                 <div>
-                  <h4>Dashboard overview</h4>
-                  <p>Monitor completion across all projects from one connected dashboard.</p>
+                  <h4>Project lifecycle control</h4>
+                  <p>Add, switch, and safely delete projects while keeping one active workspace always available.</p>
                 </div>
                 <div>
-                  <h4>Optional sign-in sync</h4>
-                  <p>Sign in with Gmail or GitHub to keep one live source of truth across all your devices.</p>
+                  <h4>Dashboard + snapshot sharing</h4>
+                  <p>Monitor completion across all projects and export a single image with tasks, subtasks, and statuses.</p>
                 </div>
                 <div>
                   <h4>Branding and holidays</h4>
                   <p>Upload logos and configure holidays so timelines and exports reflect real business plans.</p>
                 </div>
                 <div>
-                  <h4>Auto-save + export</h4>
-                  <p>Every change saves automatically and can be exported as PNG, JPEG, PDF, or JSON.</p>
+                  <h4>Optional sign-in sync</h4>
+                  <p>Sign in with Google only when you want one live source of truth across multiple devices.</p>
                 </div>
               </div>
 
@@ -2854,6 +2888,8 @@ export default function GanttChart() {
 
               <button
                 type="button"
+                ref={deleteProjectButtonRef}
+                className={activeTutorialTarget === 'deleteProjectButton' ? 'tutorial-target-active' : ''}
                 onClick={deleteActiveProject}
                 disabled={!activeProjectId}
                 style={{
@@ -2879,7 +2915,8 @@ export default function GanttChart() {
               }}
             >
               <div
-                className={`view-switch-shell ${activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}`}
+                ref={viewSwitchRef}
+                className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
                 style={{
                   ...viewSwitchShellStyle,
                   width: isPhoneLayout ? '100%' : 'auto'
@@ -3858,6 +3895,7 @@ export default function GanttChart() {
               onOpenProject={openProjectFromDashboard}
               isPhoneLayout={isPhoneLayout}
               isCompactLayout={isCompactLayout}
+              downloadButtonRef={dashboardDownloadButtonRef}
             />
           </div>
         ) : (
