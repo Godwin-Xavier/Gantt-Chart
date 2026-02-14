@@ -11,24 +11,13 @@ export default async function handler(req, res) {
 
   try {
     const providers = authProvidersConfigured();
-
-    // Diagnostic: surface which env vars are missing (key names only, never values)
-    const envDiag = {
-      hasGoogleClientId: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID.length > 0),
-      hasGoogleClientSecret: Boolean(process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CLIENT_SECRET.length > 0),
-      hasAuthSecret: Boolean(process.env.AUTH_SECRET && process.env.AUTH_SECRET.length > 0),
-      hasDatabaseUrl: Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0),
-      hasAppUrl: Boolean(process.env.APP_URL && process.env.APP_URL.length > 0)
-    };
-
     const session = getSessionFromRequest(req);
 
     if (!session) {
       return json(res, 200, {
         authenticated: false,
         user: null,
-        providers,
-        _env: envDiag
+        providers
       });
     }
 
