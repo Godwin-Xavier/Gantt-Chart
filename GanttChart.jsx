@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Cloud } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Trash2, Cloud } from 'lucide-react';
 import DashboardView from './DashboardView';
 
 const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
@@ -1637,6 +1637,62 @@ export default function GanttChart() {
     }
   };
 
+  const deleteActiveProject = () => {
+    if (!activeProjectId || !Array.isArray(projects) || projects.length === 0) return;
+
+    const targetProject = projects.find((project) => project.id === activeProjectId);
+    const targetName = targetProject?.projectTitle || 'this project';
+
+    if (projects.length === 1) {
+      const shouldReplaceWithStarter = window.confirm(
+        `Delete "${targetName}"? This is your last project, so a fresh Project 1 will be created automatically.`
+      );
+      if (!shouldReplaceWithStarter) return;
+
+      const starterProject = createProjectRecord({
+        projectTitle: 'Project 1',
+        tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+      });
+
+      skipCloudSaveRef.current = false;
+      applyWorkspacePayload({
+        schemaVersion: 3,
+        activeProjectId: starterProject.id,
+        projects: [starterProject],
+        savedAt: new Date().toISOString()
+      });
+      setIsEditingTitle(false);
+      setShowModifyMenu(false);
+      setShowHolidayManager(false);
+      return;
+    }
+
+    const shouldDelete = window.confirm(`Delete project "${targetName}"? This action cannot be undone.`);
+    if (!shouldDelete) return;
+
+    let nextActiveId = null;
+    setProjects((prevProjects) => {
+      const withSnapshot = saveActiveProjectIntoCollection(prevProjects);
+      const currentIndex = withSnapshot.findIndex((project) => project.id === activeProjectId);
+      const nextProjects = withSnapshot.filter((project) => project.id !== activeProjectId);
+
+      if (nextProjects.length > 0) {
+        const fallbackIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        nextActiveId = nextProjects[Math.min(fallbackIndex, nextProjects.length - 1)]?.id || nextProjects[0].id;
+      }
+
+      return nextProjects;
+    });
+
+    lastHydratedProjectIdRef.current = null;
+    setIsEditingTitle(false);
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    if (nextActiveId) {
+      setActiveProjectId(nextActiveId);
+    }
+  };
+
   const openProjectFromDashboard = (projectId) => {
     switchProject(projectId);
     navigateToView('planner');
@@ -2452,6 +2508,13 @@ export default function GanttChart() {
     border: '1px solid #bfdbfe'
   };
 
+  const toolbarButtonDangerSoftStyle = {
+    ...toolbarButtonBaseStyle,
+    background: '#fef2f2',
+    color: '#b91c1c',
+    border: '1px solid #fecaca'
+  };
+
   const toolbarSelectStyle = {
     width: '100%',
     height: '42px',
@@ -2741,6 +2804,22 @@ export default function GanttChart() {
               >
                 <FolderPlus size={16} />
                 Add Project
+              </button>
+
+              <button
+                type="button"
+                onClick={deleteActiveProject}
+                disabled={!activeProjectId}
+                style={{
+                  ...toolbarButtonDangerSoftStyle,
+                  width: isPhoneLayout ? '100%' : 'auto',
+                  opacity: activeProjectId ? 1 : 0.6,
+                  cursor: activeProjectId ? 'pointer' : 'not-allowed'
+                }}
+                title="Delete selected project"
+              >
+                <Trash2 size={16} />
+                Delete Project
               </button>
             </div>
 

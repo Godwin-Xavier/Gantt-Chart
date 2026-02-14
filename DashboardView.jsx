@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Mail, Filter, CheckCircle2, Clock, BarChart3, FolderOpen, Send, X, ListChecks, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { ChevronDown, ChevronRight, Mail, Filter, CheckCircle2, Clock, BarChart3, FolderOpen, Send, X, ListChecks, AlertCircle, Download } from 'lucide-react';
 
 const STATUS_COMPLETED = 'completed';
+const STATUS_IN_PROGRESS = 'in_progress';
 
 const clampPercent = (value) => {
   if (!Number.isFinite(value)) return 0;
@@ -15,6 +16,126 @@ const normalizeStatus = (value) => {
   const lower = value.toLowerCase().trim();
   if (lower === 'completed' || lower === 'complete' || lower === 'done') return 'completed';
   return 'in_progress';
+};
+
+const statusLabel = (status) => (normalizeStatus(status) === STATUS_COMPLETED ? 'Completed' : 'In Progress');
+
+const formatDateLabel = (value) => {
+  if (typeof value !== 'string' || value.length === 0) return '';
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+const formatDateRange = (startDate, endDate) => {
+  const startLabel = formatDateLabel(startDate);
+  const endLabel = formatDateLabel(endDate);
+  if (startLabel && endLabel) return `${startLabel} -> ${endLabel}`;
+  return startLabel || endLabel || '-';
+};
+
+const deriveTaskStatus = (task) => {
+  const subTasks = Array.isArray(task?.subTasks) ? task.subTasks : [];
+  if (subTasks.length === 0) return normalizeStatus(task?.status);
+  return subTasks.every((subTask) => normalizeStatus(subTask.status) === STATUS_COMPLETED)
+    ? STATUS_COMPLETED
+    : STATUS_IN_PROGRESS;
+};
+
+const buildDetailedTaskRows = (project) => {
+  if (!project || !Array.isArray(project.tasks)) return [];
+
+  const rows = [];
+
+  project.tasks.forEach((task, taskIndex) => {
+    const taskName = typeof task.name === 'string' && task.name.trim().length > 0
+      ? task.name
+      : `Task ${taskIndex + 1}`;
+
+    rows.push({
+      id: `${project.id}-task-${task.id ?? taskIndex}`,
+      name: taskName,
+      status: deriveTaskStatus(task),
+      color: task.color || '#64748b',
+      typeLabel: 'Task',
+      level: 0,
+      startDate: task.startDate,
+      endDate: task.endDate
+    });
+
+    const subTasks = Array.isArray(task.subTasks) ? task.subTasks : [];
+    subTasks.forEach((subTask, subIndex) => {
+      const subName = typeof subTask.name === 'string' && subTask.name.trim().length > 0
+        ? subTask.name
+        : `Sub-task ${subIndex + 1}`;
+
+      rows.push({
+        id: `${project.id}-task-${task.id ?? taskIndex}-sub-${subTask.id ?? subIndex}`,
+        name: subName,
+        status: normalizeStatus(subTask.status),
+        color: subTask.color || task.color || '#64748b',
+        typeLabel: 'Sub-task',
+        level: 1,
+        startDate: subTask.startDate,
+        endDate: subTask.endDate
+      });
+    });
+  });
+
+  return rows;
+};
+
+const externalScriptPromises = {};
+
+const loadExternalScript = (src, globalCheck) => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Cannot load scripts outside browser context'));
+  }
+
+  const isReady = () => (typeof globalCheck === 'function' ? globalCheck() : false);
+  if (isReady()) return Promise.resolve();
+
+  if (externalScriptPromises[src]) {
+    return externalScriptPromises[src];
+  }
+
+  externalScriptPromises[src] = new Promise((resolve, reject) => {
+    const existingScript =
+      document.querySelector(`script[data-external-src="${src}"]`) ||
+      Array.from(document.scripts).find((script) => script.src === src);
+
+    if (existingScript) {
+      if (isReady() || existingScript.dataset.loaded === '1') {
+        resolve();
+        return;
+      }
+
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.dataset.externalSrc = src;
+    script.onload = () => {
+      script.dataset.loaded = '1';
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  }).finally(() => {
+    if (!isReady()) {
+      delete externalScriptPromises[src];
+    }
+  });
+
+  return externalScriptPromises[src];
 };
 
 const flattenTasksFromProject = (project) => {
@@ -586,6 +707,8 @@ export default function DashboardView({
 }) {
   const [taskFilter, setTaskFilter] = useState('all');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isDownloadingSnapshot, setIsDownloadingSnapshot] = useState(false);
+  const dashboardSnapshotRef = useRef(null);
 
   const isPhone = Boolean(isPhoneLayout);
   const safeOverall = clampPercent(overallCompletion);
@@ -605,6 +728,69 @@ export default function DashboardView({
     () => buildEmailBody(projectSummaries, overallCompletion, totalProjects, completedProjects, dashboardProjects),
     [projectSummaries, overallCompletion, totalProjects, completedProjects, dashboardProjects]
   );
+
+  const snapshotProjects = useMemo(() => {
+    if (!Array.isArray(dashboardProjects)) return [];
+
+    return dashboardProjects.map((project) => {
+      const rows = buildDetailedTaskRows(project);
+      const completedRows = rows.filter((row) => row.status === STATUS_COMPLETED).length;
+      const progress = rows.length > 0 ? Math.round((completedRows / rows.length) * 100) : 0;
+
+      return {
+        id: project.id,
+        title: project.projectTitle,
+        rows,
+        completedRows,
+        progress
+      };
+    });
+  }, [dashboardProjects]);
+
+  const downloadDashboardSnapshot = async () => {
+    if (isDownloadingSnapshot || !dashboardSnapshotRef.current) return;
+
+    setIsDownloadingSnapshot(true);
+
+    try {
+      await loadExternalScript(
+        'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+        () => typeof window.html2canvas !== 'undefined'
+      );
+
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 120));
+
+      if (typeof window.html2canvas === 'undefined') {
+        throw new Error('html2canvas not loaded');
+      }
+
+      const canvas = await window.html2canvas(dashboardSnapshotRef.current, {
+        backgroundColor: '#f8fafc',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        windowWidth: dashboardSnapshotRef.current.scrollWidth
+      });
+
+      const dateToken = new Date().toISOString().replace(/[:.]/g, '-');
+      const link = document.createElement('a');
+      link.download = `portfolio_dashboard_snapshot_${dateToken}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Dashboard snapshot export failed:', error);
+      alert(`Failed to export dashboard image: ${error.message}`);
+    } finally {
+      setIsDownloadingSnapshot(false);
+    }
+  };
 
   if (!Array.isArray(projectSummaries) || projectSummaries.length === 0) {
     return (
@@ -648,24 +834,59 @@ export default function DashboardView({
             Track progress across all projects and tasks.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowShareModal(true)}
+        <div
           style={{
-            height: '40px', borderRadius: '12px',
-            border: '1px solid #cbd5e1', background: '#ffffff',
-            color: '#0f172a', fontSize: '0.84rem', fontWeight: 800,
-            cursor: 'pointer', padding: '0 1rem',
-            display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-            whiteSpace: 'nowrap', transition: 'all 0.15s ease',
-            alignSelf: isPhone ? 'stretch' : 'auto',
-            justifyContent: 'center'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            width: isPhone ? '100%' : 'auto',
+            flexDirection: isPhone ? 'column' : 'row'
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#6366f1'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
         >
-          <Mail size={16} /> Share via Email
-        </button>
+          <button
+            type="button"
+            onClick={downloadDashboardSnapshot}
+            disabled={isDownloadingSnapshot}
+            style={{
+              height: '40px', borderRadius: '12px',
+              border: '1px solid #2563eb',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              color: '#ffffff', fontSize: '0.84rem', fontWeight: 800,
+              cursor: isDownloadingSnapshot ? 'not-allowed' : 'pointer',
+              padding: '0 1rem',
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+              whiteSpace: 'nowrap', transition: 'all 0.15s ease',
+              alignSelf: isPhone ? 'stretch' : 'auto',
+              justifyContent: 'center',
+              opacity: isDownloadingSnapshot ? 0.7 : 1,
+              width: isPhone ? '100%' : 'auto'
+            }}
+            title="Download dashboard snapshot image"
+          >
+            <Download size={16} />
+            {isDownloadingSnapshot ? 'Preparing image...' : 'Download Snapshot'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowShareModal(true)}
+            style={{
+              height: '40px', borderRadius: '12px',
+              border: '1px solid #cbd5e1', background: '#ffffff',
+              color: '#0f172a', fontSize: '0.84rem', fontWeight: 800,
+              cursor: 'pointer', padding: '0 1rem',
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+              whiteSpace: 'nowrap', transition: 'all 0.15s ease',
+              alignSelf: isPhone ? 'stretch' : 'auto',
+              justifyContent: 'center',
+              width: isPhone ? '100%' : 'auto'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#6366f1'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+          >
+            <Mail size={16} /> Share via Email
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -803,6 +1024,251 @@ export default function DashboardView({
             />
           );
         })}
+      </div>
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: '-20000px',
+          width: '1280px',
+          pointerEvents: 'none',
+          zIndex: -1
+        }}
+      >
+        <div
+          ref={dashboardSnapshotRef}
+          style={{
+            width: '1280px',
+            boxSizing: 'border-box',
+            background: '#f8fafc',
+            color: '#0f172a',
+            fontFamily: '"Outfit", sans-serif',
+            padding: '28px'
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              boxShadow: '0 8px 22px rgba(15, 23, 42, 0.08)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
+                  Portfolio Snapshot
+                </div>
+                <div style={{ marginTop: '0.2rem', fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+                  Dashboard Task Overview
+                </div>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                Generated {new Date().toLocaleString()}
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: '0.9rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gap: '0.55rem'
+              }}
+            >
+              {[
+                { label: 'Overall Completion', value: percentLabel(safeOverall), tone: '#eef2ff', border: '#c7d2fe', color: '#3730a3' },
+                { label: 'Projects', value: totalProjects, tone: '#f0f9ff', border: '#bae6fd', color: '#0369a1' },
+                { label: 'Completed Tasks', value: completedTaskCount, tone: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+                { label: 'Pending Tasks', value: pendingTaskCount, tone: '#fffbeb', border: '#fde68a', color: '#92400e' }
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    borderRadius: '12px',
+                    border: `1px solid ${item.border}`,
+                    background: item.tone,
+                    padding: '0.6rem 0.7rem'
+                  }}
+                >
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ marginTop: '0.2rem', fontSize: '1.2rem', fontWeight: 800, color: item.color }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '0.9rem', display: 'grid', gap: '0.8rem' }}>
+            {snapshotProjects.map((project) => (
+              <div
+                key={project.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 6px 18px rgba(15, 23, 42, 0.06)'
+                }}
+              >
+                <div
+                  style={{
+                    padding: '0.75rem 0.95rem',
+                    borderBottom: '1px solid #e2e8f0',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.8rem'
+                  }}
+                >
+                  <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>{project.title}</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
+                      {project.completedRows}/{project.rows.length} completed
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: '999px',
+                        border: '1px solid #c7d2fe',
+                        background: '#eef2ff',
+                        padding: '0.2rem 0.52rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        color: '#3730a3'
+                      }}
+                    >
+                      {project.progress}%
+                    </div>
+                  </div>
+                </div>
+
+                {project.rows.length === 0 ? (
+                  <div style={{ padding: '0.8rem 0.95rem', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700 }}>
+                    No tasks available in this project.
+                  </div>
+                ) : (
+                  <div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '105px minmax(0, 1fr) 160px 230px',
+                        gap: '0.6rem',
+                        padding: '0.6rem 0.95rem',
+                        borderBottom: '1px solid #e2e8f0',
+                        background: '#f8fafc',
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: '#64748b'
+                      }}
+                    >
+                      <div>Type</div>
+                      <div>Task / Sub-task</div>
+                      <div>Status</div>
+                      <div>Timeline</div>
+                    </div>
+
+                    {project.rows.map((row, index) => {
+                      const isCompleted = row.status === STATUS_COMPLETED;
+                      return (
+                        <div
+                          key={row.id}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '105px minmax(0, 1fr) 160px 230px',
+                            gap: '0.6rem',
+                            padding: '0.55rem 0.95rem',
+                            borderBottom: index === project.rows.length - 1 ? 'none' : '1px solid #eef2f7',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: row.level === 0 ? '#334155' : '#64748b' }}>
+                            {row.typeLabel}
+                          </div>
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              paddingLeft: row.level === 1 ? '0.9rem' : 0,
+                              minWidth: 0
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '9px',
+                                height: '9px',
+                                borderRadius: '999px',
+                                background: row.color || '#64748b',
+                                flexShrink: 0
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                color: '#0f172a',
+                                textDecoration: isCompleted ? 'line-through' : 'none',
+                                opacity: isCompleted ? 0.74 : 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {row.name}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '102px',
+                                height: '24px',
+                                borderRadius: '999px',
+                                border: isCompleted ? '1px solid #86efac' : '1px solid #fde68a',
+                                background: isCompleted ? '#dcfce7' : '#fef9c3',
+                                color: isCompleted ? '#166534' : '#854d0e',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                padding: '0 0.5rem'
+                              }}
+                            >
+                              {statusLabel(row.status)}
+                            </span>
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              color: '#64748b',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {formatDateRange(row.startDate, row.endDate)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Share Modal */}
