@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Github, Cloud } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Cloud } from 'lucide-react';
 import DashboardView from './DashboardView';
 
 const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
@@ -3099,7 +3099,7 @@ export default function GanttChart() {
                     Sign in only if you want cross-device sync
                   </h3>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', fontWeight: '600', lineHeight: 1.55 }}>
-                    Stay in guest mode and continue with local auto-save, or sign in with Gmail/GitHub to sync updates across devices in real time.
+                    Stay in guest mode and continue with local auto-save, or sign in with Gmail to sync updates across devices in real time.
                   </p>
                 </div>
 
@@ -3157,12 +3157,13 @@ export default function GanttChart() {
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
+                <div style={{ marginTop: '1rem' }}>
                   <button
                     type="button"
                     onClick={() => startOptionalSignIn('google')}
                     disabled={authSession.isLoading || !authSession.providers.google}
                     style={{
+                      width: '100%',
                       height: '46px',
                       borderRadius: '12px',
                       border: authSession.providers.google ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
@@ -3179,29 +3180,6 @@ export default function GanttChart() {
                   >
                     <Mail size={17} />
                     Continue with Gmail
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => startOptionalSignIn('github')}
-                    disabled={authSession.isLoading || !authSession.providers.github}
-                    style={{
-                      height: '46px',
-                      borderRadius: '12px',
-                      border: authSession.providers.github ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
-                      background: authSession.providers.github ? '#ffffff' : '#f8fafc',
-                      color: authSession.providers.github ? '#0f172a' : '#94a3b8',
-                      fontSize: '0.9rem',
-                      fontWeight: '800',
-                      cursor: authSession.providers.github ? 'pointer' : 'not-allowed',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <Github size={17} />
-                    Continue with GitHub
                   </button>
                 </div>
               )}
