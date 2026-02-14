@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { ChevronDown, ChevronRight, Mail, Filter, CheckCircle2, Clock, BarChart3, FolderOpen, Send, X, ListChecks, AlertCircle, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, Filter, CheckCircle2, Clock, BarChart3, FolderOpen, AlertCircle, Download } from 'lucide-react';
 
 const STATUS_COMPLETED = 'completed';
 const STATUS_IN_PROGRESS = 'in_progress';
@@ -174,50 +174,6 @@ const flattenTasksFromProject = (project) => {
     }
   });
   return items;
-};
-
-const buildEmailBody = (projectSummaries, overallCompletion, totalProjects, completedProjects, dashboardProjects) => {
-  let body = `Portfolio Dashboard Summary\n`;
-  body += `${'='.repeat(40)}\n\n`;
-  body += `Overall Completion: ${percentLabel(overallCompletion)}\n`;
-  body += `Total Projects: ${totalProjects}\n`;
-  body += `Completed Projects: ${completedProjects}\n`;
-  body += `In Progress: ${totalProjects - completedProjects}\n\n`;
-  body += `${'='.repeat(40)}\n`;
-  body += `PROJECT DETAILS\n`;
-  body += `${'='.repeat(40)}\n\n`;
-
-  (dashboardProjects || []).forEach((project) => {
-    const tasks = flattenTasksFromProject(project);
-    const completed = tasks.filter(t => t.status === STATUS_COMPLETED);
-    const pending = tasks.filter(t => t.status !== STATUS_COMPLETED);
-    const pct = tasks.length > 0 ? (completed.length / tasks.length) * 100 : 0;
-
-    body += `${project.projectTitle}\n`;
-    body += `${'-'.repeat(30)}\n`;
-    body += `Progress: ${percentLabel(pct)} (${completed.length}/${tasks.length} items)\n\n`;
-
-    if (completed.length > 0) {
-      body += `  Completed Tasks:\n`;
-      completed.forEach(t => {
-        body += `    [DONE] ${t.parentName ? `${t.parentName} > ` : ''}${t.name}\n`;
-      });
-      body += '\n';
-    }
-
-    if (pending.length > 0) {
-      body += `  Pending Tasks:\n`;
-      pending.forEach(t => {
-        body += `    [TODO] ${t.parentName ? `${t.parentName} > ` : ''}${t.name}\n`;
-      });
-      body += '\n';
-    }
-    body += '\n';
-  });
-
-  body += `${'='.repeat(40)}\n`;
-  body += `Sent from Gantt Chart Planner\n`;
-  return body;
 };
 
 // --- Stat Card ---
@@ -530,168 +486,6 @@ const ProjectCard = ({ project, summary, onOpen, isPhone, globalFilter }) => {
   );
 };
 
-// --- Share via Email Modal ---
-const ShareEmailModal = ({ onClose, emailBody, subject, isPhone }) => {
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  const handleMailTo = () => {
-    const mailto = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailto, '_blank');
-  };
-
-  const handleCopyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(emailBody);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-      const textarea = document.createElement('textarea');
-      textarea.value = emailBody;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(15, 23, 42, 0.45)',
-        backdropFilter: 'blur(5px)',
-        WebkitBackdropFilter: 'blur(5px)',
-        zIndex: 100,
-        display: 'grid', placeItems: 'center',
-        padding: '1rem',
-        animation: 'overlayFade 0.18s ease-out both'
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: '540px',
-          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-          borderRadius: '20px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 35px 80px rgba(15, 23, 42, 0.22)',
-          padding: '1.25rem',
-          animation: 'popIn 0.2s ease-out both',
-          maxHeight: 'calc(100vh - 2rem)',
-          overflow: 'auto'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-          <div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              fontSize: '0.72rem', fontWeight: 800, color: '#6366f1',
-              background: '#eef2ff', border: '1px solid #c7d2fe',
-              borderRadius: '999px', padding: '0.22rem 0.55rem'
-            }}>
-              <Send size={12} /> Share Dashboard
-            </div>
-            <h3 style={{ margin: '0.55rem 0 0 0', fontSize: '1.12rem', fontWeight: 800, color: '#0f172a' }}>
-              Share via Email
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close share dialog"
-            style={{
-              background: '#f1f5f9', border: '1px solid #e2e8f0',
-              width: '36px', height: '36px', borderRadius: '10px',
-              color: '#64748b', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-            Recipient Email (optional)
-          </label>
-          <input
-            type="email"
-            value={recipientEmail}
-            onChange={e => setRecipientEmail(e.target.value)}
-            placeholder="colleague@company.com"
-            style={{
-              width: '100%', height: '42px', borderRadius: '10px',
-              border: '1px solid #cbd5e1', background: '#ffffff',
-              padding: '0 0.75rem', fontSize: '0.88rem', fontWeight: 600,
-              color: '#0f172a', boxSizing: 'border-box'
-            }}
-          />
-        </div>
-
-        {/* Preview */}
-        <div style={{
-          background: '#f8fafc', border: '1px solid #e2e8f0',
-          borderRadius: '10px', padding: '0.65rem',
-          maxHeight: '220px', overflowY: 'auto',
-          marginBottom: '0.75rem'
-        }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
-            Preview
-          </div>
-          <pre style={{
-            margin: 0, fontSize: '0.72rem', fontWeight: 600, color: '#334155',
-            whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.55,
-            fontFamily: '"JetBrains Mono", monospace'
-          }}>
-            {emailBody}
-          </pre>
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr',
-          gap: '0.55rem'
-        }}>
-          <button
-            type="button"
-            onClick={handleCopyToClipboard}
-            style={{
-              height: '42px', borderRadius: '10px',
-              border: '1px solid #cbd5e1', background: '#ffffff',
-              color: '#0f172a', fontSize: '0.85rem', fontWeight: 800,
-              cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '0.4rem',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <ListChecks size={16} />
-            {copied ? 'Copied!' : 'Copy to Clipboard'}
-          </button>
-          <button
-            type="button"
-            onClick={handleMailTo}
-            style={{
-              height: '42px', borderRadius: '10px',
-              border: '1px solid #6366f1',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              color: '#ffffff', fontSize: '0.85rem', fontWeight: 800,
-              cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '0.4rem'
-            }}
-          >
-            <Mail size={16} /> Open Email Client
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ==========================================
 // Main Dashboard Component
 // ==========================================
@@ -706,7 +500,6 @@ export default function DashboardView({
   isCompactLayout
 }) {
   const [taskFilter, setTaskFilter] = useState('all');
-  const [showShareModal, setShowShareModal] = useState(false);
   const [isDownloadingSnapshot, setIsDownloadingSnapshot] = useState(false);
   const dashboardSnapshotRef = useRef(null);
 
@@ -722,12 +515,6 @@ export default function DashboardView({
   const totalTaskCount = allFlatTasks.length;
   const completedTaskCount = allFlatTasks.filter(t => t.status === STATUS_COMPLETED).length;
   const pendingTaskCount = totalTaskCount - completedTaskCount;
-
-  const emailSubject = `Portfolio Dashboard - ${percentLabel(safeOverall)} Complete (${completedProjects}/${totalProjects} projects)`;
-  const emailBody = useMemo(
-    () => buildEmailBody(projectSummaries, overallCompletion, totalProjects, completedProjects, dashboardProjects),
-    [projectSummaries, overallCompletion, totalProjects, completedProjects, dashboardProjects]
-  );
 
   const snapshotProjects = useMemo(() => {
     if (!Array.isArray(dashboardProjects)) return [];
@@ -834,59 +621,36 @@ export default function DashboardView({
             Track progress across all projects and tasks.
           </p>
         </div>
-        <div
+        <button
+          type="button"
+          onClick={downloadDashboardSnapshot}
+          disabled={isDownloadingSnapshot}
           style={{
-            display: 'flex',
+            height: '40px',
+            borderRadius: '12px',
+            border: '1px solid #2563eb',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            color: '#ffffff',
+            fontSize: '0.84rem',
+            fontWeight: 800,
+            cursor: isDownloadingSnapshot ? 'not-allowed' : 'pointer',
+            padding: '0 1rem',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.5rem',
+            gap: '0.45rem',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.15s ease',
+            alignSelf: isPhone ? 'stretch' : 'auto',
+            justifyContent: 'center',
+            opacity: isDownloadingSnapshot ? 0.7 : 1,
             width: isPhone ? '100%' : 'auto',
-            flexDirection: isPhone ? 'column' : 'row'
+            boxShadow: isDownloadingSnapshot ? 'none' : '0 10px 20px rgba(37, 99, 235, 0.2)'
           }}
+          title="Download dashboard snapshot image"
         >
-          <button
-            type="button"
-            onClick={downloadDashboardSnapshot}
-            disabled={isDownloadingSnapshot}
-            style={{
-              height: '40px', borderRadius: '12px',
-              border: '1px solid #2563eb',
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              color: '#ffffff', fontSize: '0.84rem', fontWeight: 800,
-              cursor: isDownloadingSnapshot ? 'not-allowed' : 'pointer',
-              padding: '0 1rem',
-              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-              whiteSpace: 'nowrap', transition: 'all 0.15s ease',
-              alignSelf: isPhone ? 'stretch' : 'auto',
-              justifyContent: 'center',
-              opacity: isDownloadingSnapshot ? 0.7 : 1,
-              width: isPhone ? '100%' : 'auto'
-            }}
-            title="Download dashboard snapshot image"
-          >
-            <Download size={16} />
-            {isDownloadingSnapshot ? 'Preparing image...' : 'Download Snapshot'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowShareModal(true)}
-            style={{
-              height: '40px', borderRadius: '12px',
-              border: '1px solid #cbd5e1', background: '#ffffff',
-              color: '#0f172a', fontSize: '0.84rem', fontWeight: 800,
-              cursor: 'pointer', padding: '0 1rem',
-              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-              whiteSpace: 'nowrap', transition: 'all 0.15s ease',
-              alignSelf: isPhone ? 'stretch' : 'auto',
-              justifyContent: 'center',
-              width: isPhone ? '100%' : 'auto'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#6366f1'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-          >
-            <Mail size={16} /> Share via Email
-          </button>
-        </div>
+          <Download size={16} />
+          {isDownloadingSnapshot ? 'Preparing image...' : 'Download Snapshot'}
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -1271,15 +1035,6 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <ShareEmailModal
-          onClose={() => setShowShareModal(false)}
-          emailBody={emailBody}
-          subject={emailSubject}
-          isPhone={isPhone}
-        />
-      )}
     </div>
   );
 }

@@ -2391,12 +2391,26 @@ export default function GanttChart() {
   );
 
   const isDashboardView = currentView === 'dashboard';
+  const isPlannerView = !isDashboardView;
+  const actionControlsDisabled = isDashboardView;
   const savedAtLabel = lastSavedAt
     ? lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
   const cloudSyncedLabel = cloudSyncState.lastSyncedAt
     ? cloudSyncState.lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
+
+  const openPlannerView = () => {
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    navigateToView('planner');
+  };
+
+  const openDashboardView = () => {
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    navigateToView('dashboard');
+  };
 
   const showDatesInEditor = showDates && !isCompactLayout;
   const showCostInEditor = showCost && !isCompactLayout;
@@ -2457,10 +2471,11 @@ export default function GanttChart() {
     gap: '0.45rem',
     flexWrap: 'wrap',
     padding: '0.42rem',
-    borderRadius: '14px',
+    borderRadius: '15px',
     border: '1px solid #dbe4ef',
     background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.85)'
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 16px rgba(15, 23, 42, 0.04)',
+    transition: 'border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease'
   };
 
   const toolbarButtonBaseStyle = {
@@ -2475,8 +2490,9 @@ export default function GanttChart() {
     justifyContent: 'center',
     gap: '0.48rem',
     whiteSpace: 'nowrap',
-    transition: 'all 0.18s ease',
-    letterSpacing: '0.01em'
+    transition: 'transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease, opacity 0.16s ease',
+    letterSpacing: '0.01em',
+    transform: 'translateY(0)'
   };
 
   const toolbarButtonNeutralStyle = {
@@ -2527,6 +2543,36 @@ export default function GanttChart() {
     padding: '0 0.75rem',
     cursor: 'pointer'
   };
+
+  const viewSwitchShellStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.22rem',
+    borderRadius: '12px',
+    border: '1px solid #cbd5e1',
+    background: '#ffffff',
+    padding: '0.2rem',
+    minHeight: '42px'
+  };
+
+  const getViewSwitchButtonStyle = (isActive) => ({
+    border: isActive ? '1px solid #2563eb' : '1px solid transparent',
+    background: isActive ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent',
+    color: isActive ? '#ffffff' : '#334155',
+    boxShadow: isActive ? '0 10px 18px rgba(37, 99, 235, 0.2)' : 'none',
+    borderRadius: '10px',
+    height: '36px',
+    padding: '0 0.8rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.38rem',
+    fontSize: '0.8rem',
+    fontWeight: '800',
+    cursor: 'pointer',
+    transition: 'all 0.16s ease',
+    minWidth: isPhoneLayout ? 'calc(50% - 0.12rem)' : '104px'
+  });
 
   const syncPillStyle = {
     fontSize: '0.73rem',
@@ -2832,24 +2878,33 @@ export default function GanttChart() {
                 marginLeft: isPhoneLayout ? 0 : 'auto'
               }}
             >
-              <button
-                type="button"
-                ref={dashboardButtonRef}
-                className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
-                onClick={() => {
-                  setShowModifyMenu(false);
-                  setShowHolidayManager(false);
-                  navigateToView(isDashboardView ? 'planner' : 'dashboard');
-                }}
+              <div
+                className={`view-switch-shell ${activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}`}
                 style={{
-                  ...(isDashboardView ? toolbarButtonPrimaryStyle : toolbarButtonNeutralStyle),
+                  ...viewSwitchShellStyle,
                   width: isPhoneLayout ? '100%' : 'auto'
                 }}
-                title={isDashboardView ? 'Back to Planner' : 'Open Dashboard'}
               >
-                <BarChart3 size={16} />
-                {isDashboardView ? 'Planner' : 'Dashboard'}
-              </button>
+                <button
+                  type="button"
+                  onClick={openPlannerView}
+                  style={getViewSwitchButtonStyle(isPlannerView)}
+                  title="Open planner view"
+                >
+                  <Calendar size={15} />
+                  Planner
+                </button>
+                <button
+                  type="button"
+                  ref={dashboardButtonRef}
+                  onClick={openDashboardView}
+                  style={getViewSwitchButtonStyle(isDashboardView)}
+                  title="Open dashboard view"
+                >
+                  <BarChart3 size={15} />
+                  Dashboard
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -2888,15 +2943,19 @@ export default function GanttChart() {
               )}
             </div>
 
-            {!isDashboardView && (
-              <div
-                className="toolbar-group action-group"
-                style={{
-                  ...toolbarGroupBaseStyle,
-                  flex: isPhoneLayout ? '1 1 100%' : '2 1 520px',
-                  minWidth: isPhoneLayout ? '100%' : '460px'
-                }}
-              >
+            <div
+              className="toolbar-group action-group"
+              style={{
+                ...toolbarGroupBaseStyle,
+                flex: isPhoneLayout ? '1 1 100%' : '2 1 520px',
+                minWidth: isPhoneLayout ? '100%' : '460px',
+                opacity: actionControlsDisabled ? 0.76 : 1,
+                background: actionControlsDisabled
+                  ? 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+                  : toolbarGroupBaseStyle.background,
+                border: actionControlsDisabled ? '1px solid #e2e8f0' : toolbarGroupBaseStyle.border
+              }}
+            >
             <button
               type="button"
               ref={importButtonRef}
@@ -2905,9 +2964,12 @@ export default function GanttChart() {
                 setShowModifyMenu(false);
                 if (fileInputRef.current) fileInputRef.current.click();
               }}
+              disabled={actionControlsDisabled}
               style={{
                 ...toolbarButtonSuccessSoftStyle,
-                width: isPhoneLayout ? '100%' : 'auto'
+                width: isPhoneLayout ? '100%' : 'auto',
+                opacity: actionControlsDisabled ? 0.62 : 1,
+                cursor: actionControlsDisabled ? 'not-allowed' : 'pointer'
               }}
               title="Import JSON"
             >
@@ -2921,25 +2983,29 @@ export default function GanttChart() {
                 ref={modifyButtonRef}
                 className={activeTutorialTarget === 'modifyMenu' ? 'tutorial-target-active' : ''}
                 onClick={() => {
+                  if (actionControlsDisabled) return;
                   setShowHolidayManager(false);
                   setShowModifyMenu((prev) => !prev);
                 }}
+                disabled={actionControlsDisabled}
                 style={{
                   ...toolbarButtonNeutralStyle,
                   background: showModifyMenu ? '#eef2ff' : toolbarButtonNeutralStyle.background,
                   border: showModifyMenu ? '1px solid rgba(99, 102, 241, 0.45)' : toolbarButtonNeutralStyle.border,
                   color: showModifyMenu ? '#3730a3' : toolbarButtonNeutralStyle.color,
                   width: isPhoneLayout ? '100%' : 'auto',
-                  boxShadow: showModifyMenu ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none'
+                  boxShadow: showModifyMenu ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none',
+                  opacity: actionControlsDisabled ? 0.62 : 1,
+                  cursor: actionControlsDisabled ? 'not-allowed' : 'pointer'
                 }}
-                aria-expanded={showModifyMenu}
+                aria-expanded={showModifyMenu && !actionControlsDisabled}
               >
                 <Settings size={16} />
                 Modify Graph
                 <ChevronDown size={16} />
               </button>
 
-              {showModifyMenu && (
+              {showModifyMenu && !actionControlsDisabled && (
                 <div style={{
                   position: 'absolute',
                   top: '110%',
@@ -3141,9 +3207,13 @@ export default function GanttChart() {
                 setShowModifyMenu(false);
                 addTask();
               }}
+              disabled={actionControlsDisabled}
               style={{
                 ...toolbarButtonPrimaryStyle,
-                width: isPhoneLayout ? '100%' : 'auto'
+                width: isPhoneLayout ? '100%' : 'auto',
+                opacity: actionControlsDisabled ? 0.62 : 1,
+                cursor: actionControlsDisabled ? 'not-allowed' : 'pointer',
+                boxShadow: actionControlsDisabled ? 'none' : toolbarButtonPrimaryStyle.boxShadow
               }}
               title="Add Task"
             >
@@ -3156,9 +3226,11 @@ export default function GanttChart() {
               ref={settingsButtonRef}
               className={activeTutorialTarget === 'settingsButton' ? 'tutorial-target-active' : ''}
               onClick={() => {
+                if (actionControlsDisabled) return;
                 setShowModifyMenu(false);
                 setShowHolidayManager((prev) => !prev);
               }}
+              disabled={actionControlsDisabled}
               style={{
                 ...toolbarButtonNeutralStyle,
                 background: showHolidayManager ? '#eef2ff' : toolbarButtonNeutralStyle.background,
@@ -3168,7 +3240,9 @@ export default function GanttChart() {
                 padding: isPhoneLayout ? '0 0.85rem' : 0,
                 gridColumn: isPhoneLayout ? '1 / -1' : 'auto',
                 gap: isPhoneLayout ? '0.55rem' : 0,
-                boxShadow: showHolidayManager ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none'
+                boxShadow: showHolidayManager ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none',
+                opacity: actionControlsDisabled ? 0.62 : 1,
+                cursor: actionControlsDisabled ? 'not-allowed' : 'pointer'
               }}
               title="Settings & Branding"
               aria-label="Settings & Branding"
@@ -3177,6 +3251,24 @@ export default function GanttChart() {
               {isPhoneLayout && <span style={{ fontWeight: '800', fontSize: '0.92rem' }}>Settings & Branding</span>}
             </button>
 
+            {actionControlsDisabled && (
+              <div
+                style={{
+                  width: '100%',
+                  borderRadius: '10px',
+                  border: '1px solid #dbe4ef',
+                  background: '#f8fafc',
+                  color: '#64748b',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  padding: '0.46rem 0.62rem',
+                  textAlign: isPhoneLayout ? 'center' : 'left'
+                }}
+              >
+                Planner tools are locked in Dashboard mode. Switch to Planner to edit tasks or export the planner chart.
+              </div>
+            )}
+
             <input
               type="file"
               ref={fileInputRef}
@@ -3184,8 +3276,7 @@ export default function GanttChart() {
               accept=".json"
               style={{ display: 'none' }}
             />
-              </div>
-            )}
+            </div>
 
             {isPhoneLayout && (
               <div className="toolbar-sync-pill" style={{ ...syncPillStyle, width: '100%', textAlign: 'center' }}>
@@ -6230,6 +6321,31 @@ export default function GanttChart() {
           pointer-events: auto;
         }
 
+        .header-controls .toolbar-group:hover {
+          border-color: #c7d2fe;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 12px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .header-controls .toolbar-group button:hover:not(:disabled) {
+          transform: translateY(-1px);
+        }
+
+        .header-controls .toolbar-group button:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .header-controls .toolbar-group button:disabled {
+          box-shadow: none !important;
+        }
+
+        .view-switch-shell {
+          overflow: hidden;
+        }
+
+        .view-switch-shell button {
+          flex: 1 1 0;
+        }
+
         /* Touch-friendly targets for mobile */
         @media (pointer: coarse) {
           button, select, input[type="date"] {
@@ -6380,6 +6496,14 @@ export default function GanttChart() {
           .header-controls > div button {
             width: 100% !important;
             justify-content: center !important;
+          }
+
+          .header-controls .view-switch-shell {
+            width: 100% !important;
+          }
+
+          .header-controls .view-switch-shell button {
+            width: calc(50% - 0.12rem) !important;
           }
 
           .task-row,
