@@ -922,8 +922,8 @@ export default function GanttChart() {
       {
         id: 'dashboard-action-state',
         title: 'Dashboard keeps controls consistent',
-        body: 'When you switch to Dashboard, planner action buttons stay visible in the same place but become disabled. This keeps mobile and desktop layouts stable while making mode changes obvious.',
-        target: 'import',
+        body: 'This Dashboard button stays in the same position across desktop and mobile. When Dashboard is active, planner action buttons stay visible in place but become disabled so mode changes are clear.',
+        target: 'dashboardButton',
         panel: null,
         view: 'dashboard'
       },
