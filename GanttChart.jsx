@@ -1116,6 +1116,8 @@ export default function GanttChart() {
 
   const saveActiveProjectIntoCollection = (collection = []) => {
     if (!activeProjectId) return collection;
+    if (isHydratingProjectRef.current) return collection;
+    if (lastHydratedProjectIdRef.current !== activeProjectId) return collection;
     const snapshot = buildActiveProjectSnapshot();
 
     return collection.map((project) => (
@@ -1273,6 +1275,28 @@ export default function GanttChart() {
     const timeoutId = window.setTimeout(() => {
       try {
         const payload = buildWorkspacePayload(projects);
+        let persistedOwnerUserId = null;
+
+        if (authSession.isAuthenticated && authSession.user?.id) {
+          persistedOwnerUserId = authSession.user.id;
+        } else {
+          try {
+            const existingRaw = window.localStorage.getItem(APP_STORAGE_KEY);
+            if (existingRaw) {
+              const existingPayload = JSON.parse(existingRaw);
+              if (typeof existingPayload?._ownerUserId === 'string' && existingPayload._ownerUserId.length > 0) {
+                persistedOwnerUserId = existingPayload._ownerUserId;
+              }
+            }
+          } catch {
+            persistedOwnerUserId = null;
+          }
+        }
+
+        if (persistedOwnerUserId) {
+          payload._ownerUserId = persistedOwnerUserId;
+        }
+
         window.localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(payload));
         setLastSavedAt(new Date());
       } catch (error) {
@@ -1296,7 +1320,9 @@ export default function GanttChart() {
     showCost,
     showTotals,
     currency,
-    loginDateSeed
+    loginDateSeed,
+    authSession.isAuthenticated,
+    authSession.user?.id
   ]);
 
   const pullWorkspaceFromCloud = async (applyIfNewerOnly = true) => {
@@ -1399,8 +1425,42 @@ export default function GanttChart() {
         });
 
         if (isAuthenticated) {
+          let localOwnerUserId = null;
           try {
-            await pullWorkspaceFromCloud(false);
+            const raw = window.localStorage.getItem(APP_STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              localOwnerUserId = parsed?._ownerUserId || null;
+            }
+          } catch {}
+
+          const currentUserId = sessionPayload.user?.id || null;
+          const isUserSwitch = Boolean(localOwnerUserId && currentUserId && localOwnerUserId !== currentUserId);
+
+          try {
+            const cloudApplied = await pullWorkspaceFromCloud(false);
+
+            if (cloudApplied) {
+              // Cloud data was found and applied — this handles both fresh
+              // logins and returning users on new devices.
+            } else if (isUserSwitch) {
+              // Brand-new account (no cloud data) on a device that has
+              // another user's data in localStorage.  Reset to defaults
+              // so the new user starts clean.
+              skipCloudSaveRef.current = false;
+              const starterProject = createProjectRecord({
+                projectTitle: 'Project 1',
+                tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+              });
+              applyWorkspacePayload({
+                schemaVersion: 3,
+                activeProjectId: starterProject.id,
+                projects: [starterProject],
+                savedAt: new Date().toISOString()
+              });
+            }
+            // else: returning user, same owner, no newer cloud data — keep
+            // localStorage as-is (it's already loaded from the mount effect).
           } catch (cloudError) {
             if (!cancelled) {
               setCloudSyncState((prev) => ({
