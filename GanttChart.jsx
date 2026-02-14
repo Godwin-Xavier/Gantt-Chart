@@ -3643,10 +3643,13 @@ export default function GanttChart() {
           >
             <DashboardView
               projectSummaries={projectSummaries}
+              dashboardProjects={dashboardProjects}
               overallCompletion={overallCompletion}
               totalProjects={dashboardProjects.length}
               completedProjects={completedProjects}
               onOpenProject={openProjectFromDashboard}
+              isPhoneLayout={isPhoneLayout}
+              isCompactLayout={isCompactLayout}
             />
           </div>
         ) : (
@@ -6101,12 +6104,32 @@ export default function GanttChart() {
 
         .header-controls {
           -ms-overflow-style: none;
+          scrollbar-width: none;
         }
 
         .header-controls,
         .header-controls > div,
         .header-controls button {
           pointer-events: auto;
+        }
+
+        /* Touch-friendly targets for mobile */
+        @media (pointer: coarse) {
+          button, select, input[type="date"] {
+            min-height: 44px;
+          }
+        }
+
+        /* Smooth transitions on interactive elements */
+        .chart-card, .task-list-card {
+          transition: box-shadow 0.25s ease;
+        }
+
+        /* Dashboard responsive adjustments */
+        @media (max-width: 480px) {
+          .app-shell {
+            padding: 0.65rem 0.35rem !important;
+          }
         }
 
         @media (max-width: 1150px) {
