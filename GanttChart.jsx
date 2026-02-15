@@ -1,12 +1,14 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Trash2, Cloud } from 'lucide-react';
+import { Plus, X, Calendar, Edit2, ChevronDown, ChevronRight, Settings, Upload, Image as ImageIcon, FileJson, FileType, DollarSign, Sparkles, BookOpenCheck, BarChart3, FolderPlus, LogIn, Mail, Trash2, Cloud, Bell, BellRing, Clock } from 'lucide-react';
 import DashboardView from './DashboardView';
 
 const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
 const LEGACY_APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
 const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
+const REMINDERS_STORAGE_KEY = 'gantt-chart:reminders:v1';
+const DISMISSED_AUTO_ALERTS_KEY = 'gantt-chart:dismissed-auto-alerts:v1';
 const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH !== 'false';
 
 const STATUS_IN_PROGRESS = 'in_progress';
@@ -656,6 +658,33 @@ export default function GanttChart() {
     return window.innerWidth <= 760;
   });
   const [tasks, setTasks] = useState(() => normalizeTaskTree(buildDefaultTasks(loginDateSeed)));
+
+  // --- Reminder & Notification State ---
+  const [reminders, setReminders] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(REMINDERS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  });
+  const [dismissedAutoAlerts, setDismissedAutoAlerts] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(DISMISSED_AUTO_ALERTS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  });
+  const [activeNotifications, setActiveNotifications] = useState([]);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderTarget, setReminderTarget] = useState(null);
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderNote, setReminderNote] = useState('');
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const notificationPanelRef = useRef(null);
+  const reminderBellRef = useRef(null);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -840,6 +869,14 @@ export default function GanttChart() {
         view: 'planner'
       },
       {
+        id: 'reminder-center',
+        title: 'Use reminder center',
+        body: `${actionWord} the bell button to review pending reminders and due alerts. Then use Set Reminder on any task or sub-task to schedule follow-ups.`,
+        target: 'reminderBell',
+        panel: null,
+        view: 'planner'
+      },
+      {
         id: 'signin-providers',
         title: 'Connect Google when needed',
         body: 'This step is optional. Use Google sign-in only if you want one synced source of truth across devices.',
@@ -962,6 +999,7 @@ export default function GanttChart() {
     setShowWelcomeBanner(false);
     markIntroSeen();
     setShowSignInPrompt(false);
+    setShowNotificationPanel(false);
     setShowHolidayManager(false);
     setShowModifyMenu(false);
     setTutorialStepIndex(0);
@@ -972,6 +1010,7 @@ export default function GanttChart() {
     navigateToView('planner');
     setIsTutorialActive(false);
     setShowSignInPrompt(false);
+    setShowNotificationPanel(false);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
     setShowWelcomeBanner(true);
@@ -980,6 +1019,7 @@ export default function GanttChart() {
   const skipTutorial = () => {
     setShowWelcomeBanner(false);
     setShowSignInPrompt(false);
+    setShowNotificationPanel(false);
     setShowHolidayManager(false);
     setShowModifyMenu(false);
     setIsTutorialActive(false);
@@ -989,6 +1029,7 @@ export default function GanttChart() {
   const completeTutorial = () => {
     setIsTutorialActive(false);
     setShowSignInPrompt(false);
+    setShowNotificationPanel(false);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
     markIntroSeen();
@@ -1019,6 +1060,7 @@ export default function GanttChart() {
       dashboardButton: dashboardButtonRef.current,
       dashboardPanel: dashboardPanelRef.current,
       dashboardDownload: dashboardDownloadButtonRef.current,
+      reminderBell: reminderBellRef.current,
       import: importButtonRef.current,
       addTask: addTaskButtonRef.current,
       statusColumn: statusColumnRef.current,
@@ -1167,6 +1209,8 @@ export default function GanttChart() {
       schemaVersion: 3,
       activeProjectId,
       projects: projectsToPersist,
+      reminders,
+      dismissedAutoAlerts,
       savedAt: new Date().toISOString()
     };
   };
@@ -1183,6 +1227,14 @@ export default function GanttChart() {
     setProjects(loadedProjects);
     lastHydratedProjectIdRef.current = null;
     setActiveProjectId(nextActiveId);
+
+    if (Array.isArray(payload.reminders)) {
+      setReminders(payload.reminders);
+    }
+
+    if (Array.isArray(payload.dismissedAutoAlerts)) {
+      setDismissedAutoAlerts(payload.dismissedAutoAlerts);
+    }
 
     if (typeof payload.savedAt === 'string') {
       const parsedDate = new Date(payload.savedAt);
@@ -1344,6 +1396,8 @@ export default function GanttChart() {
     activeProjectId,
     projectTitle,
     tasks,
+    reminders,
+    dismissedAutoAlerts,
     holidays,
     customerLogo,
     customerLogoWidth,
@@ -1592,6 +1646,8 @@ export default function GanttChart() {
     activeProjectId,
     projectTitle,
     tasks,
+    reminders,
+    dismissedAutoAlerts,
     holidays,
     customerLogo,
     customerLogoWidth,
@@ -1639,6 +1695,287 @@ export default function GanttChart() {
     };
   }, [authSession.isAuthenticated, authSession.user]);
 
+  // ─── Reminder & Notification Engine ────────────────────────────────────
+
+  // Persist reminders to localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders)); } catch {}
+  }, [reminders]);
+
+  // Persist dismissed auto-alert keys
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(DISMISSED_AUTO_ALERTS_KEY, JSON.stringify(dismissedAutoAlerts)); } catch {}
+  }, [dismissedAutoAlerts]);
+
+  // Close notification panel on outside click or Escape
+  useEffect(() => {
+    if (!showNotificationPanel) return;
+    const onKey = (e) => { if (e.key === 'Escape') setShowNotificationPanel(false); };
+    const onClick = (e) => {
+      const el = notificationPanelRef.current;
+      if (!el) return;
+      if (el.contains(e.target)) return;
+      if (reminderBellRef.current && reminderBellRef.current.contains(e.target)) return;
+      setShowNotificationPanel(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('click', onClick);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('click', onClick); };
+  }, [showNotificationPanel]);
+
+  // Close reminder modal on Escape
+  useEffect(() => {
+    if (!showReminderModal) return;
+    const onKey = (e) => { if (e.key === 'Escape') setShowReminderModal(false); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prevOverflow; };
+  }, [showReminderModal]);
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Fire a notification (browser + in-app)
+  const fireNotification = (title, body, key) => {
+    // In-app toast
+    const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setActiveNotifications((prev) => [...prev, { id, title, body, key, timestamp: Date.now() }]);
+
+    // Browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, icon: '/favicon.ico', tag: key || id }); } catch {}
+    }
+  };
+
+  const dismissNotification = (id) => {
+    setActiveNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setActiveNotifications([]);
+  };
+
+  // Collect all items (tasks + subtasks across all projects) whose endDate === today
+  const getTodaysDueItems = () => {
+    const today = formatDate(new Date());
+    const dueItems = [];
+
+    const projectsToScan = Array.isArray(projects) ? projects : [];
+    projectsToScan.forEach((project) => {
+      const projectTasks = Array.isArray(project.tasks) ? project.tasks : [];
+      projectTasks.forEach((task) => {
+        if (task.endDate === today && normalizeStatus(task.status) !== STATUS_COMPLETED) {
+          dueItems.push({ type: 'task', projectId: project.id, projectName: project.projectTitle, name: task.name, endDate: task.endDate, taskId: task.id });
+        }
+        if (Array.isArray(task.subTasks)) {
+          task.subTasks.forEach((st) => {
+            if (st.endDate === today && normalizeStatus(st.status) !== STATUS_COMPLETED) {
+              dueItems.push({ type: 'subtask', projectId: project.id, projectName: project.projectTitle, name: st.name, parentName: task.name, endDate: st.endDate, taskId: task.id, subTaskId: st.id });
+            }
+          });
+        }
+      });
+    });
+
+    return dueItems;
+  };
+
+  // Check automatic due-date alerts (fires around 9 AM IST = 03:30 UTC)
+  // Also checks manual reminders
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!Array.isArray(projects) || projects.length === 0) return;
+
+    const checkReminders = () => {
+      const now = new Date();
+      const today = formatDate(now);
+
+      // --- Automatic due-date alerts at 9 AM IST ---
+      // IST is UTC+5:30. 9 AM IST = 03:30 UTC.
+      // We check if current IST hour is >= 9 and the alert hasn't been dismissed today
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const istNow = new Date(now.getTime() + istOffsetMs + now.getTimezoneOffset() * 60000);
+      const istHour = istNow.getHours();
+
+      if (istHour >= 9) {
+        const dueItems = getTodaysDueItems();
+        dueItems.forEach((item) => {
+          const alertKey = `auto-${today}-${item.projectId}-${item.taskId}${item.subTaskId ? '-' + item.subTaskId : ''}`;
+          if (!dismissedAutoAlerts.includes(alertKey)) {
+            const label = item.type === 'subtask'
+              ? `"${item.name}" (subtask of "${item.parentName}")`
+              : `"${item.name}"`;
+            fireNotification(
+              'Due Today',
+              `${label} in project "${item.projectName}" is due today (${item.endDate}).`,
+              alertKey
+            );
+            setDismissedAutoAlerts((prev) => [...prev, alertKey]);
+          }
+        });
+      }
+
+      // --- Manual reminders ---
+      const nowMs = now.getTime();
+      setReminders((prev) => {
+        const stillPending = [];
+        prev.forEach((r) => {
+          const reminderMs = new Date(`${r.date}T${r.time}:00`).getTime();
+          if (reminderMs <= nowMs && !r.fired) {
+            const label = r.subTaskId
+              ? `"${r.itemName}" (subtask)`
+              : `"${r.itemName}"`;
+            fireNotification(
+              'Reminder',
+              `${label} in project "${r.projectName}"${r.note ? ': ' + r.note : ''}`,
+              `manual-${r.id}`
+            );
+            stillPending.push({ ...r, fired: true });
+          } else {
+            stillPending.push(r);
+          }
+        });
+        return stillPending;
+      });
+    };
+
+    // Check immediately and then every 30 seconds
+    checkReminders();
+    const intervalId = window.setInterval(checkReminders, 30000);
+    return () => window.clearInterval(intervalId);
+  }, [projects, dismissedAutoAlerts]);
+
+  // Cleanup old dismissed alerts (more than 2 days old)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const today = new Date();
+    setDismissedAutoAlerts((prev) => prev.filter((key) => {
+      const dateMatch = key.match(/^auto-(\d{4}-\d{2}-\d{2})-/);
+      if (!dateMatch) return true;
+      const alertDate = getDateAtNoon(dateMatch[1]);
+      const diffDays = (today - alertDate) / (1000 * 60 * 60 * 24);
+      return diffDays < 2;
+    }));
+  }, []);
+
+  // Cleanup fired manual reminders older than 1 day
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const nowMs = Date.now();
+    setReminders((prev) => prev.filter((r) => {
+      if (!r.fired) return true;
+      const reminderMs = new Date(`${r.date}T${r.time}:00`).getTime();
+      return (nowMs - reminderMs) < 24 * 60 * 60 * 1000;
+    }));
+  }, []);
+
+  // Reminder CRUD functions
+  const openReminderModal = (taskId, subTaskId = null) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    let itemName = task.name;
+    let itemEndDate = task.endDate;
+    if (subTaskId) {
+      const st = Array.isArray(task.subTasks) ? task.subTasks.find((s) => s.id === subTaskId) : null;
+      if (st) { itemName = st.name; itemEndDate = st.endDate; }
+    }
+
+    setReminderTarget({ taskId, subTaskId, itemName, projectId: activeProjectId, projectName: projectTitle });
+    setReminderDate(itemEndDate || formatDate(new Date()));
+    setReminderTime('09:00');
+    setReminderNote('');
+    setShowNotificationPanel(false);
+    setShowReminderModal(true);
+  };
+
+  const saveReminder = () => {
+    if (!reminderTarget || !reminderDate || !reminderTime) return;
+    const newReminder = {
+      id: `rem-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      taskId: reminderTarget.taskId,
+      subTaskId: reminderTarget.subTaskId || null,
+      itemName: reminderTarget.itemName,
+      projectId: reminderTarget.projectId || activeProjectId,
+      projectName: reminderTarget.projectName,
+      date: reminderDate,
+      time: reminderTime,
+      note: reminderNote,
+      fired: false,
+      createdAt: new Date().toISOString()
+    };
+    setReminders((prev) => [...prev, newReminder]);
+    setShowReminderModal(false);
+    setReminderTarget(null);
+  };
+
+  const deleteReminder = (reminderId) => {
+    setReminders((prev) => prev.filter((r) => r.id !== reminderId));
+  };
+
+  const getRemindersForItem = (taskId, subTaskId = null) => {
+    return reminders.filter((r) => {
+      const matchesProject = r.projectId
+        ? r.projectId === activeProjectId
+        : r.projectName === projectTitle;
+      return matchesProject && r.taskId === taskId && r.subTaskId === subTaskId && !r.fired;
+    });
+  };
+
+  const formatReminderDateTimeLabel = (date, time) => {
+    if (!date || !time) return 'Invalid date/time';
+    const value = new Date(`${date}T${time}:00`);
+    if (Number.isNaN(value.getTime())) return `${date} ${time}`;
+    return value.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const pendingReminders = useMemo(
+    () => reminders
+      .filter((r) => !r.fired)
+      .sort((a, b) => {
+        const aTime = new Date(`${a.date}T${a.time}:00`).getTime();
+        const bTime = new Date(`${b.date}T${b.time}:00`).getTime();
+        return aTime - bTime;
+      }),
+    [reminders]
+  );
+
+  const recentNotifications = useMemo(
+    () => [...activeNotifications].sort((a, b) => b.timestamp - a.timestamp),
+    [activeNotifications]
+  );
+
+  const pendingReminderCount = pendingReminders.length;
+  const activeNotificationCount = activeNotifications.length;
+  const notificationBadgeCount = pendingReminderCount + activeNotificationCount;
+  const browserNotificationPermission = typeof window !== 'undefined' && 'Notification' in window
+    ? Notification.permission
+    : 'unsupported';
+  const reminderTargetPending = reminderTarget
+    ? getRemindersForItem(reminderTarget.taskId, reminderTarget.subTaskId || null)
+    : [];
+
+  const removeProjectReminderData = (projectId, projectName) => {
+    setReminders((prev) => prev.filter((r) => {
+      if (r.projectId) return r.projectId !== projectId;
+      return projectName ? r.projectName !== projectName : true;
+    }));
+    setDismissedAutoAlerts((prev) => prev.filter((key) => !key.includes(`-${projectId}-`)));
+  };
+
   const switchProject = (projectId) => {
     if (!projectId || projectId === activeProjectId) return;
     setProjects((prevProjects) => saveActiveProjectIntoCollection(prevProjects));
@@ -1647,6 +1984,7 @@ export default function GanttChart() {
     setActiveProjectId(projectId);
     setShowModifyMenu(false);
     setShowHolidayManager(false);
+    setShowNotificationPanel(false);
   };
 
   const addProject = () => {
@@ -1683,6 +2021,8 @@ export default function GanttChart() {
       );
       if (!shouldReplaceWithStarter) return;
 
+      removeProjectReminderData(activeProjectId, targetName);
+
       const starterProject = createProjectRecord({
         projectTitle: 'Project 1',
         tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
@@ -1703,6 +2043,8 @@ export default function GanttChart() {
 
     const shouldDelete = window.confirm(`Delete project "${targetName}"? This action cannot be undone.`);
     if (!shouldDelete) return;
+
+    removeProjectReminderData(activeProjectId, targetName);
 
     let nextActiveId = null;
     setProjects((prevProjects) => {
@@ -1735,6 +2077,7 @@ export default function GanttChart() {
   const openSignInPrompt = () => {
     setShowModifyMenu(false);
     setShowHolidayManager(false);
+    setShowNotificationPanel(false);
     if (authSession.isAuthenticated && authSession.user?.email) {
       setAuthPromptMessage(`Signed in as ${authSession.user.email}. Your updates are syncing across devices.`);
     } else {
@@ -1831,6 +2174,12 @@ export default function GanttChart() {
 
   const removeTask = (id) => {
     setTasks(tasks.filter(task => task.id !== id));
+    setReminders((prev) => prev.filter((r) => {
+      const matchesProject = r.projectId
+        ? r.projectId === activeProjectId
+        : r.projectName === projectTitle;
+      return !(matchesProject && r.taskId === id);
+    }));
   };
 
   const updateTask = (id, field, value) => {
@@ -1979,6 +2328,13 @@ export default function GanttChart() {
         })()
         : task
     ));
+
+    setReminders((prev) => prev.filter((r) => {
+      const matchesProject = r.projectId
+        ? r.projectId === activeProjectId
+        : r.projectName === projectTitle;
+      return !(matchesProject && r.taskId === parentId && r.subTaskId === subTaskId);
+    }));
   };
 
   const updateSubTask = (parentId, subTaskId, field, value) => {
@@ -2022,6 +2378,8 @@ export default function GanttChart() {
             : importedProjects[0].id;
 
           setProjects(importedProjects);
+          if (Array.isArray(data.reminders)) setReminders(data.reminders);
+          if (Array.isArray(data.dismissedAutoAlerts)) setDismissedAutoAlerts(data.dismissedAutoAlerts);
           lastHydratedProjectIdRef.current = null;
           setActiveProjectId(nextActiveId);
           setShowModifyMenu(false);
@@ -2041,6 +2399,8 @@ export default function GanttChart() {
         if (typeof data.showCost === 'boolean') setShowCost(data.showCost);
         if (typeof data.showTotals === 'boolean') setShowTotals(data.showTotals);
         if (typeof data.currency === 'string' && data.currency.length > 0) setCurrency(data.currency);
+        if (Array.isArray(data.reminders)) setReminders(data.reminders);
+        if (Array.isArray(data.dismissedAutoAlerts)) setDismissedAutoAlerts(data.dismissedAutoAlerts);
       } catch (error) {
         console.error('Error importing chart:', error);
         alert('Failed to import chart. Invalid JSON file.');
@@ -2124,6 +2484,8 @@ export default function GanttChart() {
           showCost: activeProject ? activeProject.showCost : showCost,
           showTotals: activeProject ? activeProject.showTotals : showTotals,
           currency: activeProject ? activeProject.currency : currency,
+          reminders,
+          dismissedAutoAlerts,
           exportedAt: new Date().toISOString()
         };
         const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
@@ -2437,12 +2799,14 @@ export default function GanttChart() {
   const openPlannerView = () => {
     setShowModifyMenu(false);
     setShowHolidayManager(false);
+    setShowNotificationPanel(false);
     navigateToView('planner');
   };
 
   const openDashboardView = () => {
     setShowModifyMenu(false);
     setShowHolidayManager(false);
+    setShowNotificationPanel(false);
     navigateToView('dashboard');
   };
 
@@ -2475,6 +2839,7 @@ export default function GanttChart() {
       ...(showDatesInEditor ? ['150px', '150px'] : []),
       ...(showCostInEditor ? ['140px'] : []),
       '54px',
+      '36px',
       '44px'
     ].join(' ');
 
@@ -2490,8 +2855,8 @@ export default function GanttChart() {
   const editorMinWidth = isCompactLayout
     ? 0
     : (showDatesInEditor
-      ? (showCostInEditor ? 1160 : 1020)
-      : (showCostInEditor ? 860 : 700));
+      ? (showCostInEditor ? 1196 : 1056)
+      : (showCostInEditor ? 896 : 736));
 
   const chartGridMinWidth = isCompactLayout
     ? 0
@@ -2957,6 +3322,259 @@ export default function GanttChart() {
                 {authSession.isAuthenticated ? <Cloud size={16} /> : <LogIn size={16} />}
                 {authSession.isAuthenticated ? 'Cloud Sync On' : 'Sign In (Optional)'}
               </button>
+
+              <div style={{ position: 'relative', flex: isPhoneLayout ? '1 1 100%' : '0 0 auto', width: isPhoneLayout ? '100%' : 'auto' }}>
+                <button
+                  type="button"
+                  ref={reminderBellRef}
+                  className={activeTutorialTarget === 'reminderBell' ? 'tutorial-target-active' : ''}
+                  onClick={() => {
+                    setShowModifyMenu(false);
+                    setShowHolidayManager(false);
+                    setShowNotificationPanel((prev) => !prev);
+                  }}
+                  style={{
+                    ...toolbarButtonNeutralStyle,
+                    width: isPhoneLayout ? '100%' : '46px',
+                    padding: isPhoneLayout ? '0 0.85rem' : 0,
+                    background: showNotificationPanel ? '#eef2ff' : toolbarButtonNeutralStyle.background,
+                    border: showNotificationPanel ? '1px solid rgba(99, 102, 241, 0.45)' : toolbarButtonNeutralStyle.border,
+                    color: showNotificationPanel ? '#3730a3' : toolbarButtonNeutralStyle.color,
+                    boxShadow: showNotificationPanel ? '0 8px 18px rgba(99, 102, 241, 0.14)' : 'none',
+                    position: 'relative',
+                    gap: isPhoneLayout ? '0.5rem' : 0
+                  }}
+                  title="Reminder center"
+                  aria-label="Reminder center"
+                >
+                  {notificationBadgeCount > 0 ? <BellRing size={17} /> : <Bell size={17} />}
+                  {isPhoneLayout && <span style={{ fontWeight: '800', fontSize: '0.9rem' }}>Reminders</span>}
+                  {notificationBadgeCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: isPhoneLayout ? '6px' : '-6px',
+                      right: isPhoneLayout ? '10px' : '-6px',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '999px',
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.65rem',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 0.3rem',
+                      border: '2px solid #ffffff',
+                      lineHeight: 1
+                    }}>
+                      {notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotificationPanel && (
+                  <div
+                    ref={notificationPanelRef}
+                    style={{
+                      position: 'absolute',
+                      top: '110%',
+                      right: isPhoneLayout ? 'auto' : 0,
+                      left: isPhoneLayout ? 0 : 'auto',
+                      width: isPhoneLayout ? '100%' : 'min(420px, calc(100vw - 3rem))',
+                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                      border: '1px solid #dbe4ef',
+                      borderRadius: '14px',
+                      boxShadow: '0 20px 44px rgba(15, 23, 42, 0.2)',
+                      zIndex: 85,
+                      padding: '0.75rem',
+                      display: 'grid',
+                      gap: '0.7rem',
+                      animation: 'popIn 0.16s ease-out both'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                      <div>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          <BellRing size={14} />
+                          Reminder Center
+                        </div>
+                        <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
+                          {pendingReminderCount} pending reminders • {activeNotificationCount} active alerts
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowNotificationPanel(false)}
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '9px',
+                          border: '1px solid #dbe4ef',
+                          background: '#ffffff',
+                          color: '#64748b',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                        aria-label="Close reminder center"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: '0.55rem 0.65rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.8rem',
+                      fontSize: '0.76rem',
+                      fontWeight: '700',
+                      color: '#475569'
+                    }}>
+                      <span>Browser notifications</span>
+                      <span style={{
+                        padding: '0.14rem 0.45rem',
+                        borderRadius: '999px',
+                        border: '1px solid #cbd5e1',
+                        background: browserNotificationPermission === 'granted' ? '#ecfdf5' : '#f8fafc',
+                        color: browserNotificationPermission === 'granted' ? '#166534' : '#475569',
+                        textTransform: 'capitalize'
+                      }}>
+                        {browserNotificationPermission === 'unsupported' ? 'Not Supported' : browserNotificationPermission}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '0.45rem' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        Pending reminders
+                      </div>
+                      <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'grid', gap: '0.45rem' }}>
+                        {pendingReminders.length === 0 ? (
+                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.65rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
+                            No pending reminders yet. Use the bell icon on a task row to create one.
+                          </div>
+                        ) : pendingReminders.map((reminder) => (
+                          <div key={reminder.id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', background: '#ffffff', padding: '0.6rem', display: 'grid', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {reminder.itemName}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700' }}>
+                                  {reminder.projectName}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => deleteReminder(reminder.id)}
+                                style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '7px',
+                                  border: '1px solid #fecaca',
+                                  background: '#fff1f2',
+                                  color: '#dc2626',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  flex: '0 0 auto'
+                                }}
+                                title="Delete reminder"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#475569', fontWeight: '700' }}>
+                              <Clock size={12} />
+                              {formatReminderDateTimeLabel(reminder.date, reminder.time)}
+                            </div>
+
+                            {reminder.note && (
+                              <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600', lineHeight: 1.35 }}>
+                                {reminder.note}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '0.45rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          Active alerts
+                        </div>
+                        {recentNotifications.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={clearAllNotifications}
+                            style={{
+                              border: '1px solid #cbd5e1',
+                              background: '#ffffff',
+                              borderRadius: '8px',
+                              height: '26px',
+                              padding: '0 0.55rem',
+                              fontSize: '0.7rem',
+                              fontWeight: '800',
+                              color: '#334155',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'grid', gap: '0.45rem' }}>
+                        {recentNotifications.length === 0 ? (
+                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.65rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
+                            Alerts will appear here when reminders fire.
+                          </div>
+                        ) : recentNotifications.map((notification) => (
+                          <div key={notification.id} style={{ border: '1px solid #dbe4ef', borderRadius: '10px', background: '#f8fafc', padding: '0.55rem 0.6rem', display: 'grid', gap: '0.18rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
+                              <div style={{ fontSize: '0.79rem', fontWeight: '800', color: '#0f172a' }}>{notification.title}</div>
+                              <button
+                                type="button"
+                                onClick={() => dismissNotification(notification.id)}
+                                style={{
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '7px',
+                                  border: '1px solid #dbe4ef',
+                                  background: '#ffffff',
+                                  color: '#64748b',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  flex: '0 0 auto'
+                                }}
+                                title="Dismiss alert"
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>{notification.body}</div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700' }}>
+                              {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"
@@ -3486,6 +4104,240 @@ export default function GanttChart() {
           </div>
         )}
 
+        {showReminderModal && reminderTarget && (
+          <div
+            onClick={() => setShowReminderModal(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(5px) saturate(1.06)',
+              WebkitBackdropFilter: 'blur(5px) saturate(1.06)',
+              zIndex: 96,
+              display: 'grid',
+              placeItems: 'center',
+              padding: '1rem',
+              animation: 'overlayFade 0.18s ease-out both'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '560px',
+                maxHeight: 'calc(100vh - 2rem)',
+                overflowY: 'auto',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                border: '1px solid #dbe4ef',
+                borderRadius: '20px',
+                boxShadow: '0 30px 70px rgba(15, 23, 42, 0.25)',
+                padding: '1rem',
+                display: 'grid',
+                gap: '0.9rem',
+                animation: 'popIn 0.18s ease-out both'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: '800', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <Bell size={14} />
+                    Set Reminder
+                  </div>
+                  <h3 style={{ margin: '0.45rem 0 0.2rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
+                    {reminderTarget.itemName}
+                  </h3>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '700' }}>
+                    {reminderTarget.projectName}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowReminderModal(false)}
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '10px',
+                    border: '1px solid #dbe4ef',
+                    background: '#ffffff',
+                    color: '#64748b',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  aria-label="Close reminder modal"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div style={{
+                border: '1px solid #dbe4ef',
+                borderRadius: '12px',
+                background: '#ffffff',
+                padding: '0.75rem',
+                display: 'grid',
+                gap: '0.7rem'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.7rem' }}>
+                  <label style={{ display: 'grid', gap: '0.35rem' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Date
+                    </span>
+                    <input
+                      type="date"
+                      value={reminderDate}
+                      onChange={(e) => setReminderDate(e.target.value)}
+                      style={{
+                        height: '40px',
+                        borderRadius: '10px',
+                        border: '1px solid #cbd5e1',
+                        padding: '0 0.7rem',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        background: '#ffffff',
+                        colorScheme: 'light'
+                      }}
+                    />
+                  </label>
+
+                  <label style={{ display: 'grid', gap: '0.35rem' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Time
+                    </span>
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      style={{
+                        height: '40px',
+                        borderRadius: '10px',
+                        border: '1px solid #cbd5e1',
+                        padding: '0 0.7rem',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        background: '#ffffff'
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label style={{ display: 'grid', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Note (Optional)
+                  </span>
+                  <textarea
+                    value={reminderNote}
+                    onChange={(e) => setReminderNote(e.target.value)}
+                    rows={3}
+                    placeholder="What should this reminder mention?"
+                    style={{
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      padding: '0.65rem 0.7rem',
+                      fontSize: '0.84rem',
+                      color: '#0f172a',
+                      resize: 'vertical',
+                      minHeight: '84px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </label>
+              </div>
+
+              {reminderTargetPending.length > 0 && (
+                <div style={{ border: '1px solid #dbe4ef', borderRadius: '12px', background: '#ffffff', padding: '0.7rem', display: 'grid', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Existing reminders for this item
+                  </div>
+                  <div style={{ display: 'grid', gap: '0.42rem', maxHeight: '150px', overflowY: 'auto' }}>
+                    {reminderTargetPending.map((reminder) => (
+                      <div key={reminder.id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>
+                            {formatReminderDateTimeLabel(reminder.date, reminder.time)}
+                          </div>
+                          {reminder.note && (
+                            <div style={{ marginTop: '0.1rem', fontSize: '0.72rem', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {reminder.note}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteReminder(reminder.id)}
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '7px',
+                            border: '1px solid #fecaca',
+                            background: '#fff1f2',
+                            color: '#dc2626',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            flex: '0 0 auto'
+                          }}
+                          aria-label="Delete existing reminder"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.55rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReminderModal(false)}
+                  style={{
+                    height: '40px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '0.82rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    padding: '0 0.85rem'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveReminder}
+                  disabled={!reminderDate || !reminderTime}
+                  style={{
+                    height: '40px',
+                    borderRadius: '10px',
+                    border: '1px solid #1d4ed8',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: '800',
+                    cursor: !reminderDate || !reminderTime ? 'not-allowed' : 'pointer',
+                    opacity: !reminderDate || !reminderTime ? 0.7 : 1,
+                    padding: '0 0.9rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <Clock size={14} />
+                  Save Reminder
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Settings & Branding Drawer */}
         {!isDashboardView && showHolidayManager && (
           <div
@@ -3962,6 +4814,11 @@ export default function GanttChart() {
                 )}
                 {showInlineEditorExtras && showCostInEditor && <div>Cost</div>}
                 {showInlineEditorExtras && <div style={{ textAlign: 'center' }}>Color</div>}
+                {showInlineEditorExtras && (
+                  <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center' }} title="Reminder">
+                    <Bell size={13} />
+                  </div>
+                )}
                 {showInlineEditorExtras && <div />}
               </div>
 
@@ -3969,6 +4826,7 @@ export default function GanttChart() {
                 {tasks.map((task, index) => {
                   const taskStatus = getTaskCompletionStatus(task);
                   const isTaskCompleted = taskStatus === STATUS_COMPLETED;
+                  const taskReminderCount = getRemindersForItem(task.id).length;
                   const parentDays = getBusinessDays(task.startDate, task.endDate, holidays);
                   const parentCost = Number(task.cost) || 0;
 
@@ -4232,6 +5090,47 @@ export default function GanttChart() {
                             />
 
                             <button
+                              type="button"
+                              onClick={() => openReminderModal(task.id)}
+                              title={taskReminderCount > 0 ? `${taskReminderCount} reminder(s) set` : 'Set reminder'}
+                              style={{
+                                background: taskReminderCount > 0 ? '#ecfdf5' : '#f8fafc',
+                                border: taskReminderCount > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                borderRadius: '8px',
+                                padding: '0.65rem',
+                                cursor: 'pointer',
+                                color: taskReminderCount > 0 ? '#166534' : '#475569',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative'
+                              }}
+                            >
+                              <Bell size={15} />
+                              {taskReminderCount > 0 && (
+                                <span style={{
+                                  position: 'absolute',
+                                  top: '-5px',
+                                  right: '-5px',
+                                  minWidth: '16px',
+                                  height: '16px',
+                                  borderRadius: '999px',
+                                  background: '#16a34a',
+                                  color: '#ffffff',
+                                  fontSize: '0.62rem',
+                                  fontWeight: '800',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '2px solid #ffffff',
+                                  lineHeight: 1
+                                }}>
+                                  {taskReminderCount > 9 ? '9+' : taskReminderCount}
+                                </span>
+                              )}
+                            </button>
+
+                            <button
                               onClick={() => removeTask(task.id)}
                               style={{
                                 background: '#fee2e2',
@@ -4258,7 +5157,7 @@ export default function GanttChart() {
                         )}
                       </div>
 
-                      {isCompactLayout && (showDates || showCost) && (
+                      {isCompactLayout && (
                         <div className="mobile-detail-card" style={{
                           marginTop: '0.65rem',
                           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
@@ -4359,6 +5258,29 @@ export default function GanttChart() {
                             </div>
 
                             <button
+                              type="button"
+                              onClick={() => openReminderModal(task.id)}
+                              style={{
+                                flex: '1 1 170px',
+                                background: taskReminderCount > 0 ? '#ecfdf5' : '#ffffff',
+                                border: taskReminderCount > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                borderRadius: '8px',
+                                padding: '0.55rem 0.75rem',
+                                cursor: 'pointer',
+                                color: taskReminderCount > 0 ? '#166534' : '#334155',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.82rem',
+                                fontWeight: '700'
+                              }}
+                            >
+                              <Bell size={14} />
+                              {taskReminderCount > 0 ? `${taskReminderCount} Reminder${taskReminderCount > 1 ? 's' : ''}` : 'Set Reminder'}
+                            </button>
+
+                            <button
                               onClick={() => removeTask(task.id)}
                               style={{
                                 flex: '1 1 170px',
@@ -4389,6 +5311,7 @@ export default function GanttChart() {
                           {task.subTasks.map((subTask, subIndex) => {
                             const subTaskStatus = normalizeStatus(subTask.status);
                             const isSubTaskCompleted = subTaskStatus === STATUS_COMPLETED;
+                            const subTaskReminderCount = getRemindersForItem(task.id, subTask.id).length;
                             const rollup = subTaskRollups[subIndex] || {
                               days: getBusinessDays(subTask.startDate, subTask.endDate, holidays),
                               runningDays: 0,
@@ -4653,6 +5576,47 @@ export default function GanttChart() {
                                       />
 
                                       <button
+                                        type="button"
+                                        onClick={() => openReminderModal(task.id, subTask.id)}
+                                        title={subTaskReminderCount > 0 ? `${subTaskReminderCount} reminder(s) set` : 'Set reminder'}
+                                        style={{
+                                          background: subTaskReminderCount > 0 ? '#ecfdf5' : '#f8fafc',
+                                          border: subTaskReminderCount > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                          borderRadius: '6px',
+                                          padding: '0.55rem',
+                                          cursor: 'pointer',
+                                          color: subTaskReminderCount > 0 ? '#166534' : '#475569',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          position: 'relative'
+                                        }}
+                                      >
+                                        <Bell size={14} />
+                                        {subTaskReminderCount > 0 && (
+                                          <span style={{
+                                            position: 'absolute',
+                                            top: '-5px',
+                                            right: '-5px',
+                                            minWidth: '15px',
+                                            height: '15px',
+                                            borderRadius: '999px',
+                                            background: '#16a34a',
+                                            color: '#ffffff',
+                                            fontSize: '0.6rem',
+                                            fontWeight: '800',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: '2px solid #ffffff',
+                                            lineHeight: 1
+                                          }}>
+                                            {subTaskReminderCount > 9 ? '9+' : subTaskReminderCount}
+                                          </span>
+                                        )}
+                                      </button>
+
+                                      <button
                                         onClick={() => removeSubTask(task.id, subTask.id)}
                                         style={{
                                           background: '#fee2e2',
@@ -4679,7 +5643,7 @@ export default function GanttChart() {
                                   )}
                                 </div>
 
-                                {isCompactLayout && (showDates || showCost) && (
+                                {isCompactLayout && (
                                   <div className="mobile-detail-card" style={{
                                     marginTop: '0.55rem',
                                     background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
@@ -4777,6 +5741,29 @@ export default function GanttChart() {
                                           }}
                                         />
                                       </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => openReminderModal(task.id, subTask.id)}
+                                        style={{
+                                          flex: '1 1 160px',
+                                          background: subTaskReminderCount > 0 ? '#ecfdf5' : '#ffffff',
+                                          border: subTaskReminderCount > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
+                                          borderRadius: '7px',
+                                          padding: '0.48rem 0.6rem',
+                                          cursor: 'pointer',
+                                          color: subTaskReminderCount > 0 ? '#166534' : '#334155',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          gap: '0.35rem',
+                                          fontSize: '0.76rem',
+                                          fontWeight: '700'
+                                        }}
+                                      >
+                                        <Bell size={13} />
+                                        {subTaskReminderCount > 0 ? `${subTaskReminderCount} Reminder${subTaskReminderCount > 1 ? 's' : ''}` : 'Set Reminder'}
+                                      </button>
 
                                       <button
                                         onClick={() => removeSubTask(task.id, subTask.id)}
@@ -6048,6 +7035,67 @@ export default function GanttChart() {
           )}
         </div>
           </>
+        )}
+
+        {recentNotifications.length > 0 && (
+          <div style={{
+            position: 'fixed',
+            right: isPhoneLayout ? '0.55rem' : '1rem',
+            left: isPhoneLayout ? '0.55rem' : 'auto',
+            bottom: isPhoneLayout ? '0.6rem' : '1rem',
+            zIndex: 92,
+            display: 'grid',
+            gap: '0.55rem',
+            width: isPhoneLayout ? 'auto' : 'min(360px, calc(100vw - 2rem))',
+            pointerEvents: 'none'
+          }}>
+            {recentNotifications.slice(0, 4).map((notification) => (
+              <div
+                key={notification.id}
+                style={{
+                  pointerEvents: 'auto',
+                  borderRadius: '12px',
+                  border: '1px solid #cbd5e1',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                  boxShadow: '0 18px 35px rgba(15, 23, 42, 0.16)',
+                  padding: '0.65rem 0.7rem',
+                  display: 'grid',
+                  gap: '0.2rem',
+                  animation: 'popIn 0.18s ease-out both'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>{notification.title}</div>
+                  <button
+                    type="button"
+                    onClick={() => dismissNotification(notification.id)}
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '7px',
+                      border: '1px solid #dbe4ef',
+                      background: '#ffffff',
+                      color: '#64748b',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      flex: '0 0 auto'
+                    }}
+                    aria-label="Dismiss notification"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>
+                  {notification.body}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700' }}>
+                  {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
 
