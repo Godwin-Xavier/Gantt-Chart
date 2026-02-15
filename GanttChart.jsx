@@ -9,7 +9,9 @@ const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
 const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
 const REMINDERS_STORAGE_KEY = 'gantt-chart:reminders:v1';
 const DISMISSED_AUTO_ALERTS_KEY = 'gantt-chart:dismissed-auto-alerts:v1';
+const REMINDER_NOTIFICATION_PREFS_KEY = 'gantt-chart:reminder-notification-prefs:v1';
 const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH !== 'false';
+const DEFAULT_PAGE_TITLE = 'Project Tracker | Gantt Planner';
 
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
@@ -676,7 +678,34 @@ export default function GanttChart() {
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
   });
+  const [reminderNotificationPrefs, setReminderNotificationPrefs] = useState(() => {
+    const defaults = {
+      soundEnabled: true,
+      tabTitleFlashEnabled: true
+    };
+
+    if (typeof window === 'undefined') return defaults;
+
+    try {
+      const raw = window.localStorage.getItem(REMINDER_NOTIFICATION_PREFS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed || typeof parsed !== 'object') return defaults;
+
+      return {
+        soundEnabled: parsed.soundEnabled !== false,
+        tabTitleFlashEnabled: parsed.tabTitleFlashEnabled !== false
+      };
+    } catch {
+      return defaults;
+    }
+  });
   const [activeNotifications, setActiveNotifications] = useState([]);
+  const [tabAttentionNotifications, setTabAttentionNotifications] = useState([]);
+  const [showTabAttentionBanner, setShowTabAttentionBanner] = useState(false);
+  const [isDocumentHidden, setIsDocumentHidden] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.visibilityState === 'hidden';
+  });
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderTarget, setReminderTarget] = useState(null);
   const [reminderDate, setReminderDate] = useState('');
@@ -685,6 +714,10 @@ export default function GanttChart() {
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
   const notificationPanelRef = useRef(null);
   const reminderBellRef = useRef(null);
+  const defaultDocumentTitleRef = useRef(DEFAULT_PAGE_TITLE);
+  const tabAttentionTitleIntervalRef = useRef(null);
+  const reminderSoundContextRef = useRef(null);
+  const lastReminderSoundAtRef = useRef(0);
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -1709,6 +1742,11 @@ export default function GanttChart() {
     try { window.localStorage.setItem(DISMISSED_AUTO_ALERTS_KEY, JSON.stringify(dismissedAutoAlerts)); } catch {}
   }, [dismissedAutoAlerts]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(REMINDER_NOTIFICATION_PREFS_KEY, JSON.stringify(reminderNotificationPrefs)); } catch {}
+  }, [reminderNotificationPrefs]);
+
   // Close notification panel on outside click or Escape
   useEffect(() => {
     if (!showNotificationPanel) return;
@@ -1743,24 +1781,174 @@ export default function GanttChart() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    defaultDocumentTitleRef.current = document.title || DEFAULT_PAGE_TITLE;
+
+    return () => {
+      if (tabAttentionTitleIntervalRef.current) {
+        window.clearInterval(tabAttentionTitleIntervalRef.current);
+        tabAttentionTitleIntervalRef.current = null;
+      }
+
+      if (reminderSoundContextRef.current && typeof reminderSoundContextRef.current.close === 'function') {
+        reminderSoundContextRef.current.close().catch(() => {});
+      }
+
+      document.title = defaultDocumentTitleRef.current || DEFAULT_PAGE_TITLE;
+    };
+  }, []);
+
+  const resetDocumentTitle = () => {
+    if (typeof document === 'undefined') return;
+    document.title = defaultDocumentTitleRef.current || DEFAULT_PAGE_TITLE;
+  };
+
+  const clearTabAttentionIndicators = () => {
+    setTabAttentionNotifications([]);
+    setShowTabAttentionBanner(false);
+    resetDocumentTitle();
+  };
+
+  const playReminderSound = () => {
+    if (!reminderNotificationPrefs.soundEnabled) return;
+    if (typeof window === 'undefined') return;
+
+    const nowMs = Date.now();
+    if (nowMs - lastReminderSoundAtRef.current < 1400) return;
+    lastReminderSoundAtRef.current = nowMs;
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    try {
+      if (!reminderSoundContextRef.current) {
+        reminderSoundContextRef.current = new AudioContextClass();
+      }
+
+      const context = reminderSoundContextRef.current;
+      const playChime = () => {
+        const scheduleTone = (delaySeconds, frequency) => {
+          const startAt = context.currentTime + delaySeconds;
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(frequency, startAt);
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.exponentialRampToValueAtTime(0.09, startAt + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.2);
+
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(startAt);
+          oscillator.stop(startAt + 0.22);
+        };
+
+        scheduleTone(0, 880);
+        scheduleTone(0.24, 1320);
+      };
+
+      if (context.state === 'suspended') {
+        context.resume().then(playChime).catch(() => {});
+        return;
+      }
+
+      playChime();
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const syncVisibility = () => {
+      const hidden = document.visibilityState === 'hidden';
+      setIsDocumentHidden(hidden);
+
+      if (!hidden && tabAttentionNotifications.length > 0) {
+        setShowTabAttentionBanner(true);
+      }
+    };
+
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    window.addEventListener('focus', syncVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', syncVisibility);
+      window.removeEventListener('focus', syncVisibility);
+    };
+  }, [tabAttentionNotifications.length]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (tabAttentionTitleIntervalRef.current) {
+      window.clearInterval(tabAttentionTitleIntervalRef.current);
+      tabAttentionTitleIntervalRef.current = null;
+    }
+
+    if (!reminderNotificationPrefs.tabTitleFlashEnabled || !isDocumentHidden || tabAttentionNotifications.length === 0) {
+      resetDocumentTitle();
+      return;
+    }
+
+    const baseTitle = defaultDocumentTitleRef.current || DEFAULT_PAGE_TITLE;
+    const alertTitle = tabAttentionNotifications.length === 1
+      ? `Reminder due - ${baseTitle}`
+      : `${tabAttentionNotifications.length} reminders due - ${baseTitle}`;
+
+    let showBaseTitle = false;
+    document.title = alertTitle;
+
+    tabAttentionTitleIntervalRef.current = window.setInterval(() => {
+      showBaseTitle = !showBaseTitle;
+      document.title = showBaseTitle ? baseTitle : alertTitle;
+    }, 1200);
+
+    return () => {
+      if (tabAttentionTitleIntervalRef.current) {
+        window.clearInterval(tabAttentionTitleIntervalRef.current);
+        tabAttentionTitleIntervalRef.current = null;
+      }
+    };
+  }, [isDocumentHidden, reminderNotificationPrefs.tabTitleFlashEnabled, tabAttentionNotifications.length]);
+
   // Fire a notification (browser + in-app)
   const fireNotification = (title, body, key) => {
-    // In-app toast
-    const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setActiveNotifications((prev) => [...prev, { id, title, body, key, timestamp: Date.now() }]);
+    const timestamp = Date.now();
+    const id = `notif-${timestamp}-${Math.random().toString(36).slice(2, 6)}`;
+    const nextNotification = { id, title, body, key, timestamp };
+
+    setActiveNotifications((prev) => [...prev, nextNotification]);
+
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      setTabAttentionNotifications((prev) => [...prev, nextNotification]);
+    }
 
     // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
       try { new Notification(title, { body, icon: '/favicon.ico', tag: key || id }); } catch {}
     }
+
+    playReminderSound();
   };
 
   const dismissNotification = (id) => {
     setActiveNotifications((prev) => prev.filter((n) => n.id !== id));
+    setTabAttentionNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const clearAllNotifications = () => {
     setActiveNotifications([]);
+    clearTabAttentionIndicators();
+  };
+
+  const openReminderCenterFromBanner = () => {
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    setShowNotificationPanel(true);
+    clearTabAttentionIndicators();
   };
 
   // Collect all items (tasks + subtasks across all projects) whose endDate === today
@@ -1961,6 +2149,10 @@ export default function GanttChart() {
   const pendingReminderCount = pendingReminders.length;
   const activeNotificationCount = activeNotifications.length;
   const notificationBadgeCount = pendingReminderCount + activeNotificationCount;
+  const latestTabAttentionNotification = tabAttentionNotifications.length > 0
+    ? tabAttentionNotifications[tabAttentionNotifications.length - 1]
+    : null;
+  const tabAttentionCount = tabAttentionNotifications.length;
   const browserNotificationPermission = typeof window !== 'undefined' && 'Notification' in window
     ? Notification.permission
     : 'unsupported';
@@ -3122,6 +3314,80 @@ export default function GanttChart() {
           />
         )}
 
+        {showTabAttentionBanner && tabAttentionCount > 0 && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              marginBottom: '0.95rem',
+              borderRadius: '16px',
+              border: '1px solid #fcd34d',
+              background: 'linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%)',
+              boxShadow: '0 14px 30px rgba(146, 64, 14, 0.16)',
+              padding: isPhoneLayout ? '0.72rem' : '0.75rem 0.85rem',
+              display: 'flex',
+              flexDirection: isPhoneLayout ? 'column' : 'row',
+              alignItems: isPhoneLayout ? 'stretch' : 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem'
+            }}
+          >
+            <div style={{ minWidth: 0, display: 'grid', gap: '0.22rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: '800', color: '#92400e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <BellRing size={14} />
+                Reminder Alert
+              </div>
+              <div style={{ fontSize: '0.86rem', fontWeight: '800', color: '#78350f', lineHeight: 1.35 }}>
+                {tabAttentionCount > 1
+                  ? `${tabAttentionCount} reminders fired while this tab was in the background.`
+                  : (latestTabAttentionNotification?.body || 'A reminder just fired.')}
+              </div>
+              {tabAttentionCount > 1 && latestTabAttentionNotification?.body && (
+                <div style={{ fontSize: '0.77rem', fontWeight: '700', color: '#92400e', lineHeight: 1.4 }}>
+                  Latest: {latestTabAttentionNotification.body}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: isPhoneLayout ? 'flex-start' : 'flex-end' }}>
+              <button
+                type="button"
+                onClick={openReminderCenterFromBanner}
+                style={{
+                  height: '34px',
+                  borderRadius: '9px',
+                  border: '1px solid #d97706',
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  padding: '0 0.68rem',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                Open Reminder Center
+              </button>
+              <button
+                type="button"
+                onClick={clearTabAttentionIndicators}
+                style={{
+                  height: '34px',
+                  borderRadius: '9px',
+                  border: '1px solid #fcd34d',
+                  background: '#ffffff',
+                  color: '#92400e',
+                  padding: '0 0.65rem',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="top-header" style={{
           marginBottom: '2.25rem',
@@ -3331,7 +3597,13 @@ export default function GanttChart() {
                   onClick={() => {
                     setShowModifyMenu(false);
                     setShowHolidayManager(false);
-                    setShowNotificationPanel((prev) => !prev);
+                    setShowNotificationPanel((prev) => {
+                      const nextPanelState = !prev;
+                      if (nextPanelState) {
+                        clearTabAttentionIndicators();
+                      }
+                      return nextPanelState;
+                    });
                   }}
                   style={{
                     ...toolbarButtonNeutralStyle,
@@ -3449,6 +3721,69 @@ export default function GanttChart() {
                       }}>
                         {browserNotificationPermission === 'unsupported' ? 'Not Supported' : browserNotificationPermission}
                       </span>
+                    </div>
+
+                    <div style={{
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: '0.55rem 0.65rem',
+                      display: 'grid',
+                      gap: '0.5rem'
+                    }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.7rem',
+                        fontSize: '0.76rem',
+                        color: '#334155',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}>
+                        <span>Reminder sound</span>
+                        <input
+                          type="checkbox"
+                          checked={reminderNotificationPrefs.soundEnabled}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setReminderNotificationPrefs((prev) => ({ ...prev, soundEnabled: checked }));
+                          }}
+                          style={{
+                            width: '1.05rem',
+                            height: '1.05rem',
+                            cursor: 'pointer',
+                            accentColor: '#2563eb'
+                          }}
+                        />
+                      </label>
+
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.7rem',
+                        fontSize: '0.76rem',
+                        color: '#334155',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}>
+                        <span>Tab title flashing</span>
+                        <input
+                          type="checkbox"
+                          checked={reminderNotificationPrefs.tabTitleFlashEnabled}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setReminderNotificationPrefs((prev) => ({ ...prev, tabTitleFlashEnabled: checked }));
+                          }}
+                          style={{
+                            width: '1.05rem',
+                            height: '1.05rem',
+                            cursor: 'pointer',
+                            accentColor: '#2563eb'
+                          }}
+                        />
+                      </label>
                     </div>
 
                     <div style={{ display: 'grid', gap: '0.45rem' }}>
