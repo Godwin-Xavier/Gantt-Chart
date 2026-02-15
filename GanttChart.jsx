@@ -2183,25 +2183,25 @@ export default function GanttChart() {
   };
 
   const addProject = () => {
-    let newProjectId = null;
+    const newProjectId = createProjectId();
 
     setProjects((prevProjects) => {
       const withSnapshot = saveActiveProjectIntoCollection(prevProjects);
       const newProject = createProjectRecord({
-        id: createProjectId(),
+        id: newProjectId,
         projectTitle: createProjectName(withSnapshot),
         tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
       });
-      newProjectId = newProject.id;
       return [...withSnapshot, newProject];
     });
 
-    if (newProjectId) {
-      lastHydratedProjectIdRef.current = null;
-      setIsEditingTitle(false);
-      setActiveProjectId(newProjectId);
-      navigateToView('planner');
-    }
+    lastHydratedProjectIdRef.current = null;
+    setIsEditingTitle(false);
+    setActiveProjectId(newProjectId);
+    setShowModifyMenu(false);
+    setShowHolidayManager(false);
+    setShowNotificationPanel(false);
+    navigateToView('planner');
   };
 
   const deleteActiveProject = () => {
