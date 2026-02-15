@@ -2071,15 +2071,18 @@ export default function GanttChart() {
     if (!task) return;
 
     let itemName = task.name;
-    let itemEndDate = task.endDate;
     if (subTaskId) {
       const st = Array.isArray(task.subTasks) ? task.subTasks.find((s) => s.id === subTaskId) : null;
-      if (st) { itemName = st.name; itemEndDate = st.endDate; }
+      if (st) { itemName = st.name; }
     }
 
+    const now = new Date();
+    const nowDate = formatDate(now);
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     setReminderTarget({ taskId, subTaskId, itemName, projectId: activeProjectId, projectName: projectTitle });
-    setReminderDate(itemEndDate || formatDate(new Date()));
-    setReminderTime('09:00');
+    setReminderDate(nowDate);
+    setReminderTime(nowTime);
     setReminderNote('');
     setShowNotificationPanel(false);
     setShowReminderModal(true);
