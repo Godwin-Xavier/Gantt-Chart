@@ -1569,9 +1569,11 @@ export default function GanttChart() {
               // another user's data in localStorage.  Reset to defaults
               // so the new user starts clean.
               skipCloudSaveRef.current = false;
+              const starterLoginSeed = getLoginDateString();
               const starterProject = createProjectRecord({
                 projectTitle: 'Project 1',
-                tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+                loginDateSeed: starterLoginSeed,
+                tasks: normalizeTaskTree(buildDefaultTasks(starterLoginSeed))
               });
               applyWorkspacePayload({
                 schemaVersion: 3,
@@ -2184,13 +2186,15 @@ export default function GanttChart() {
 
   const addProject = () => {
     const newProjectId = createProjectId();
+    const newProjectLoginSeed = getLoginDateString();
 
     setProjects((prevProjects) => {
       const withSnapshot = saveActiveProjectIntoCollection(prevProjects);
       const newProject = createProjectRecord({
         id: newProjectId,
         projectTitle: createProjectName(withSnapshot),
-        tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+        loginDateSeed: newProjectLoginSeed,
+        tasks: normalizeTaskTree(buildDefaultTasks(newProjectLoginSeed))
       });
       return [...withSnapshot, newProject];
     });
@@ -2218,9 +2222,11 @@ export default function GanttChart() {
 
       removeProjectReminderData(activeProjectId, targetName);
 
+      const starterLoginSeed = getLoginDateString();
       const starterProject = createProjectRecord({
         projectTitle: 'Project 1',
-        tasks: normalizeTaskTree(buildDefaultTasks(loginDateSeed))
+        loginDateSeed: starterLoginSeed,
+        tasks: normalizeTaskTree(buildDefaultTasks(starterLoginSeed))
       });
 
       skipCloudSaveRef.current = false;
