@@ -916,7 +916,7 @@ export default function GanttChart() {
       {
         id: 'view-switch',
         title: 'Switch views without layout jump',
-        body: `${actionWord} Planner or Dashboard in the left command area to switch modes smoothly. Desktop keeps it on the left rail and mobile keeps it in the top switch so navigation stays consistent.`,
+        body: `${actionWord} Planner in Navigation + Sync to jump back into editing. Dashboard has its own dedicated button in the left command area for clearer mode control.`,
         target: 'viewSwitch',
         panel: null,
         view: 'planner'
@@ -1020,7 +1020,7 @@ export default function GanttChart() {
       {
         id: 'dashboard-action-state',
         title: 'Dashboard keeps controls consistent',
-        body: 'The Dashboard button stays in the left command navigation across devices. When Dashboard is active, planner action buttons remain visible in their card but become disabled so mode changes are clear.',
+        body: 'Dashboard uses a dedicated button in the left command area across devices. When Dashboard is active, planner action buttons remain visible in their card but become disabled so mode changes are clear.',
         target: 'dashboardButton',
         panel: null,
         view: 'dashboard'
@@ -3838,37 +3838,25 @@ export default function GanttChart() {
             {!isPhoneLayout && useVerticalCommandRail && (
               <div className="command-rail" style={commandRailStyle}>
                 <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
-                  View Mode
+                  Quick Access
                 </div>
 
-                <div
-                  ref={viewSwitchRef}
-                  className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
+                <button
+                  type="button"
+                  ref={dashboardButtonRef}
+                  className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
+                  onClick={openDashboardView}
                   style={{
-                    ...viewSwitchShellStyle,
-                    width: '100%'
+                    ...getViewSwitchButtonStyle(isDashboardView),
+                    width: '100%',
+                    minWidth: '100%',
+                    height: '42px'
                   }}
+                  title="Open dashboard view"
                 >
-                  <button
-                    type="button"
-                    onClick={openPlannerView}
-                    style={getViewSwitchButtonStyle(isPlannerView)}
-                    title="Open planner view"
-                  >
-                    <Calendar size={15} />
-                    Planner
-                  </button>
-                  <button
-                    type="button"
-                    ref={dashboardButtonRef}
-                    onClick={openDashboardView}
-                    style={getViewSwitchButtonStyle(isDashboardView)}
-                    title="Open dashboard view"
-                  >
-                    <BarChart3 size={15} />
-                    Dashboard
-                  </button>
-                </div>
+                  <BarChart3 size={15} />
+                  Dashboard
+                </button>
 
                 <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
                   Control Panels
@@ -3906,34 +3894,23 @@ export default function GanttChart() {
             <div style={{ display: 'grid', gap: '0.62rem', minWidth: 0 }}>
               {(isPhoneLayout || !useVerticalCommandRail) && (
                 <div style={{ display: 'grid', gap: '0.45rem', minWidth: 0 }}>
-                <div
-                  ref={viewSwitchRef}
-                  className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
+
+                <button
+                  type="button"
+                  ref={dashboardButtonRef}
+                  className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
+                  onClick={openDashboardView}
                   style={{
-                    ...viewSwitchShellStyle,
-                    width: '100%'
+                    ...getViewSwitchButtonStyle(isDashboardView),
+                    width: '100%',
+                    minWidth: '100%',
+                    height: '42px'
                   }}
+                  title="Open dashboard view"
                 >
-                  <button
-                    type="button"
-                    onClick={openPlannerView}
-                    style={getViewSwitchButtonStyle(isPlannerView)}
-                    title="Open planner view"
-                  >
-                    <Calendar size={15} />
-                    Planner
-                  </button>
-                  <button
-                    type="button"
-                    ref={dashboardButtonRef}
-                    onClick={openDashboardView}
-                    style={getViewSwitchButtonStyle(isDashboardView)}
-                    title="Open dashboard view"
-                  >
-                    <BarChart3 size={15} />
-                    Dashboard
-                  </button>
-                </div>
+                  <BarChart3 size={15} />
+                  Dashboard
+                </button>
 
                 <div className="command-panel-tabs" style={{
                   display: 'grid',
@@ -4083,7 +4060,7 @@ export default function GanttChart() {
                     Navigation + Sync
                   </div>
                   <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
-                    Manage reminders and monitor cloud sync status.
+                    Jump back to Planner, manage reminders, and monitor cloud sync status.
                   </div>
                 </div>
                 <div style={{
@@ -4118,6 +4095,22 @@ export default function GanttChart() {
                 Navigation + Sync
               </div>
               )}
+
+              <button
+                type="button"
+                ref={viewSwitchRef}
+                className={activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}
+                onClick={openPlannerView}
+                style={{
+                  ...getViewSwitchButtonStyle(isPlannerView),
+                  width: isPhoneLayout ? '100%' : 'auto',
+                  minWidth: isPhoneLayout ? '100%' : '120px'
+                }}
+                title="Open planner view"
+              >
+                <Calendar size={15} />
+                Planner
+              </button>
 
               <button
                 type="button"
