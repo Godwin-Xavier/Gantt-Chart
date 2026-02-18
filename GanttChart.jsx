@@ -722,6 +722,7 @@ export default function GanttChart() {
   const [reminderTime, setReminderTime] = useState('09:00');
   const [reminderNote, setReminderNote] = useState('');
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const [activeControlPanel, setActiveControlPanel] = useState('workspace');
   const notificationPanelRef = useRef(null);
   const reminderBellRef = useRef(null);
   const defaultDocumentTitleRef = useRef(DEFAULT_PAGE_TITLE);
@@ -831,6 +832,21 @@ export default function GanttChart() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    if (activeControlPanel !== 'workspace' && activeControlPanel !== 'utility' && activeControlPanel !== 'action') {
+      setActiveControlPanel('workspace');
+      return;
+    }
+
+    if (activeControlPanel !== 'utility' && showNotificationPanel) {
+      setShowNotificationPanel(false);
+    }
+
+    if (activeControlPanel !== 'action' && showModifyMenu) {
+      setShowModifyMenu(false);
+    }
+  }, [activeControlPanel, showModifyMenu, showNotificationPanel]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -2030,6 +2046,7 @@ export default function GanttChart() {
   const openReminderCenterFromBanner = () => {
     setShowModifyMenu(false);
     setShowHolidayManager(false);
+    setActiveControlPanel('utility');
     setShowNotificationPanel(true);
     clearTabAttentionIndicators();
   };
@@ -3132,6 +3149,25 @@ export default function GanttChart() {
     navigateToView('dashboard');
   };
 
+  const showSinglePanelMode = true;
+  const useVerticalCommandRail = !isPhoneLayout && !isCompactLayout;
+
+  const openControlPanel = (panelId) => {
+    setShowModifyMenu(false);
+    if (panelId !== 'utility') {
+      setShowNotificationPanel(false);
+    }
+    setActiveControlPanel(panelId);
+  };
+
+  const controlPanelTitles = {
+    workspace: 'Workspace',
+    utility: 'Navigation + Sync',
+    action: 'Planner Actions'
+  };
+
+  const activeControlPanelTitle = controlPanelTitles[activeControlPanel] || controlPanelTitles.workspace;
+
   const showDatesInEditor = showDates && !isCompactLayout;
   const showCostInEditor = showCost && !isCompactLayout;
   const showDatesInChart = showDates && !isCompactLayout;
@@ -3357,6 +3393,83 @@ export default function GanttChart() {
     whiteSpace: 'nowrap'
   };
 
+  const commandCenterShellStyle = {
+    position: 'relative',
+    zIndex: 1,
+    display: 'grid',
+    gridTemplateColumns: useVerticalCommandRail ? '230px minmax(0, 1fr)' : '1fr',
+    gap: '0.72rem',
+    alignItems: 'start',
+    minWidth: 0
+  };
+
+  const commandRailStyle = {
+    borderRadius: '18px',
+    border: '1px solid #dbe4ef',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 12px 24px rgba(15, 23, 42, 0.08)',
+    padding: '0.68rem',
+    display: 'grid',
+    gap: '0.5rem',
+    position: 'sticky',
+    top: '0.75rem'
+  };
+
+  const getCommandPanelToggleStyle = (panelId) => {
+    const isActive = activeControlPanel === panelId;
+    return {
+      height: isPhoneLayout ? '40px' : '44px',
+      width: '100%',
+      borderRadius: '12px',
+      border: isActive ? '1px solid #1d4ed8' : '1px solid #d1dbe8',
+      background: isActive
+        ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%)'
+        : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+      color: isActive ? '#ffffff' : '#334155',
+      boxShadow: isActive
+        ? '0 10px 20px rgba(37, 99, 235, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.24)'
+        : 'inset 0 1px 0 rgba(255, 255, 255, 0.84)',
+      fontSize: isPhoneLayout ? '0.76rem' : '0.78rem',
+      fontWeight: '800',
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.42rem',
+      transition: 'all 0.16s ease',
+      padding: '0 0.72rem'
+    };
+  };
+
+  const controlPanelCardStyle = {
+    borderRadius: '20px',
+    border: '1px solid #dbe4ef',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    boxShadow: '0 14px 28px rgba(15, 23, 42, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+    padding: isPhoneLayout ? '0.75rem' : '0.9rem',
+    display: 'grid',
+    gap: '0.68rem',
+    minWidth: 0
+  };
+
+  const controlPanelCardHeaderStyle = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '0.7rem'
+  };
+
+  const controlPanelInnerGroupStyle = showSinglePanelMode
+    ? {
+      border: 'none',
+      background: 'transparent',
+      boxShadow: 'none',
+      padding: 0,
+      gap: isPhoneLayout ? '0.52rem' : '0.58rem',
+      width: '100%'
+    }
+    : {};
+
   return (
     <div className="app-shell" style={{
       minHeight: '100vh',
@@ -3579,7 +3692,7 @@ export default function GanttChart() {
           position: 'relative',
           top: 'auto',
           zIndex: 1,
-          overflow: 'hidden',
+          overflow: 'visible',
           padding: isPhoneLayout ? '0.9rem' : '1.2rem 1.25rem',
           borderRadius: '24px',
           background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 64%, #f1f5f9 100%)',
@@ -3634,18 +3747,22 @@ export default function GanttChart() {
               <BarChart3 size={13} />
               {isDashboardView ? 'Dashboard Mode' : 'Planner Mode'}
             </div>
-            <div style={{ ...headerMetaPillStyle, maxWidth: isPhoneLayout ? '100%' : '360px' }}>
+            {!isPhoneLayout && (
+            <div style={{ ...headerMetaPillStyle, maxWidth: isCompactLayout ? '300px' : '360px' }}>
               <Clock size={13} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Next reminder: {nextReminderLabel}
               </span>
             </div>
-            <div style={{ ...headerMetaPillStyle, maxWidth: isPhoneLayout ? '100%' : '320px' }}>
+            )}
+            {!isCompactLayout && !isPhoneLayout && (
+            <div style={{ ...headerMetaPillStyle, maxWidth: '320px' }}>
               <Bell size={13} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {nextReminderDetail}
               </span>
             </div>
+            )}
           </div>
 
           {isEditingTitle ? (
@@ -3717,38 +3834,126 @@ export default function GanttChart() {
             Premium workflow: manage projects, switch views, and keep reminders focused without clutter.
           </div>
 
-          <div
-            className="header-controls"
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              gap: '0.62rem',
-              flexWrap: 'wrap',
-              padding: 0,
-              borderRadius: 0,
-              background: 'transparent',
-              border: 'none',
-              boxShadow: 'none',
-              width: '100%',
-              flex: '1 1 auto',
-              overflowX: 'visible',
-              scrollbarWidth: 'none'
-            }}
-          >
-            <div
-              className="toolbar-group workspace-group"
-              style={{
-                ...toolbarGroupBaseStyle,
-                flex: isPhoneLayout ? '1 1 100%' : '1.5 1 360px',
-                minWidth: isPhoneLayout ? '100%' : '320px'
-              }}
-            >
+          <div className="command-center-shell" style={commandCenterShellStyle}>
+            {!isPhoneLayout && useVerticalCommandRail && (
+              <div className="command-rail" style={commandRailStyle}>
+                <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
+                  Control Panels
+                </div>
+
+                <button type="button" onClick={() => openControlPanel('workspace')} style={getCommandPanelToggleStyle('workspace')}>
+                  <FolderPlus size={15} />
+                  Workspace
+                </button>
+                <button type="button" onClick={() => openControlPanel('utility')} style={getCommandPanelToggleStyle('utility')}>
+                  <Bell size={15} />
+                  Navigation + Sync
+                </button>
+                <button type="button" onClick={() => openControlPanel('action')} style={getCommandPanelToggleStyle('action')}>
+                  <Settings size={15} />
+                  Planner Actions
+                </button>
+
+                <div style={{
+                  marginTop: '0.28rem',
+                  borderRadius: '12px',
+                  border: '1px solid #dbe4ef',
+                  background: '#f8fafc',
+                  padding: '0.55rem 0.6rem',
+                  fontSize: '0.72rem',
+                  color: '#64748b',
+                  fontWeight: '700',
+                  lineHeight: 1.35
+                }}>
+                  {savedAtLabel ? `Saved ${savedAtLabel}` : 'Auto-save active'}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gap: '0.62rem', minWidth: 0 }}>
+              {(isPhoneLayout || !useVerticalCommandRail) && (
+                <div className="command-panel-tabs" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gap: '0.45rem',
+                  minWidth: 0
+                }}>
+                  <button type="button" onClick={() => openControlPanel('workspace')} style={getCommandPanelToggleStyle('workspace')}>
+                    <FolderPlus size={14} />
+                    Workspace
+                  </button>
+                  <button type="button" onClick={() => openControlPanel('utility')} style={getCommandPanelToggleStyle('utility')}>
+                    <Bell size={14} />
+                    Navigation
+                  </button>
+                  <button type="button" onClick={() => openControlPanel('action')} style={getCommandPanelToggleStyle('action')}>
+                    <Settings size={14} />
+                    Actions
+                  </button>
+                </div>
+              )}
+
+              <div
+                className="header-controls command-panel-host"
+                style={{
+                  display: 'block',
+                  padding: 0,
+                  borderRadius: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  width: '100%',
+                  flex: '1 1 auto',
+                  overflowX: 'visible',
+                  scrollbarWidth: 'none',
+                  minWidth: 0
+                }}
+              >
+            {(!showSinglePanelMode || activeControlPanel === 'workspace') && (
+            <div className="command-panel-card workspace-panel" style={controlPanelCardStyle}>
+              <div style={controlPanelCardHeaderStyle}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.71rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.09em', color: '#1e3a8a' }}>
+                    <FolderPlus size={13} />
+                    Workspace
+                  </div>
+                  <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
+                    Switch projects and manage your active workspace.
+                  </div>
+                </div>
+                {showSinglePanelMode && (
+                  <div style={{
+                    borderRadius: '999px',
+                    border: '1px solid #dbe4ef',
+                    background: '#ffffff',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.68rem',
+                    fontWeight: '800',
+                    color: '#64748b',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {activeControlPanelTitle}
+                  </div>
+                )}
+              </div>
+
+              <div
+                className="toolbar-group workspace-group"
+                style={{
+                  ...toolbarGroupBaseStyle,
+                  ...controlPanelInnerGroupStyle,
+                  flex: showSinglePanelMode ? '1 1 auto' : (isPhoneLayout ? '1 1 100%' : '1.5 1 360px'),
+                  minWidth: showSinglePanelMode ? '100%' : (isPhoneLayout ? '100%' : '320px')
+                }}
+              >
+              {!showSinglePanelMode && (
               <div style={toolbarSectionLabelStyle}>
                 <span style={toolbarSectionLabelIconStyle}>
                   <FolderPlus size={11} />
                 </span>
                 Workspace
               </div>
+              )}
 
               <div
                 style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '1 1 220px' }}
@@ -3801,23 +4006,54 @@ export default function GanttChart() {
                 <Trash2 size={16} />
                 Delete Project
               </button>
+              </div>
             </div>
+            )}
 
-            <div
-              className="toolbar-group utility-group"
-              style={{
-                ...toolbarGroupBaseStyle,
-                flex: isPhoneLayout ? '1 1 100%' : '1.05 1 330px',
-                minWidth: isPhoneLayout ? '100%' : '280px',
-                marginLeft: isPhoneLayout ? 0 : 'auto'
-              }}
-            >
+            {(!showSinglePanelMode || activeControlPanel === 'utility') && (
+            <div className="command-panel-card utility-panel" style={controlPanelCardStyle}>
+              <div style={controlPanelCardHeaderStyle}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.71rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.09em', color: '#1e3a8a' }}>
+                    <Bell size={13} />
+                    Navigation + Sync
+                  </div>
+                  <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
+                    Switch views, manage reminders, and monitor cloud sync.
+                  </div>
+                </div>
+                <div style={{
+                  borderRadius: '999px',
+                  border: '1px solid #dbe4ef',
+                  background: '#ffffff',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.68rem',
+                  fontWeight: '800',
+                  color: '#64748b',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {activeControlPanelTitle}
+                </div>
+              </div>
+
+              <div
+                className="toolbar-group utility-group"
+                style={{
+                  ...toolbarGroupBaseStyle,
+                  ...controlPanelInnerGroupStyle,
+                  flex: showSinglePanelMode ? '1 1 auto' : (isPhoneLayout ? '1 1 100%' : '1.05 1 330px'),
+                  minWidth: showSinglePanelMode ? '100%' : (isPhoneLayout ? '100%' : '280px'),
+                  marginLeft: showSinglePanelMode ? 0 : (isPhoneLayout ? 0 : 'auto')
+                }}
+              >
+              {!showSinglePanelMode && (
               <div style={toolbarSectionLabelStyle}>
                 <span style={toolbarSectionLabelIconStyle}>
                   <BarChart3 size={11} />
                 </span>
                 Navigation + Sync
               </div>
+              )}
 
               <div
                 ref={viewSwitchRef}
@@ -3869,8 +4105,8 @@ export default function GanttChart() {
                   ref={reminderBellRef}
                   className={activeTutorialTarget === 'reminderBell' ? 'tutorial-target-active' : ''}
                   onClick={() => {
-                    setShowModifyMenu(false);
                     setShowHolidayManager(false);
+                    openControlPanel('utility');
                     setShowNotificationPanel((prev) => {
                       const nextPanelState = !prev;
                       if (nextPanelState) {
@@ -4326,27 +4562,60 @@ export default function GanttChart() {
                   {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
                 </div>
               )}
+              </div>
             </div>
+            )}
 
-            <div
-              className="toolbar-group action-group"
-              style={{
-                ...toolbarGroupBaseStyle,
-                flex: isPhoneLayout ? '1 1 100%' : '2 1 540px',
-                minWidth: isPhoneLayout ? '100%' : '460px',
-                opacity: actionControlsDisabled ? 0.76 : 1,
-                background: actionControlsDisabled
-                  ? 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
-                  : toolbarGroupBaseStyle.background,
-                border: actionControlsDisabled ? '1px solid #e2e8f0' : toolbarGroupBaseStyle.border
-              }}
-            >
+            {(!showSinglePanelMode || activeControlPanel === 'action') && (
+            <div className="command-panel-card action-panel" style={controlPanelCardStyle}>
+              <div style={controlPanelCardHeaderStyle}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.71rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.09em', color: '#1e3a8a' }}>
+                    <Settings size={13} />
+                    Planner Actions
+                  </div>
+                  <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
+                    Import, configure, and update tasks from one focused action card.
+                  </div>
+                </div>
+                <div style={{
+                  borderRadius: '999px',
+                  border: '1px solid #dbe4ef',
+                  background: '#ffffff',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.68rem',
+                  fontWeight: '800',
+                  color: '#64748b',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {activeControlPanelTitle}
+                </div>
+              </div>
+
+              <div
+                className="toolbar-group action-group"
+                style={{
+                  ...toolbarGroupBaseStyle,
+                  ...controlPanelInnerGroupStyle,
+                  flex: showSinglePanelMode ? '1 1 auto' : (isPhoneLayout ? '1 1 100%' : '2 1 540px'),
+                  minWidth: showSinglePanelMode ? '100%' : (isPhoneLayout ? '100%' : '460px'),
+                  opacity: actionControlsDisabled ? 0.76 : 1,
+                  background: actionControlsDisabled
+                    ? 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+                    : controlPanelInnerGroupStyle.background || toolbarGroupBaseStyle.background,
+                  border: actionControlsDisabled
+                    ? '1px solid #e2e8f0'
+                    : (controlPanelInnerGroupStyle.border || toolbarGroupBaseStyle.border)
+                }}
+              >
+            {!showSinglePanelMode && (
             <div style={toolbarSectionLabelStyle}>
               <span style={toolbarSectionLabelIconStyle}>
                 <Settings size={11} />
               </span>
               Planner Actions
             </div>
+            )}
 
             <button
               type="button"
@@ -4677,6 +4946,10 @@ export default function GanttChart() {
                 {authSession.isAuthenticated && !cloudSyncState.isSaving && cloudSyncedLabel && ` • Cloud ${cloudSyncedLabel}`}
               </div>
             )}
+            </div>
+            )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -8182,6 +8455,26 @@ export default function GanttChart() {
           pointer-events: auto;
         }
 
+        .command-panel-host {
+          display: block !important;
+        }
+
+        .command-panel-host > .command-panel-card,
+        .command-panel-host > div {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .command-panel-host .toolbar-group {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .command-panel-tabs button,
+        .command-rail button {
+          min-height: 42px;
+        }
+
         .top-header-meta > div {
           max-width: 100%;
         }
@@ -8250,6 +8543,10 @@ export default function GanttChart() {
         }
 
         @media (max-width: 980px) {
+          .command-center-shell {
+            grid-template-columns: 1fr !important;
+          }
+
           .top-header {
             position: static !important;
             flex-direction: column !important;
@@ -8279,6 +8576,10 @@ export default function GanttChart() {
             justify-content: flex-start !important;
             flex-wrap: wrap !important;
             overflow-x: visible !important;
+          }
+
+          .header-controls.command-panel-host {
+            display: block !important;
           }
 
           .header-controls .toolbar-group {
@@ -8320,6 +8621,17 @@ export default function GanttChart() {
             gap: 0.6rem !important;
           }
 
+          .header-controls.command-panel-host {
+            display: block !important;
+            grid-template-columns: 1fr !important;
+          }
+
+          .header-controls.command-panel-host .workspace-group,
+          .header-controls.command-panel-host .utility-group,
+          .header-controls.command-panel-host .action-group {
+            grid-column: auto !important;
+          }
+
           .header-controls .workspace-group {
             grid-column: 1 / -1;
           }
@@ -8337,6 +8649,14 @@ export default function GanttChart() {
         @media (max-width: 760px) {
           .app-shell {
             padding: 1rem 0.55rem !important;
+          }
+
+          .command-center-shell {
+            gap: 0.55rem !important;
+          }
+
+          .command-panel-tabs {
+            grid-template-columns: 1fr !important;
           }
 
           .top-header-meta {
@@ -8359,6 +8679,10 @@ export default function GanttChart() {
             flex-direction: column !important;
             gap: 0.55rem !important;
             align-items: stretch !important;
+          }
+
+          .header-controls.command-panel-host {
+            display: block !important;
           }
 
           .header-controls > div,
