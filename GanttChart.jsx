@@ -722,7 +722,7 @@ export default function GanttChart() {
   const [reminderTime, setReminderTime] = useState('09:00');
   const [reminderNote, setReminderNote] = useState('');
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
-  const [activeControlPanel, setActiveControlPanel] = useState('workspace');
+  const [activeControlPanel, setActiveControlPanel] = useState('action');
   const notificationPanelRef = useRef(null);
   const reminderBellRef = useRef(null);
   const defaultDocumentTitleRef = useRef(DEFAULT_PAGE_TITLE);
@@ -1059,6 +1059,7 @@ export default function GanttChart() {
     navigateToView('planner');
     setShowWelcomeBanner(false);
     markIntroSeen();
+    setActiveControlPanel('workspace');
     setShowSignInPrompt(false);
     setShowNotificationPanel(false);
     setShowHolidayManager(false);
@@ -3415,31 +3416,31 @@ export default function GanttChart() {
     top: '0.75rem'
   };
 
-  const getCommandPanelToggleStyle = (panelId) => {
-    const isActive = activeControlPanel === panelId;
-    return {
-      height: isPhoneLayout ? '40px' : '44px',
-      width: '100%',
-      borderRadius: '12px',
-      border: isActive ? '1px solid #1d4ed8' : '1px solid #d1dbe8',
-      background: isActive
-        ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%)'
-        : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-      color: isActive ? '#ffffff' : '#334155',
-      boxShadow: isActive
-        ? '0 10px 20px rgba(37, 99, 235, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.24)'
-        : 'inset 0 1px 0 rgba(255, 255, 255, 0.84)',
-      fontSize: isPhoneLayout ? '0.76rem' : '0.78rem',
-      fontWeight: '800',
-      cursor: 'pointer',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '0.42rem',
-      transition: 'all 0.16s ease',
-      padding: '0 0.72rem'
-    };
-  };
+  const getCommandToggleStyle = (isActive) => ({
+    height: isPhoneLayout ? '40px' : '44px',
+    width: '100%',
+    borderRadius: '12px',
+    border: isActive ? '1px solid #1d4ed8' : '1px solid #d1dbe8',
+    background: isActive
+      ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%)'
+      : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    color: isActive ? '#ffffff' : '#334155',
+    boxShadow: isActive
+      ? '0 10px 20px rgba(37, 99, 235, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.24)'
+      : 'inset 0 1px 0 rgba(255, 255, 255, 0.84)',
+    fontSize: isPhoneLayout ? '0.76rem' : '0.78rem',
+    fontWeight: '800',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.42rem',
+    transition: 'all 0.16s ease',
+    padding: '0 0.72rem'
+  });
+
+  const getCommandPanelToggleStyle = (panelId) => getCommandToggleStyle(activeControlPanel === panelId);
+  const getCommandViewToggleStyle = (isActive) => getCommandToggleStyle(isActive);
 
   const controlPanelCardStyle = {
     borderRadius: '20px',
@@ -3843,19 +3844,18 @@ export default function GanttChart() {
 
                 <button
                   type="button"
-                  ref={dashboardButtonRef}
-                  className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
-                  onClick={openDashboardView}
-                  style={{
-                    ...getViewSwitchButtonStyle(isDashboardView),
-                    width: '100%',
-                    minWidth: '100%',
-                    height: '42px'
+                  onClick={() => {
+                    openPlannerView();
+                    openControlPanel('action');
                   }}
-                  title="Open dashboard view"
+                  style={{
+                    ...getCommandPanelToggleStyle('action'),
+                    minWidth: '100%'
+                  }}
+                  title="Open planner actions"
                 >
-                  <BarChart3 size={15} />
-                  Dashboard
+                  <Settings size={15} />
+                  Planner Actions
                 </button>
 
                 <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
@@ -3870,9 +3870,16 @@ export default function GanttChart() {
                   <Bell size={15} />
                   Navigation + Sync
                 </button>
-                <button type="button" onClick={() => openControlPanel('action')} style={getCommandPanelToggleStyle('action')}>
-                  <Settings size={15} />
-                  Planner Actions
+                <button
+                  type="button"
+                  ref={dashboardButtonRef}
+                  className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
+                  onClick={openDashboardView}
+                  style={getCommandViewToggleStyle(isDashboardView)}
+                  title="Open dashboard view"
+                >
+                  <BarChart3 size={15} />
+                  Dashboard
                 </button>
 
                 <div style={{
@@ -3897,19 +3904,19 @@ export default function GanttChart() {
 
                 <button
                   type="button"
-                  ref={dashboardButtonRef}
-                  className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
-                  onClick={openDashboardView}
-                  style={{
-                    ...getViewSwitchButtonStyle(isDashboardView),
-                    width: '100%',
-                    minWidth: '100%',
-                    height: '42px'
+                  onClick={() => {
+                    openPlannerView();
+                    openControlPanel('action');
                   }}
-                  title="Open dashboard view"
+                  style={{
+                    ...getCommandPanelToggleStyle('action'),
+                    width: '100%',
+                    minWidth: '100%'
+                  }}
+                  title="Open planner actions"
                 >
-                  <BarChart3 size={15} />
-                  Dashboard
+                  <Settings size={15} />
+                  Planner Actions
                 </button>
 
                 <div className="command-panel-tabs" style={{
@@ -3926,9 +3933,16 @@ export default function GanttChart() {
                     <Bell size={14} />
                     Navigation
                   </button>
-                  <button type="button" onClick={() => openControlPanel('action')} style={getCommandPanelToggleStyle('action')}>
-                    <Settings size={14} />
-                    Actions
+                  <button
+                    type="button"
+                    ref={dashboardButtonRef}
+                    className={activeTutorialTarget === 'dashboardButton' ? 'tutorial-target-active' : ''}
+                    onClick={openDashboardView}
+                    style={getCommandViewToggleStyle(isDashboardView)}
+                    title="Open dashboard view"
+                  >
+                    <BarChart3 size={14} />
+                    Dashboard
                   </button>
                 </div>
                 </div>
