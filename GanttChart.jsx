@@ -916,7 +916,7 @@ export default function GanttChart() {
       {
         id: 'view-switch',
         title: 'Switch views without layout jump',
-        body: `${actionWord} Planner or Dashboard here to switch modes smoothly. This switch stays in the same place on desktop and mobile so navigation feels consistent.`,
+        body: `${actionWord} Planner or Dashboard in the left command area to switch modes smoothly. Desktop keeps it on the left rail and mobile keeps it in the top switch so navigation stays consistent.`,
         target: 'viewSwitch',
         panel: null,
         view: 'planner'
@@ -1020,7 +1020,7 @@ export default function GanttChart() {
       {
         id: 'dashboard-action-state',
         title: 'Dashboard keeps controls consistent',
-        body: 'This Dashboard button stays in the same position across desktop and mobile. When Dashboard is active, planner action buttons stay visible in place but become disabled so mode changes are clear.',
+        body: 'The Dashboard button stays in the left command navigation across devices. When Dashboard is active, planner action buttons remain visible in their card but become disabled so mode changes are clear.',
         target: 'dashboardButton',
         panel: null,
         view: 'dashboard'
@@ -3838,6 +3838,39 @@ export default function GanttChart() {
             {!isPhoneLayout && useVerticalCommandRail && (
               <div className="command-rail" style={commandRailStyle}>
                 <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
+                  View Mode
+                </div>
+
+                <div
+                  ref={viewSwitchRef}
+                  className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
+                  style={{
+                    ...viewSwitchShellStyle,
+                    width: '100%'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={openPlannerView}
+                    style={getViewSwitchButtonStyle(isPlannerView)}
+                    title="Open planner view"
+                  >
+                    <Calendar size={15} />
+                    Planner
+                  </button>
+                  <button
+                    type="button"
+                    ref={dashboardButtonRef}
+                    onClick={openDashboardView}
+                    style={getViewSwitchButtonStyle(isDashboardView)}
+                    title="Open dashboard view"
+                  >
+                    <BarChart3 size={15} />
+                    Dashboard
+                  </button>
+                </div>
+
+                <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
                   Control Panels
                 </div>
 
@@ -3872,6 +3905,36 @@ export default function GanttChart() {
 
             <div style={{ display: 'grid', gap: '0.62rem', minWidth: 0 }}>
               {(isPhoneLayout || !useVerticalCommandRail) && (
+                <div style={{ display: 'grid', gap: '0.45rem', minWidth: 0 }}>
+                <div
+                  ref={viewSwitchRef}
+                  className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
+                  style={{
+                    ...viewSwitchShellStyle,
+                    width: '100%'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={openPlannerView}
+                    style={getViewSwitchButtonStyle(isPlannerView)}
+                    title="Open planner view"
+                  >
+                    <Calendar size={15} />
+                    Planner
+                  </button>
+                  <button
+                    type="button"
+                    ref={dashboardButtonRef}
+                    onClick={openDashboardView}
+                    style={getViewSwitchButtonStyle(isDashboardView)}
+                    title="Open dashboard view"
+                  >
+                    <BarChart3 size={15} />
+                    Dashboard
+                  </button>
+                </div>
+
                 <div className="command-panel-tabs" style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -3890,6 +3953,7 @@ export default function GanttChart() {
                     <Settings size={14} />
                     Actions
                   </button>
+                </div>
                 </div>
               )}
 
@@ -4019,7 +4083,7 @@ export default function GanttChart() {
                     Navigation + Sync
                   </div>
                   <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
-                    Switch views, manage reminders, and monitor cloud sync.
+                    Manage reminders and monitor cloud sync status.
                   </div>
                 </div>
                 <div style={{
@@ -4054,35 +4118,6 @@ export default function GanttChart() {
                 Navigation + Sync
               </div>
               )}
-
-              <div
-                ref={viewSwitchRef}
-                className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
-                style={{
-                  ...viewSwitchShellStyle,
-                  width: isPhoneLayout ? '100%' : 'auto'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={openPlannerView}
-                  style={getViewSwitchButtonStyle(isPlannerView)}
-                  title="Open planner view"
-                >
-                  <Calendar size={15} />
-                  Planner
-                </button>
-                <button
-                  type="button"
-                  ref={dashboardButtonRef}
-                  onClick={openDashboardView}
-                  style={getViewSwitchButtonStyle(isDashboardView)}
-                  title="Open dashboard view"
-                >
-                  <BarChart3 size={15} />
-                  Dashboard
-                </button>
-              </div>
 
               <button
                 type="button"
