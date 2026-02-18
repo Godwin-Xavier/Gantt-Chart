@@ -4950,11 +4950,36 @@ export default function GanttChart() {
                   color: '#64748b',
                   fontSize: '0.74rem',
                   fontWeight: '700',
-                  padding: '0.46rem 0.62rem',
+                  padding: '0.48rem 0.62rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.6rem',
+                  flexWrap: 'wrap',
                   textAlign: isPhoneLayout ? 'center' : 'left'
                 }}
               >
-                Planner tools are locked in Dashboard mode. Switch to Planner to edit tasks or export the planner chart.
+                <span style={{ flex: '1 1 280px' }}>
+                  Planner tools are locked in Dashboard mode. Switch to Planner to edit tasks or export the planner chart.
+                </span>
+                <button
+                  type="button"
+                  onClick={openPlannerView}
+                  style={{
+                    ...toolbarButtonPrimaryStyle,
+                    height: '34px',
+                    borderRadius: '9px',
+                    fontSize: '0.74rem',
+                    padding: '0 0.72rem',
+                    width: isPhoneLayout ? '100%' : 'auto',
+                    boxShadow: 'none',
+                    flexShrink: 0
+                  }}
+                  title="Switch to planner mode"
+                >
+                  <Calendar size={14} />
+                  Switch to Planner
+                </button>
               </div>
             )}
 
