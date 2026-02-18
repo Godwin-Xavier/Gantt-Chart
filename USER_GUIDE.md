@@ -102,3 +102,8 @@ Required environment variables for deployment:
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
+
+## 7) Vercel production deployment
+
+- Production automatically deploys when a new commit is pushed to `main`.
+- If GitHub is up to date but Vercel has not refreshed yet, open **Deployments** in Vercel and click **Redeploy** on the latest commit.
