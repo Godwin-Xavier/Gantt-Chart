@@ -12,6 +12,10 @@ const DISMISSED_AUTO_ALERTS_KEY = 'gantt-chart:dismissed-auto-alerts:v1';
 const REMINDER_NOTIFICATION_PREFS_KEY = 'gantt-chart:reminder-notification-prefs:v1';
 const CLOUD_AUTH_ENABLED = import.meta.env.VITE_ENABLE_CLOUD_AUTH !== 'false';
 const DEFAULT_PAGE_TITLE = 'Project Tracker | Gantt Planner';
+const MANUAL_REMINDER_MATCH_WINDOW_MS = 90 * 1000;
+const NOTIFICATION_DEDUPE_WINDOW_MS = 90 * 1000;
+const NOTIFICATION_RETENTION_MS = 12 * 60 * 60 * 1000;
+const MAX_ACTIVE_NOTIFICATIONS = 40;
 
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
@@ -199,6 +203,12 @@ const getTaskCompletionStatus = (task) => {
     return areAllSubTasksCompleted(task.subTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS;
   }
   return normalizeStatus(task.status);
+};
+
+const getReminderTimestamp = (dateValue, timeValue) => {
+  if (typeof dateValue !== 'string' || typeof timeValue !== 'string') return Number.NaN;
+  const parsed = new Date(`${dateValue}T${timeValue}:00`);
+  return parsed.getTime();
 };
 
 export default function GanttChart() {
@@ -718,6 +728,8 @@ export default function GanttChart() {
   const tabAttentionTitleIntervalRef = useRef(null);
   const reminderSoundContextRef = useRef(null);
   const lastReminderSoundAtRef = useRef(0);
+  const notificationKeyLedgerRef = useRef({});
+  const toastDismissTimersRef = useRef({});
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
   const modifyMenuRef = useRef(null);
@@ -1793,6 +1805,11 @@ export default function GanttChart() {
         tabAttentionTitleIntervalRef.current = null;
       }
 
+      Object.values(toastDismissTimersRef.current).forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      toastDismissTimersRef.current = {};
+
       if (reminderSoundContextRef.current && typeof reminderSoundContextRef.current.close === 'function') {
         reminderSoundContextRef.current.close().catch(() => {});
       }
@@ -1917,34 +1934,98 @@ export default function GanttChart() {
   }, [isDocumentHidden, reminderNotificationPrefs.tabTitleFlashEnabled, tabAttentionNotifications.length]);
 
   // Fire a notification (browser + in-app)
-  const fireNotification = (title, body, key) => {
-    const timestamp = Date.now();
-    const id = `notif-${timestamp}-${Math.random().toString(36).slice(2, 6)}`;
-    const nextNotification = { id, title, body, key, timestamp };
+  const fireNotification = (title, body, key, metadata = {}) => {
+    if (typeof window === 'undefined') return false;
 
-    setActiveNotifications((prev) => [...prev, nextNotification]);
+    const timestamp = Date.now();
+    const dedupeKey = typeof key === 'string' && key.length > 0 ? key : `${title}:${body}`;
+    const previousFireAt = notificationKeyLedgerRef.current[dedupeKey];
+
+    if (typeof previousFireAt === 'number' && (timestamp - previousFireAt) < NOTIFICATION_DEDUPE_WINDOW_MS) {
+      return false;
+    }
+
+    notificationKeyLedgerRef.current[dedupeKey] = timestamp;
+    Object.keys(notificationKeyLedgerRef.current).forEach((ledgerKey) => {
+      if ((timestamp - notificationKeyLedgerRef.current[ledgerKey]) > NOTIFICATION_RETENTION_MS) {
+        delete notificationKeyLedgerRef.current[ledgerKey];
+      }
+    });
+
+    const id = `notif-${timestamp}-${Math.random().toString(36).slice(2, 6)}`;
+    const nextNotification = {
+      id,
+      title,
+      body,
+      key: dedupeKey,
+      timestamp,
+      kind: metadata.kind || 'manual',
+      scheduledAt: metadata.scheduledAt || null
+    };
+
+    setActiveNotifications((prev) => (
+      [...prev, nextNotification]
+        .filter((n) => (timestamp - n.timestamp) <= NOTIFICATION_RETENTION_MS)
+        .slice(-MAX_ACTIVE_NOTIFICATIONS)
+    ));
 
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-      setTabAttentionNotifications((prev) => [...prev, nextNotification]);
+      setTabAttentionNotifications((prev) => [...prev, nextNotification].slice(-MAX_ACTIVE_NOTIFICATIONS));
     }
 
-    // Browser notification
     if ('Notification' in window && Notification.permission === 'granted') {
-      try { new Notification(title, { body, icon: '/favicon.ico', tag: key || id }); } catch {}
+      try { new Notification(title, { body, icon: '/favicon.ico', tag: dedupeKey }); } catch {}
     }
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveNotifications((prev) => prev.filter((n) => n.id !== id));
+      setTabAttentionNotifications((prev) => prev.filter((n) => n.id !== id));
+      delete toastDismissTimersRef.current[id];
+    }, 14000);
+    toastDismissTimersRef.current[id] = timeoutId;
 
     playReminderSound();
+    return true;
   };
 
   const dismissNotification = (id) => {
+    if (toastDismissTimersRef.current[id]) {
+      window.clearTimeout(toastDismissTimersRef.current[id]);
+      delete toastDismissTimersRef.current[id];
+    }
     setActiveNotifications((prev) => prev.filter((n) => n.id !== id));
     setTabAttentionNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const clearAllNotifications = () => {
+    Object.values(toastDismissTimersRef.current).forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    toastDismissTimersRef.current = {};
     setActiveNotifications([]);
     clearTabAttentionIndicators();
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const cleanupNotificationData = () => {
+      const nowMs = Date.now();
+
+      setActiveNotifications((prev) => prev.filter((n) => (nowMs - n.timestamp) <= NOTIFICATION_RETENTION_MS));
+      setTabAttentionNotifications((prev) => prev.filter((n) => (nowMs - n.timestamp) <= NOTIFICATION_RETENTION_MS));
+
+      Object.keys(notificationKeyLedgerRef.current).forEach((ledgerKey) => {
+        if ((nowMs - notificationKeyLedgerRef.current[ledgerKey]) > NOTIFICATION_RETENTION_MS) {
+          delete notificationKeyLedgerRef.current[ledgerKey];
+        }
+      });
+    };
+
+    cleanupNotificationData();
+    const intervalId = window.setInterval(cleanupNotificationData, 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const openReminderCenterFromBanner = () => {
     setShowModifyMenu(false);
@@ -1997,43 +2078,67 @@ export default function GanttChart() {
 
       if (istHour >= 9) {
         const dueItems = getTodaysDueItems();
-        dueItems.forEach((item) => {
-          const alertKey = `auto-${today}-${item.projectId}-${item.taskId}${item.subTaskId ? '-' + item.subTaskId : ''}`;
-          if (!dismissedAutoAlerts.includes(alertKey)) {
-            const label = item.type === 'subtask'
-              ? `"${item.name}" (subtask of "${item.parentName}")`
-              : `"${item.name}"`;
-            fireNotification(
-              'Due Today',
-              `${label} in project "${item.projectName}" is due today (${item.endDate}).`,
-              alertKey
-            );
-            setDismissedAutoAlerts((prev) => [...prev, alertKey]);
-          }
-        });
+        const alertKey = `auto-${today}-summary`;
+
+        if (dueItems.length > 0 && !dismissedAutoAlerts.includes(alertKey)) {
+          const projectCount = new Set(dueItems.map((item) => item.projectId)).size;
+          const preview = dueItems
+            .slice(0, 2)
+            .map((item) => `"${item.name}"`)
+            .join(', ');
+          const remainingCount = Math.max(0, dueItems.length - 2);
+
+          fireNotification(
+            'Due Today Summary',
+            `${dueItems.length} item${dueItems.length === 1 ? '' : 's'} due across ${projectCount} project${projectCount === 1 ? '' : 's'}${preview ? `: ${preview}` : ''}${remainingCount > 0 ? ` +${remainingCount} more` : ''}.`,
+            alertKey,
+            { kind: 'auto', scheduledAt: `${today}T09:00:00+05:30` }
+          );
+
+          setDismissedAutoAlerts((prev) => {
+            const merged = new Set(prev);
+            merged.add(alertKey);
+            return Array.from(merged);
+          });
+        }
       }
 
       // --- Manual reminders ---
       const nowMs = now.getTime();
       setReminders((prev) => {
-        const stillPending = [];
-        prev.forEach((r) => {
-          const reminderMs = new Date(`${r.date}T${r.time}:00`).getTime();
-          if (reminderMs <= nowMs && !r.fired) {
+        return prev.map((r) => {
+          if (r.fired) return r;
+
+          const reminderMs = getReminderTimestamp(r.date, r.time);
+          if (!Number.isFinite(reminderMs)) return r;
+
+          const deltaMs = nowMs - reminderMs;
+
+          if (deltaMs < 0) {
+            return r;
+          }
+
+          if (deltaMs <= MANUAL_REMINDER_MATCH_WINDOW_MS) {
             const label = r.subTaskId
               ? `"${r.itemName}" (subtask)`
               : `"${r.itemName}"`;
+
             fireNotification(
               'Reminder',
               `${label} in project "${r.projectName}"${r.note ? ': ' + r.note : ''}`,
-              `manual-${r.id}`
+              `manual-${r.id}`,
+              { kind: 'manual', scheduledAt: `${r.date}T${r.time}:00` }
             );
-            stillPending.push({ ...r, fired: true });
-          } else {
-            stillPending.push(r);
+
+            return { ...r, fired: true, firedAt: new Date().toISOString() };
           }
+
+          if (deltaMs > MANUAL_REMINDER_MATCH_WINDOW_MS) {
+            return { ...r, fired: true, skipped: true, skippedAt: new Date().toISOString() };
+          }
+
+          return r;
         });
-        return stillPending;
       });
     };
 
@@ -2139,8 +2244,8 @@ export default function GanttChart() {
     () => reminders
       .filter((r) => !r.fired)
       .sort((a, b) => {
-        const aTime = new Date(`${a.date}T${a.time}:00`).getTime();
-        const bTime = new Date(`${b.date}T${b.time}:00`).getTime();
+        const aTime = getReminderTimestamp(a.date, a.time);
+        const bTime = getReminderTimestamp(b.date, b.time);
         return aTime - bTime;
       }),
     [reminders]
@@ -2151,9 +2256,25 @@ export default function GanttChart() {
     [activeNotifications]
   );
 
+  const upcomingReminders = useMemo(() => pendingReminders.slice(0, 7), [pendingReminders]);
+  const nextPendingReminder = pendingReminders.length > 0 ? pendingReminders[0] : null;
+  const autoNotificationCount = recentNotifications.filter((notification) => notification.kind === 'auto').length;
+  const manualNotificationCount = recentNotifications.filter((notification) => notification.kind !== 'auto').length;
+  const dueTodayReminderCount = useMemo(() => {
+    const today = formatDate(new Date());
+    return pendingReminders.filter((reminder) => reminder.date === today).length;
+  }, [pendingReminders]);
+
   const pendingReminderCount = pendingReminders.length;
   const activeNotificationCount = activeNotifications.length;
-  const notificationBadgeCount = pendingReminderCount + activeNotificationCount;
+  const notificationBadgeCount = activeNotificationCount + dueTodayReminderCount;
+  const nextReminderLabel = nextPendingReminder
+    ? formatReminderDateTimeLabel(nextPendingReminder.date, nextPendingReminder.time)
+    : 'No reminder scheduled';
+  const nextReminderDetail = nextPendingReminder
+    ? nextPendingReminder.itemName
+    : 'Set reminders from task rows';
+  const toastNotifications = recentNotifications.slice(0, 2);
   const latestTabAttentionNotification = tabAttentionNotifications.length > 0
     ? tabAttentionNotifications[tabAttentionNotifications.length - 1]
     : null;
@@ -3068,120 +3189,171 @@ export default function GanttChart() {
   const toolbarGroupBaseStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.45rem',
+    gap: '0.5rem',
     flexWrap: 'wrap',
-    padding: '0.42rem',
-    borderRadius: '15px',
-    border: '1px solid #dbe4ef',
-    background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 16px rgba(15, 23, 42, 0.04)',
+    padding: '0.56rem',
+    borderRadius: '18px',
+    border: '1px solid rgba(203, 213, 225, 0.95)',
+    background: 'linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 68%, rgba(241, 245, 249, 0.92) 100%)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 26px rgba(15, 23, 42, 0.07)',
     transition: 'border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease'
   };
 
   const toolbarButtonBaseStyle = {
-    height: '42px',
-    borderRadius: '11px',
+    height: '43px',
+    borderRadius: '12px',
     padding: '0 0.95rem',
-    fontSize: '0.88rem',
+    fontSize: '0.84rem',
     fontWeight: '800',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.48rem',
+    gap: '0.5rem',
     whiteSpace: 'nowrap',
     transition: 'transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease, opacity 0.16s ease',
     letterSpacing: '0.01em',
-    transform: 'translateY(0)'
+    transform: 'translateY(0)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.72)'
   };
 
   const toolbarButtonNeutralStyle = {
     ...toolbarButtonBaseStyle,
-    background: '#ffffff',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
     color: '#0f172a',
-    border: '1px solid #cbd5e1'
+    border: '1px solid #d1dbe8',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 2px 10px rgba(15, 23, 42, 0.06)'
   };
 
   const toolbarButtonPrimaryStyle = {
     ...toolbarButtonBaseStyle,
-    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%)',
     color: '#ffffff',
-    border: '1px solid #1d4ed8',
-    boxShadow: '0 10px 18px rgba(37, 99, 235, 0.2)'
+    border: '1px solid rgba(29, 78, 216, 0.95)',
+    boxShadow: '0 12px 24px rgba(37, 99, 235, 0.27), inset 0 1px 0 rgba(255, 255, 255, 0.28)'
   };
 
   const toolbarButtonSuccessSoftStyle = {
     ...toolbarButtonBaseStyle,
-    background: '#ecfdf5',
+    background: 'linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%)',
     color: '#166534',
     border: '1px solid #86efac'
   };
 
   const toolbarButtonAccentSoftStyle = {
     ...toolbarButtonBaseStyle,
-    background: '#eff6ff',
+    background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)',
     color: '#1e40af',
     border: '1px solid #bfdbfe'
   };
 
   const toolbarButtonDangerSoftStyle = {
     ...toolbarButtonBaseStyle,
-    background: '#fef2f2',
+    background: 'linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%)',
     color: '#b91c1c',
-    border: '1px solid #fecaca'
+    border: '1px solid #fecdd3'
   };
 
   const toolbarSelectStyle = {
     width: '100%',
-    height: '42px',
-    borderRadius: '11px',
-    border: '1px solid #cbd5e1',
-    background: '#ffffff',
+    height: '43px',
+    borderRadius: '12px',
+    border: '1px solid #d1dbe8',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
     color: '#0f172a',
-    fontSize: '0.88rem',
+    fontSize: '0.84rem',
     fontWeight: '700',
     padding: '0 0.75rem',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 2px 10px rgba(15, 23, 42, 0.06)'
   };
 
   const viewSwitchShellStyle = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.22rem',
-    borderRadius: '12px',
-    border: '1px solid #cbd5e1',
-    background: '#ffffff',
+    borderRadius: '13px',
+    border: '1px solid #d1dbe8',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
     padding: '0.2rem',
-    minHeight: '42px'
+    minHeight: '43px',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.84)'
   };
 
   const getViewSwitchButtonStyle = (isActive) => ({
-    border: isActive ? '1px solid #2563eb' : '1px solid transparent',
-    background: isActive ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent',
+    border: isActive ? '1px solid #1d4ed8' : '1px solid rgba(203, 213, 225, 0.72)',
+    background: isActive
+      ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 52%, #0ea5e9 100%)'
+      : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
     color: isActive ? '#ffffff' : '#334155',
-    boxShadow: isActive ? '0 10px 18px rgba(37, 99, 235, 0.2)' : 'none',
+    boxShadow: isActive
+      ? '0 10px 20px rgba(37, 99, 235, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.24)'
+      : 'inset 0 1px 0 rgba(255, 255, 255, 0.82)',
     borderRadius: '10px',
-    height: '36px',
+    height: '37px',
     padding: '0 0.8rem',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '0.38rem',
-    fontSize: '0.8rem',
+    fontSize: '0.79rem',
     fontWeight: '800',
     cursor: 'pointer',
     transition: 'all 0.16s ease',
-    minWidth: isPhoneLayout ? 'calc(50% - 0.12rem)' : '104px'
+    minWidth: isPhoneLayout ? 'calc(50% - 0.12rem)' : '108px'
   });
 
-  const syncPillStyle = {
-    fontSize: '0.73rem',
-    fontWeight: '700',
-    color: '#64748b',
-    padding: '0.42rem 0.72rem',
+  const toolbarSectionLabelStyle = {
+    width: '100%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.42rem',
+    padding: '0.05rem 0.08rem',
+    marginBottom: '0.06rem',
+    fontSize: '0.66rem',
+    fontWeight: '800',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: '#475569'
+  };
+
+  const toolbarSectionLabelIconStyle = {
+    width: '18px',
+    height: '18px',
     borderRadius: '999px',
-    border: '1px solid #dbe4ef',
-    background: '#ffffff',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #cbd5e1',
+    background: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
+    color: '#334155',
+    flex: '0 0 auto'
+  };
+
+  const headerMetaPillStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(203, 213, 225, 0.95)',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    padding: '0.28rem 0.64rem',
+    fontSize: '0.72rem',
+    fontWeight: '700',
+    color: '#334155',
+    whiteSpace: 'nowrap',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+  };
+
+  const syncPillStyle = {
+    fontSize: '0.72rem',
+    fontWeight: '700',
+    color: '#475569',
+    padding: '0.42rem 0.75rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(203, 213, 225, 0.95)',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.82)',
     whiteSpace: 'nowrap'
   };
 
@@ -3399,20 +3571,83 @@ export default function GanttChart() {
 
         {/* Header */}
         <div className="top-header" style={{
-          marginBottom: '2.25rem',
+          marginBottom: '2.05rem',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
-          gap: '0.85rem',
+          gap: '0.9rem',
           position: 'relative',
           top: 'auto',
           zIndex: 1,
-          padding: isPhoneLayout ? '0.9rem' : '1.1rem 1.2rem',
-          borderRadius: '20px',
-          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-          border: '1px solid rgba(226, 232, 240, 0.95)',
-          boxShadow: '0 16px 34px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)'
+          overflow: 'hidden',
+          padding: isPhoneLayout ? '0.9rem' : '1.2rem 1.25rem',
+          borderRadius: '24px',
+          background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 64%, #f1f5f9 100%)',
+          border: '1px solid rgba(203, 213, 225, 0.82)',
+          boxShadow: '0 22px 42px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.92)'
         }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: '-85px',
+              right: '-70px',
+              width: '220px',
+              height: '220px',
+              borderRadius: '999px',
+              background: 'radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(14, 165, 233, 0) 72%)',
+              pointerEvents: 'none'
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              bottom: '-100px',
+              left: '-80px',
+              width: '250px',
+              height: '250px',
+              borderRadius: '999px',
+              background: 'radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 72%)',
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div className="top-header-meta" style={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.42rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{
+              ...headerMetaPillStyle,
+              background: 'linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%)',
+              border: '1px solid rgba(147, 197, 253, 0.9)',
+              color: '#1e3a8a'
+            }}>
+              <Sparkles size={13} />
+              Command Center
+            </div>
+            <div style={headerMetaPillStyle}>
+              <BarChart3 size={13} />
+              {isDashboardView ? 'Dashboard Mode' : 'Planner Mode'}
+            </div>
+            <div style={{ ...headerMetaPillStyle, maxWidth: isPhoneLayout ? '100%' : '360px' }}>
+              <Clock size={13} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Next reminder: {nextReminderLabel}
+              </span>
+            </div>
+            <div style={{ ...headerMetaPillStyle, maxWidth: isPhoneLayout ? '100%' : '320px' }}>
+              <Bell size={13} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {nextReminderDetail}
+              </span>
+            </div>
+          </div>
+
           {isEditingTitle ? (
             <input
               ref={titleRef}
@@ -3426,13 +3661,15 @@ export default function GanttChart() {
               style={{
                 fontSize: 'clamp(1.35rem, 2.1vw, 2.35rem)',
                 fontWeight: '800',
-                color: '#000000',
+                color: '#020617',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: '2px solid #000000',
+                borderBottom: '2px solid rgba(15, 23, 42, 0.75)',
                 outline: 'none',
                 padding: '0.35rem 0',
-                width: '100%'
+                width: '100%',
+                position: 'relative',
+                zIndex: 1
               }}
             />
           ) : (
@@ -3443,7 +3680,7 @@ export default function GanttChart() {
               style={{
                 fontSize: 'clamp(1.35rem, 2.1vw, 2.35rem)',
                 fontWeight: '800',
-                color: '#000000',
+                color: '#020617',
                 margin: 0,
                 cursor: 'pointer',
                 display: 'flex',
@@ -3456,7 +3693,10 @@ export default function GanttChart() {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                lineHeight: 1.1
+                lineHeight: 1.1,
+                letterSpacing: '-0.015em',
+                position: 'relative',
+                zIndex: 1
               }}
               onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -3465,6 +3705,17 @@ export default function GanttChart() {
               <Edit2 size={28} style={{ opacity: 0.5 }} />
             </h1>
           )}
+
+          <div style={{
+            position: 'relative',
+            zIndex: 1,
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            color: '#64748b',
+            lineHeight: 1.35
+          }}>
+            Premium workflow: manage projects, switch views, and keep reminders focused without clutter.
+          </div>
 
           <div
             className="header-controls"
@@ -3492,6 +3743,13 @@ export default function GanttChart() {
                 minWidth: isPhoneLayout ? '100%' : '320px'
               }}
             >
+              <div style={toolbarSectionLabelStyle}>
+                <span style={toolbarSectionLabelIconStyle}>
+                  <FolderPlus size={11} />
+                </span>
+                Workspace
+              </div>
+
               <div
                 style={{ minWidth: isPhoneLayout ? '100%' : '220px', flex: isPhoneLayout ? '1 1 auto' : '1 1 220px' }}
                 className={`toolbar-select-wrap ${activeTutorialTarget === 'projectSwitcher' ? 'tutorial-target-active' : ''}`}
@@ -3549,11 +3807,18 @@ export default function GanttChart() {
               className="toolbar-group utility-group"
               style={{
                 ...toolbarGroupBaseStyle,
-                flex: isPhoneLayout ? '1 1 100%' : '1 1 320px',
+                flex: isPhoneLayout ? '1 1 100%' : '1.05 1 330px',
                 minWidth: isPhoneLayout ? '100%' : '280px',
                 marginLeft: isPhoneLayout ? 0 : 'auto'
               }}
             >
+              <div style={toolbarSectionLabelStyle}>
+                <span style={toolbarSectionLabelIconStyle}>
+                  <BarChart3 size={11} />
+                </span>
+                Navigation + Sync
+              </div>
+
               <div
                 ref={viewSwitchRef}
                 className={`view-switch-shell ${activeTutorialTarget === 'viewSwitch' ? 'tutorial-target-active' : ''}`}
@@ -3662,26 +3927,28 @@ export default function GanttChart() {
                       top: '110%',
                       right: isPhoneLayout ? 'auto' : 0,
                       left: isPhoneLayout ? 0 : 'auto',
-                      width: isPhoneLayout ? '100%' : 'min(420px, calc(100vw - 3rem))',
-                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                      border: '1px solid #dbe4ef',
-                      borderRadius: '14px',
-                      boxShadow: '0 20px 44px rgba(15, 23, 42, 0.2)',
+                      width: isPhoneLayout ? '100%' : 'min(470px, calc(100vw - 3rem))',
+                      maxHeight: isPhoneLayout ? 'min(70vh, 620px)' : 'min(78vh, 700px)',
+                      overflowY: 'auto',
+                      background: 'linear-gradient(165deg, #ffffff 0%, #f8fafc 68%, #f1f5f9 100%)',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '18px',
+                      boxShadow: '0 26px 54px rgba(15, 23, 42, 0.24)',
                       zIndex: 85,
-                      padding: '0.75rem',
+                      padding: '0.9rem',
                       display: 'grid',
-                      gap: '0.7rem',
+                      gap: '0.75rem',
                       animation: 'popIn 0.16s ease-out both'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
                       <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: '800', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                           <BellRing size={14} />
                           Reminder Center
                         </div>
-                        <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
-                          {pendingReminderCount} pending reminders • {activeNotificationCount} active alerts
+                        <div style={{ marginTop: '0.24rem', fontSize: '0.8rem', color: '#475569', fontWeight: '700', lineHeight: 1.35 }}>
+                          {pendingReminderCount} scheduled reminders • {activeNotificationCount} live alerts
                         </div>
                       </div>
 
@@ -3692,8 +3959,8 @@ export default function GanttChart() {
                           width: '30px',
                           height: '30px',
                           borderRadius: '9px',
-                          border: '1px solid #dbe4ef',
-                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
                           color: '#64748b',
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -3707,111 +3974,204 @@ export default function GanttChart() {
                     </div>
 
                     <div style={{
-                      borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
-                      background: '#ffffff',
-                      padding: '0.55rem 0.65rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.8rem',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      color: '#475569'
+                      borderRadius: '12px',
+                      border: '1px solid #c7d2fe',
+                      background: 'linear-gradient(135deg, #eef2ff 0%, #f0f9ff 100%)',
+                      padding: '0.68rem 0.72rem',
+                      display: 'grid',
+                      gap: '0.22rem'
                     }}>
-                      <span>Browser notifications</span>
-                      <span style={{
-                        padding: '0.14rem 0.45rem',
-                        borderRadius: '999px',
-                        border: '1px solid #cbd5e1',
-                        background: browserNotificationPermission === 'granted' ? '#ecfdf5' : '#f8fafc',
-                        color: browserNotificationPermission === 'granted' ? '#166534' : '#475569',
-                        textTransform: 'capitalize'
-                      }}>
-                        {browserNotificationPermission === 'unsupported' ? 'Not Supported' : browserNotificationPermission}
-                      </span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.42rem', fontSize: '0.72rem', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        <Clock size={13} />
+                        Precision delivery
+                      </div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#1e3a8a', lineHeight: 1.35 }}>
+                        Manual reminders fire only at the exact scheduled time window. Missed times are skipped automatically so alerts do not pile up.
+                      </div>
                     </div>
 
                     <div style={{
-                      borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      border: '1px solid #dbe4ef',
                       background: '#ffffff',
-                      padding: '0.55rem 0.65rem',
+                      padding: '0.62rem 0.68rem',
                       display: 'grid',
-                      gap: '0.5rem'
+                      gap: '0.55rem'
                     }}>
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.7rem',
-                        fontSize: '0.76rem',
-                        color: '#334155',
-                        fontWeight: '700',
-                        cursor: 'pointer'
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                        gap: '0.42rem'
                       }}>
-                        <span>Reminder sound</span>
-                        <input
-                          type="checkbox"
-                          checked={reminderNotificationPrefs.soundEnabled}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setReminderNotificationPrefs((prev) => ({ ...prev, soundEnabled: checked }));
-                          }}
-                          style={{
-                            width: '1.05rem',
-                            height: '1.05rem',
-                            cursor: 'pointer',
-                            accentColor: '#2563eb'
-                          }}
-                        />
-                      </label>
+                        {[
+                          { label: 'Upcoming', value: pendingReminderCount, tone: '#eef2ff', border: '#c7d2fe', color: '#3730a3' },
+                          { label: 'Due Today', value: dueTodayReminderCount, tone: '#fffbeb', border: '#fde68a', color: '#92400e' },
+                          { label: 'Alerts', value: activeNotificationCount, tone: '#fef2f2', border: '#fecaca', color: '#991b1b' }
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            style={{
+                              borderRadius: '10px',
+                              border: `1px solid ${item.border}`,
+                              background: item.tone,
+                              padding: '0.42rem 0.5rem',
+                              display: 'grid',
+                              gap: '0.12rem',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontSize: '0.62rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b' }}>
+                              {item.label}
+                            </div>
+                            <div style={{ fontSize: '1rem', fontWeight: '800', color: item.color, lineHeight: 1.1 }}>
+                              {item.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
 
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.7rem',
-                        fontSize: '0.76rem',
-                        color: '#334155',
-                        fontWeight: '700',
-                        cursor: 'pointer'
+                      <div style={{
+                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        background: '#f8fafc',
+                        padding: '0.48rem 0.58rem',
+                        display: 'grid',
+                        gap: '0.24rem'
                       }}>
-                        <span>Tab title flashing</span>
-                        <input
-                          type="checkbox"
-                          checked={reminderNotificationPrefs.tabTitleFlashEnabled}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setReminderNotificationPrefs((prev) => ({ ...prev, tabTitleFlashEnabled: checked }));
-                          }}
-                          style={{
-                            width: '1.05rem',
-                            height: '1.05rem',
-                            cursor: 'pointer',
-                            accentColor: '#2563eb'
-                          }}
-                        />
-                      </label>
+                        <div style={{ fontSize: '0.66rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
+                          Next reminder
+                        </div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.25 }}>
+                          {nextReminderLabel}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748b' }}>
+                          {nextReminderDetail}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr',
+                        gap: '0.48rem'
+                      }}>
+                        <div style={{
+                          borderRadius: '10px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          padding: '0.5rem 0.58rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.55rem',
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          color: '#475569'
+                        }}>
+                          <span>Browser notifications</span>
+                          <span style={{
+                            padding: '0.12rem 0.42rem',
+                            borderRadius: '999px',
+                            border: '1px solid #cbd5e1',
+                            background: browserNotificationPermission === 'granted' ? '#ecfdf5' : '#f8fafc',
+                            color: browserNotificationPermission === 'granted' ? '#166534' : '#475569',
+                            textTransform: 'capitalize',
+                            fontSize: '0.67rem',
+                            fontWeight: '800'
+                          }}>
+                            {browserNotificationPermission === 'unsupported' ? 'Not Supported' : browserNotificationPermission}
+                          </span>
+                        </div>
+
+                        <div style={{
+                          borderRadius: '10px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          padding: '0.5rem 0.58rem',
+                          display: 'grid',
+                          gap: '0.36rem'
+                        }}>
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.6rem',
+                            fontSize: '0.72rem',
+                            color: '#334155',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}>
+                            <span>Reminder sound</span>
+                            <input
+                              type="checkbox"
+                              checked={reminderNotificationPrefs.soundEnabled}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setReminderNotificationPrefs((prev) => ({ ...prev, soundEnabled: checked }));
+                              }}
+                              style={{
+                                width: '1rem',
+                                height: '1rem',
+                                cursor: 'pointer',
+                                accentColor: '#2563eb'
+                              }}
+                            />
+                          </label>
+
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.6rem',
+                            fontSize: '0.72rem',
+                            color: '#334155',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}>
+                            <span>Tab title flashing</span>
+                            <input
+                              type="checkbox"
+                              checked={reminderNotificationPrefs.tabTitleFlashEnabled}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setReminderNotificationPrefs((prev) => ({ ...prev, tabTitleFlashEnabled: checked }));
+                              }}
+                              style={{
+                                width: '1rem',
+                                height: '1rem',
+                                cursor: 'pointer',
+                                accentColor: '#2563eb'
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: '0.45rem' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                        Pending reminders
-                      </div>
-                      <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'grid', gap: '0.45rem' }}>
-                        {pendingReminders.length === 0 ? (
-                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.65rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
-                            No pending reminders yet. Use the bell icon on a task row to create one.
+                    <div style={{ display: 'grid', gap: '0.48rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          Upcoming reminders
+                        </div>
+                        {pendingReminderCount > upcomingReminders.length && (
+                          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#64748b' }}>
+                            +{pendingReminderCount - upcomingReminders.length} more
                           </div>
-                        ) : pendingReminders.map((reminder) => (
-                          <div key={reminder.id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', background: '#ffffff', padding: '0.6rem', display: 'grid', gap: '0.25rem' }}>
+                        )}
+                      </div>
+
+                      <div style={{ maxHeight: '210px', overflowY: 'auto', display: 'grid', gap: '0.42rem' }}>
+                        {upcomingReminders.length === 0 ? (
+                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.68rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
+                            No scheduled reminders yet. Use the bell icon on any task row.
+                          </div>
+                        ) : upcomingReminders.map((reminder) => (
+                          <div key={reminder.id} style={{ border: '1px solid #dbe4ef', borderRadius: '11px', background: '#ffffff', padding: '0.58rem', display: 'grid', gap: '0.24rem' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
                               <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {reminder.itemName}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700' }}>
+                                <div style={{ fontSize: '0.71rem', color: '#64748b', fontWeight: '700' }}>
                                   {reminder.projectName}
                                 </div>
                               </div>
@@ -3838,13 +4198,13 @@ export default function GanttChart() {
                               </button>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#475569', fontWeight: '700' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.73rem', color: '#334155', fontWeight: '700' }}>
                               <Clock size={12} />
                               {formatReminderDateTimeLabel(reminder.date, reminder.time)}
                             </div>
 
                             {reminder.note && (
-                              <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600', lineHeight: 1.35 }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '600', lineHeight: 1.3 }}>
                                 {reminder.note}
                               </div>
                             )}
@@ -3853,40 +4213,65 @@ export default function GanttChart() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: '0.45rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                          Active alerts
+                    <div style={{ display: 'grid', gap: '0.48rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          Recent alerts
                         </div>
-                        {recentNotifications.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={clearAllNotifications}
-                            style={{
-                              border: '1px solid #cbd5e1',
-                              background: '#ffffff',
-                              borderRadius: '8px',
-                              height: '26px',
-                              padding: '0 0.55rem',
-                              fontSize: '0.7rem',
-                              fontWeight: '800',
-                              color: '#334155',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Clear All
-                          </button>
-                        )}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569' }}>
+                            Manual {manualNotificationCount} • Auto {autoNotificationCount}
+                          </span>
+                          {recentNotifications.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={clearAllNotifications}
+                              style={{
+                                border: '1px solid #cbd5e1',
+                                background: '#ffffff',
+                                borderRadius: '8px',
+                                height: '26px',
+                                padding: '0 0.55rem',
+                                fontSize: '0.68rem',
+                                fontWeight: '800',
+                                color: '#334155',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'grid', gap: '0.45rem' }}>
+
+                      <div style={{ maxHeight: '190px', overflowY: 'auto', display: 'grid', gap: '0.42rem' }}>
                         {recentNotifications.length === 0 ? (
-                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.65rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
-                            Alerts will appear here when reminders fire.
+                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.68rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
+                            Alerts appear here only when reminders fire in their scheduled window.
                           </div>
-                        ) : recentNotifications.map((notification) => (
-                          <div key={notification.id} style={{ border: '1px solid #dbe4ef', borderRadius: '10px', background: '#f8fafc', padding: '0.55rem 0.6rem', display: 'grid', gap: '0.18rem' }}>
+                        ) : recentNotifications.slice(0, 8).map((notification) => (
+                          <div key={notification.id} style={{ border: '1px solid #dbe4ef', borderRadius: '10px', background: '#f8fafc', padding: '0.55rem 0.6rem', display: 'grid', gap: '0.2rem' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
-                              <div style={{ fontSize: '0.79rem', fontWeight: '800', color: '#0f172a' }}>{notification.title}</div>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                                <span style={{
+                                  padding: '0.1rem 0.38rem',
+                                  borderRadius: '999px',
+                                  border: notification.kind === 'auto' ? '1px solid #bfdbfe' : '1px solid #fdba74',
+                                  background: notification.kind === 'auto' ? '#eff6ff' : '#fffbeb',
+                                  color: notification.kind === 'auto' ? '#1e40af' : '#92400e',
+                                  fontSize: '0.64rem',
+                                  fontWeight: '800',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.08em',
+                                  flexShrink: 0
+                                }}>
+                                  {notification.kind === 'auto' ? 'Auto' : 'Manual'}
+                                </span>
+                                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {notification.title}
+                                </div>
+                              </div>
+
                               <button
                                 type="button"
                                 onClick={() => dismissNotification(notification.id)}
@@ -3908,8 +4293,9 @@ export default function GanttChart() {
                                 <X size={11} />
                               </button>
                             </div>
-                            <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>{notification.body}</div>
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700' }}>
+
+                            <div style={{ fontSize: '0.73rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>{notification.body}</div>
+                            <div style={{ fontSize: '0.67rem', color: '#94a3b8', fontWeight: '700' }}>
                               {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
@@ -3946,7 +4332,7 @@ export default function GanttChart() {
               className="toolbar-group action-group"
               style={{
                 ...toolbarGroupBaseStyle,
-                flex: isPhoneLayout ? '1 1 100%' : '2 1 520px',
+                flex: isPhoneLayout ? '1 1 100%' : '2 1 540px',
                 minWidth: isPhoneLayout ? '100%' : '460px',
                 opacity: actionControlsDisabled ? 0.76 : 1,
                 background: actionControlsDisabled
@@ -3955,6 +4341,13 @@ export default function GanttChart() {
                 border: actionControlsDisabled ? '1px solid #e2e8f0' : toolbarGroupBaseStyle.border
               }}
             >
+            <div style={toolbarSectionLabelStyle}>
+              <span style={toolbarSectionLabelIconStyle}>
+                <Settings size={11} />
+              </span>
+              Planner Actions
+            </div>
+
             <button
               type="button"
               ref={importButtonRef}
@@ -7381,7 +7774,7 @@ export default function GanttChart() {
           </>
         )}
 
-        {recentNotifications.length > 0 && (
+        {toastNotifications.length > 0 && (
           <div style={{
             position: 'fixed',
             right: isPhoneLayout ? '0.55rem' : '1rem',
@@ -7393,7 +7786,7 @@ export default function GanttChart() {
             width: isPhoneLayout ? 'auto' : 'min(360px, calc(100vw - 2rem))',
             pointerEvents: 'none'
           }}>
-            {recentNotifications.slice(0, 4).map((notification) => (
+            {toastNotifications.map((notification) => (
               <div
                 key={notification.id}
                 style={{
@@ -7409,7 +7802,25 @@ export default function GanttChart() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>{notification.title}</div>
+                  <div style={{ minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span style={{
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '999px',
+                      border: notification.kind === 'auto' ? '1px solid #bfdbfe' : '1px solid #fdba74',
+                      background: notification.kind === 'auto' ? '#eff6ff' : '#fffbeb',
+                      color: notification.kind === 'auto' ? '#1e40af' : '#92400e',
+                      fontSize: '0.62rem',
+                      fontWeight: '800',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      flexShrink: 0
+                    }}>
+                      {notification.kind === 'auto' ? 'Auto' : 'Manual'}
+                    </span>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {notification.title}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => dismissNotification(notification.id)}
@@ -7439,6 +7850,26 @@ export default function GanttChart() {
                 </div>
               </div>
             ))}
+
+            {recentNotifications.length > toastNotifications.length && (
+              <button
+                type="button"
+                onClick={() => setShowNotificationPanel(true)}
+                style={{
+                  pointerEvents: 'auto',
+                  height: '34px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                  color: '#334155',
+                  fontSize: '0.72rem',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                View {recentNotifications.length - toastNotifications.length} more alert{recentNotifications.length - toastNotifications.length === 1 ? '' : 's'}
+              </button>
+            )}
           </div>
         )}
 
@@ -7751,9 +8182,18 @@ export default function GanttChart() {
           pointer-events: auto;
         }
 
+        .top-header-meta > div {
+          max-width: 100%;
+        }
+
+        .header-controls .toolbar-group {
+          backdrop-filter: blur(8px) saturate(1.05);
+          -webkit-backdrop-filter: blur(8px) saturate(1.05);
+        }
+
         .header-controls .toolbar-group:hover {
-          border-color: #c7d2fe;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 12px 24px rgba(15, 23, 42, 0.08);
+          border-color: #bfdbfe;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 18px 30px rgba(15, 23, 42, 0.12);
         }
 
         .header-controls .toolbar-group button:hover:not(:disabled) {
@@ -7815,6 +8255,17 @@ export default function GanttChart() {
             flex-direction: column !important;
             align-items: stretch !important;
             gap: 1rem !important;
+          }
+
+          .top-header-meta {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.42rem !important;
+          }
+
+          .top-header-meta > div {
+            width: 100%;
+            justify-content: flex-start;
           }
 
           .project-title {
@@ -7886,6 +8337,10 @@ export default function GanttChart() {
         @media (max-width: 760px) {
           .app-shell {
             padding: 1rem 0.55rem !important;
+          }
+
+          .top-header-meta {
+            grid-template-columns: 1fr !important;
           }
 
           .project-title {
