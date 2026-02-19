@@ -26,6 +26,71 @@ const STATUS_OPTIONS = [
   { value: STATUS_COMPLETED, label: 'Completed' }
 ];
 
+const TUTORIAL_TARGET_PANEL_MAP = {
+  commandCenter: 'workspace',
+  projectSwitcher: 'workspace',
+  addProjectButton: 'workspace',
+  deleteProjectButton: 'workspace',
+  viewSwitch: 'utility',
+  signInButton: 'utility',
+  reminderBell: 'utility',
+  signInPanel: 'utility',
+  import: 'action',
+  addTask: 'action',
+  modifyMenu: 'action',
+  settingsButton: 'action',
+  companyUpload: 'action',
+  holidayDate: 'action'
+};
+
+const TUTORIAL_TARGET_LABELS = {
+  title: 'Project Title',
+  commandCenter: 'Command Center',
+  projectSwitcher: 'Project Selector',
+  addProjectButton: 'Add Project',
+  deleteProjectButton: 'Delete Project',
+  viewSwitch: 'Planner Button',
+  signInButton: 'Sign In (Optional)',
+  reminderBell: 'Reminder Center',
+  signInPanel: 'Cloud Sync Panel',
+  import: 'Import',
+  addTask: 'Add Task',
+  statusColumn: 'Status Controls',
+  modifyMenu: 'Modify Graph',
+  settingsButton: 'Settings and Branding',
+  companyUpload: 'Company Logo Upload',
+  holidayDate: 'Holiday Date Picker',
+  taskEditor: 'Tasks Editor',
+  timeline: 'Timeline Chart',
+  dashboardButton: 'Dashboard Button',
+  dashboardPanel: 'Portfolio Dashboard',
+  dashboardDownload: 'Download Snapshot'
+};
+
+const TUTORIAL_TARGET_ACTIONS = {
+  title: 'Click the title text, type a new name, then press Enter.',
+  commandCenter: 'Use these grouped controls to switch workspace, navigation, and planner actions.',
+  projectSwitcher: 'Open the selector and choose a different project.',
+  addProjectButton: 'Click Add Project to create a separate workspace timeline.',
+  deleteProjectButton: 'Click Delete Project to remove the active project after confirmation.',
+  viewSwitch: 'Click Planner to return to editing mode.',
+  signInButton: 'Click Sign In (Optional) only if you need cloud sync.',
+  reminderBell: 'Click the bell to open upcoming reminders and recent alerts.',
+  signInPanel: 'Use Continue with Gmail for cloud sync or close to stay local.',
+  import: 'Click Import and select a JSON export to restore data.',
+  addTask: 'Click Add Task to create a new phase in the planner.',
+  statusColumn: 'Change any row status between In Progress and Completed.',
+  modifyMenu: 'Open Modify Graph to toggle view options and export formats.',
+  settingsButton: 'Open Settings and Branding to manage logos and holidays.',
+  companyUpload: 'Upload your company logo for branded exports.',
+  holidayDate: 'Pick a date and add it as a holiday for business-day calculations.',
+  taskEditor: 'Edit task names, dates, duration, colors, cost, and reminders here.',
+  timeline: 'Review timeline bars to confirm plan timing and completion.',
+  dashboardButton: 'Switch to Dashboard mode for portfolio-level tracking.',
+  dashboardPanel: 'Expand projects and use filters to inspect progress.',
+  dashboardDownload: 'Click Download Snapshot to export one share-ready dashboard image.'
+};
+
 const DEFAULT_TASK_BLUEPRINT = [
   {
     id: 1,
@@ -736,6 +801,7 @@ export default function GanttChart() {
   const toastDismissTimersRef = useRef({});
   const fileInputRef = useRef(null);
   const chartRef = useRef(null);
+  const commandCenterRef = useRef(null);
   const modifyMenuRef = useRef(null);
   const titleRef = useRef(null);
   const signInButtonRef = useRef(null);
@@ -954,8 +1020,8 @@ export default function GanttChart() {
       {
         id: 'top-command-center',
         title: 'Use the command center',
-        body: 'The top controls are grouped into workspace, utility, and planner actions. Desktop keeps them in clean rows, while phones stack them into touch-friendly blocks with the same features.',
-        target: 'projectSwitcher',
+        body: 'This full area is your control hub. It groups workspace switching, navigation, reminders, and planner actions in one place.',
+        target: 'commandCenter',
         panel: null,
         view: 'planner'
       },
@@ -1212,6 +1278,7 @@ export default function GanttChart() {
   const getTutorialTargetElement = () => {
     const elementMap = {
       title: titleRef.current,
+      commandCenter: commandCenterRef.current,
       signInButton: signInButtonRef.current,
       signInPanel: signInPanelRef.current,
       projectSwitcher: projectSwitcherRef.current,
@@ -1237,12 +1304,39 @@ export default function GanttChart() {
     return elementMap[activeTutorialTarget] || null;
   };
 
+  const activeTutorialTargetLabel = activeTutorialTarget
+    ? (TUTORIAL_TARGET_LABELS[activeTutorialTarget] || 'Highlighted feature')
+    : 'Highlighted feature';
+
+  const activeTutorialTargetAction = activeTutorialTarget
+    ? (TUTORIAL_TARGET_ACTIONS[activeTutorialTarget] || 'Use the highlighted feature to continue.')
+    : 'Use the highlighted feature to continue.';
+
+  const locateTutorialTarget = () => {
+    const targetElement = getTutorialTargetElement();
+    if (!targetElement) return;
+
+    targetElement.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest'
+    });
+  };
+
   useEffect(() => {
     if (!isTutorialActive || !activeTutorialStep) return;
 
     const targetView = activeTutorialStep.view === 'dashboard' ? 'dashboard' : 'planner';
     if (currentView !== targetView) {
       navigateToView(targetView);
+    }
+
+    const targetControlPanel = targetView === 'planner'
+      ? TUTORIAL_TARGET_PANEL_MAP[activeTutorialStep.target] || null
+      : null;
+
+    if (targetControlPanel && activeControlPanel !== targetControlPanel) {
+      setActiveControlPanel(targetControlPanel);
     }
 
     const shouldKeepSignInPromptOpen = activeTutorialStep.target === 'signInButton' || activeTutorialStep.panel === 'signin';
@@ -1282,7 +1376,7 @@ export default function GanttChart() {
     }, 180);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeTutorialStep, isTutorialActive, currentView]);
+  }, [activeTutorialStep, isTutorialActive, currentView, activeControlPanel]);
 
   useEffect(() => {
     if (!isTutorialActive) {
@@ -3757,7 +3851,16 @@ export default function GanttChart() {
             <h4>{activeTutorialStep.title}</h4>
             <p>{activeTutorialStep.body}</p>
 
+            <div className="tutorial-highlight-meta">
+              <div className="tutorial-highlight-chip">Highlighting: {activeTutorialTargetLabel}</div>
+              <div className="tutorial-highlight-tip">Do this now: {activeTutorialTargetAction}</div>
+            </div>
+
             <div className="tutorial-actions">
+              <button onClick={locateTutorialTarget} className="tutorial-secondary-btn">
+                Locate
+              </button>
+
               <button
                 onClick={goToPreviousTutorialStep}
                 disabled={tutorialStepIndex === 0}
@@ -4015,7 +4118,7 @@ export default function GanttChart() {
             Premium workflow: manage projects, switch views, and keep reminders focused without clutter.
           </div>
 
-          <div className="command-center-shell" style={commandCenterShellStyle}>
+          <div ref={commandCenterRef} className="command-center-shell" style={commandCenterShellStyle}>
             {!isPhoneLayout && useVerticalCommandRail && (
               <div className="command-rail" style={commandRailStyle}>
                 <div style={{ fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', padding: '0 0.15rem' }}>
@@ -8791,9 +8894,35 @@ export default function GanttChart() {
           font-weight: 600;
         }
 
+        .tutorial-highlight-meta {
+          margin-top: 0.72rem;
+          display: grid;
+          gap: 0.36rem;
+        }
+
+        .tutorial-highlight-chip {
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #93c5fd;
+        }
+
+        .tutorial-highlight-tip {
+          border-radius: 10px;
+          border: 1px solid rgba(148, 163, 184, 0.34);
+          background: rgba(15, 23, 42, 0.62);
+          color: #e2e8f0;
+          font-size: 0.78rem;
+          font-weight: 700;
+          line-height: 1.4;
+          padding: 0.48rem 0.55rem;
+        }
+
         .tutorial-actions {
           margin-top: 0.85rem;
           display: flex;
+          flex-wrap: wrap;
           gap: 0.45rem;
           justify-content: flex-end;
         }
