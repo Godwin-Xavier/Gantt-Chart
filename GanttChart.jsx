@@ -5,8 +5,8 @@ import DashboardView from './DashboardView';
 
 const APP_STORAGE_KEY = 'gantt-chart:workspace:v3';
 const LEGACY_APP_STORAGE_KEY = 'gantt-chart:workspace:v2';
-const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v1';
-const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v1';
+const INTRO_BANNER_KEY = 'gantt-chart:intro-banner-seen:v2';
+const TUTORIAL_DONE_KEY = 'gantt-chart:tutorial-done:v2';
 const REMINDERS_STORAGE_KEY = 'gantt-chart:reminders:v1';
 const DISMISSED_AUTO_ALERTS_KEY = 'gantt-chart:dismissed-auto-alerts:v1';
 const REMINDER_NOTIFICATION_PREFS_KEY = 'gantt-chart:reminder-notification-prefs:v1';
@@ -16,6 +16,7 @@ const MANUAL_REMINDER_MATCH_WINDOW_MS = 90 * 1000;
 const NOTIFICATION_DEDUPE_WINDOW_MS = 90 * 1000;
 const NOTIFICATION_RETENTION_MS = 12 * 60 * 60 * 1000;
 const MAX_ACTIVE_NOTIFICATIONS = 40;
+const WELCOME_PREVIEW_INTERVAL_MS = 3400;
 
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
@@ -658,6 +659,8 @@ export default function GanttChart() {
     error: ''
   });
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => !readStorageFlag(INTRO_BANNER_KEY));
+  const [welcomePreviewIndex, setWelcomePreviewIndex] = useState(0);
+  const [isWelcomePreviewPlaying, setIsWelcomePreviewPlaying] = useState(true);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialFocusRect, setTutorialFocusRect] = useState(null);
@@ -869,6 +872,73 @@ export default function GanttChart() {
     }
   }, [tasks.length]);
 
+  const welcomePreviewFrames = useMemo(() => {
+    const actionWord = isPhoneLayout ? 'Tap' : 'Click';
+
+    return [
+      {
+        id: 'command-center',
+        title: 'Command center controls',
+        body: 'Workspace, navigation, and planner actions stay grouped and consistent across layouts.',
+        cue: `${actionWord} Guide anytime to replay onboarding.`,
+        icon: <Settings size={14} />,
+        tone: 'linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%)',
+        border: '#bfdbfe',
+        bullets: ['Workspace selector', 'Navigation + Sync panel', 'Planner actions card']
+      },
+      {
+        id: 'projects',
+        title: 'Multi-project workflow',
+        body: 'Create, switch, and safely delete projects while keeping one active workspace available.',
+        cue: `${actionWord} Add Project to start another timeline.`,
+        icon: <FolderPlus size={14} />,
+        tone: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)',
+        border: '#c7d2fe',
+        bullets: ['Project dropdown', 'Add Project', 'Delete with confirmation']
+      },
+      {
+        id: 'reminders',
+        title: 'Reminder center',
+        body: 'Set reminders from rows, monitor due alerts, and control sound or tab-flash preferences.',
+        cue: `${actionWord} the bell to open reminders and recent alerts.`,
+        icon: <Bell size={14} />,
+        tone: 'linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)',
+        border: '#a5f3fc',
+        bullets: ['Task + sub-task reminders', 'Due today counters', 'Manual + auto alerts']
+      },
+      {
+        id: 'planner',
+        title: 'Planner editing and import',
+        body: 'Import JSON plans, update status and durations, and keep task/sub-task timelines in sync.',
+        cue: `${actionWord} Import or Add Task in planner actions.`,
+        icon: <Upload size={14} />,
+        tone: 'linear-gradient(135deg, #dcfce7 0%, #ecfccb 100%)',
+        border: '#bbf7d0',
+        bullets: ['Status controls', 'Business-day durations', 'Inline reminder badges']
+      },
+      {
+        id: 'settings-branding',
+        title: 'Branding and holidays',
+        body: 'Upload customer and company logos, then add holidays used in business-day calculations.',
+        cue: `${actionWord} Settings and Branding to open the drawer.`,
+        icon: <Calendar size={14} />,
+        tone: 'linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%)',
+        border: '#fde68a',
+        bullets: ['Logo uploads', 'Holiday manager', 'Export-ready header visuals']
+      },
+      {
+        id: 'dashboard',
+        title: 'Dashboard and snapshot sharing',
+        body: 'Track portfolio completion, filter tasks, expand project cards, and download one snapshot image.',
+        cue: `${actionWord} Dashboard, then Download Snapshot.`,
+        icon: <BarChart3 size={14} />,
+        tone: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+        border: '#93c5fd',
+        bullets: ['Portfolio progress cards', 'All / Completed / Pending filters', 'Share-ready dashboard snapshot']
+      }
+    ];
+  }, [isPhoneLayout]);
+
   const tutorialSteps = useMemo(() => {
     const actionWord = isPhoneLayout ? 'Tap' : 'Click';
 
@@ -939,8 +1009,8 @@ export default function GanttChart() {
       },
       {
         id: 'signin-providers',
-        title: 'Connect Google when needed',
-        body: 'This step is optional. Use Google sign-in only if you want one synced source of truth across devices.',
+        title: 'Connect Gmail when needed',
+        body: 'This step is optional. Use Gmail sign-in only if you want one synced source of truth across devices.',
         target: 'signInPanel',
         panel: 'signin',
         view: 'planner'
@@ -1046,6 +1116,35 @@ export default function GanttChart() {
 
   const activeTutorialStep = isTutorialActive ? tutorialSteps[tutorialStepIndex] : null;
   const activeTutorialTarget = activeTutorialStep?.target || null;
+  const activeWelcomePreview = welcomePreviewFrames[welcomePreviewIndex] || welcomePreviewFrames[0];
+
+  const goToNextWelcomePreview = () => {
+    if (welcomePreviewFrames.length === 0) return;
+    setWelcomePreviewIndex((prev) => (prev + 1) % welcomePreviewFrames.length);
+  };
+
+  const goToPreviousWelcomePreview = () => {
+    if (welcomePreviewFrames.length === 0) return;
+    setWelcomePreviewIndex((prev) => (prev - 1 + welcomePreviewFrames.length) % welcomePreviewFrames.length);
+  };
+
+  useEffect(() => {
+    if (!showWelcomeBanner) return;
+    setWelcomePreviewIndex(0);
+    setIsWelcomePreviewPlaying(true);
+  }, [showWelcomeBanner]);
+
+  useEffect(() => {
+    if (!showWelcomeBanner || !isWelcomePreviewPlaying) return;
+    if (welcomePreviewFrames.length <= 1) return;
+    if (typeof window === 'undefined') return;
+
+    const intervalId = window.setInterval(() => {
+      setWelcomePreviewIndex((prev) => (prev + 1) % welcomePreviewFrames.length);
+    }, WELCOME_PREVIEW_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [showWelcomeBanner, isWelcomePreviewPlaying, welcomePreviewFrames.length]);
 
   const markIntroSeen = () => {
     writeStorageFlag(INTRO_BANNER_KEY, true);
@@ -3499,6 +3598,87 @@ export default function GanttChart() {
                 </p>
               </div>
 
+              <div className="welcome-preview-shell">
+                <div className="welcome-preview-toolbar">
+                  <div className="welcome-preview-label">Updated Tutorial Reel</div>
+                  <button
+                    type="button"
+                    onClick={() => setIsWelcomePreviewPlaying((prev) => !prev)}
+                    className="welcome-preview-toggle"
+                  >
+                    {isWelcomePreviewPlaying ? 'Pause Reel' : 'Play Reel'}
+                  </button>
+                </div>
+
+                {activeWelcomePreview && (
+                  <div
+                    className="welcome-preview-frame"
+                    style={{
+                      background: activeWelcomePreview.tone,
+                      borderColor: activeWelcomePreview.border
+                    }}
+                  >
+                    <div className="welcome-preview-frame-head">
+                      <div className="welcome-preview-icon">{activeWelcomePreview.icon}</div>
+                      <div>
+                        <h3>{activeWelcomePreview.title}</h3>
+                        <p>{activeWelcomePreview.body}</p>
+                      </div>
+                    </div>
+
+                    <div className="welcome-preview-bullets">
+                      {activeWelcomePreview.bullets.map((bullet) => (
+                        <span key={bullet}>{bullet}</span>
+                      ))}
+                    </div>
+
+                    <div className="welcome-preview-cue">{activeWelcomePreview.cue}</div>
+                  </div>
+                )}
+
+                <div className="welcome-preview-controls">
+                  <button
+                    type="button"
+                    onClick={goToPreviousWelcomePreview}
+                    className="welcome-preview-nav"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="welcome-preview-dots" role="tablist" aria-label="Tutorial preview frames">
+                    {welcomePreviewFrames.map((frame, index) => {
+                      const isActive = index === welcomePreviewIndex;
+                      return (
+                        <button
+                          key={frame.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-label={`Preview frame ${index + 1}: ${frame.title}`}
+                          onClick={() => setWelcomePreviewIndex(index)}
+                          className="welcome-preview-dot"
+                        >
+                          <span
+                            style={{
+                              width: isActive ? '32px' : '11px',
+                              background: isActive ? '#1e3a8a' : '#cbd5e1'
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={goToNextWelcomePreview}
+                    className="welcome-preview-nav"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
               <div className="welcome-feature-grid">
                 <div>
                   <h4>Command-center header</h4>
@@ -3522,7 +3702,7 @@ export default function GanttChart() {
                 </div>
                 <div>
                   <h4>Optional sign-in sync</h4>
-                  <p>Sign in with Google only when you want one live source of truth across multiple devices.</p>
+                  <p>Sign in with Gmail only when you want one live source of truth across multiple devices.</p>
                 </div>
               </div>
 
@@ -5562,8 +5742,7 @@ export default function GanttChart() {
                       </div>
 
                       <label
-                        ref={companyUploadRef}
-                        className={activeTutorialTarget === 'companyUpload' ? 'tutorial-target-active tutorial-settings-target' : 'tutorial-settings-target'}
+                        className="tutorial-settings-target"
                         style={{
                           cursor: 'pointer',
                           background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
@@ -5637,7 +5816,10 @@ export default function GanttChart() {
                         )}
                       </div>
 
-                      <label style={{
+                      <label
+                        ref={companyUploadRef}
+                        className={activeTutorialTarget === 'companyUpload' ? 'tutorial-target-active tutorial-settings-target' : 'tutorial-settings-target'}
+                        style={{
                         cursor: 'pointer',
                         background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
                         border: '1px dashed rgba(148, 163, 184, 0.7)',
@@ -8381,6 +8563,157 @@ export default function GanttChart() {
           background: #f8fafc;
         }
 
+        .welcome-preview-shell {
+          margin-top: 1rem;
+          border: 1px solid #dbe4ef;
+          border-radius: 16px;
+          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+          padding: 0.78rem;
+          display: grid;
+          gap: 0.6rem;
+        }
+
+        .welcome-preview-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.65rem;
+        }
+
+        .welcome-preview-label {
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: #1e3a8a;
+          text-transform: uppercase;
+          letter-spacing: 0.11em;
+        }
+
+        .welcome-preview-toggle {
+          height: 30px;
+          border-radius: 9px;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 0 0.58rem;
+          cursor: pointer;
+        }
+
+        .welcome-preview-frame {
+          border: 1px solid #cbd5e1;
+          border-radius: 14px;
+          padding: 0.75rem;
+          display: grid;
+          gap: 0.62rem;
+        }
+
+        .welcome-preview-frame-head {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 0.62rem;
+          align-items: flex-start;
+        }
+
+        .welcome-preview-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(148, 163, 184, 0.45);
+          background: rgba(255, 255, 255, 0.75);
+          color: #1e3a8a;
+          flex: 0 0 auto;
+        }
+
+        .welcome-preview-frame h3 {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.2;
+        }
+
+        .welcome-preview-frame p {
+          margin: 0.2rem 0 0;
+          font-size: 0.82rem;
+          line-height: 1.45;
+          font-weight: 600;
+          color: #334155;
+        }
+
+        .welcome-preview-bullets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.38rem;
+        }
+
+        .welcome-preview-bullets span {
+          border-radius: 999px;
+          border: 1px solid rgba(148, 163, 184, 0.45);
+          background: rgba(255, 255, 255, 0.82);
+          padding: 0.17rem 0.48rem;
+          font-size: 0.69rem;
+          font-weight: 800;
+          color: #334155;
+          letter-spacing: 0.02em;
+        }
+
+        .welcome-preview-cue {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #1e3a8a;
+          line-height: 1.4;
+          border-radius: 10px;
+          border: 1px solid rgba(191, 219, 254, 0.95);
+          background: rgba(239, 246, 255, 0.9);
+          padding: 0.46rem 0.55rem;
+        }
+
+        .welcome-preview-controls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.55rem;
+        }
+
+        .welcome-preview-nav {
+          height: 30px;
+          border-radius: 9px;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 0 0.62rem;
+          cursor: pointer;
+        }
+
+        .welcome-preview-dots {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.28rem;
+          flex: 1;
+        }
+
+        .welcome-preview-dot {
+          border: none;
+          background: transparent;
+          padding: 0;
+          cursor: pointer;
+          line-height: 0;
+        }
+
+        .welcome-preview-dot span {
+          display: inline-flex;
+          height: 7px;
+          border-radius: 999px;
+          transition: width 0.2s ease, background 0.2s ease;
+        }
+
         .welcome-feature-grid {
           margin-top: 1.15rem;
           display: grid;
@@ -8679,6 +9012,15 @@ export default function GanttChart() {
           .welcome-feature-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+
+          .welcome-preview-frame-head {
+            grid-template-columns: 1fr;
+          }
+
+          .welcome-preview-icon {
+            width: 32px;
+            height: 32px;
+          }
         }
 
         @media (min-width: 761px) and (max-width: 980px) {
@@ -8815,6 +9157,21 @@ export default function GanttChart() {
 
           .welcome-feature-grid {
             grid-template-columns: 1fr;
+          }
+
+          .welcome-preview-toolbar,
+          .welcome-preview-controls {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .welcome-preview-toggle,
+          .welcome-preview-nav {
+            width: 100%;
+          }
+
+          .welcome-preview-dots {
+            justify-content: flex-start;
           }
 
           .welcome-actions {
