@@ -34,8 +34,9 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.08), transparent 36%),
-    radial-gradient(circle at 90% 0%, rgba(148, 163, 184, 0.2), transparent 42%),
+    radial-gradient(ellipse at 8% 8%, rgba(99, 102, 241, 0.06), transparent 38%),
+    radial-gradient(ellipse at 92% 4%, rgba(14, 165, 233, 0.07), transparent 44%),
+    radial-gradient(ellipse at 50% 96%, rgba(16, 185, 129, 0.04), transparent 40%),
     #f8fafc;
   color: #0f172a;
   overflow-x: hidden;
@@ -61,4 +62,44 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/* ── Enterprise scrollbar polish ─────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ── Smooth focus rings ───────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.7);
+  outline-offset: 2px;
+}
+
+/* ── Selection highlight ──────────────────────────────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.18);
+  color: inherit;
+}
+
+/* ── Smooth transitions for interactive elements ─────────────── */
+button {
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }

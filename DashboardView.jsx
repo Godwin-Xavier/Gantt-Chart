@@ -177,34 +177,42 @@ const flattenTasksFromProject = (project) => {
 };
 
 // --- Stat Card ---
-const StatCard = ({ icon, label, value, accent }) => (
+const StatCard = ({ icon, label, value, accent, accentBorder }) => (
   <div
     style={{
       background: '#ffffff',
-      border: '1px solid #e2e8f0',
+      border: `1px solid ${accentBorder || '#e2e8f0'}`,
       borderRadius: '16px',
-      padding: '1rem 1.1rem',
+      padding: '1rem 1.15rem',
       display: 'flex',
       alignItems: 'flex-start',
-      gap: '0.75rem',
+      gap: '0.8rem',
       transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-      cursor: 'default'
+      cursor: 'default',
+      position: 'relative',
+      overflow: 'hidden'
     }}
-    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(15,23,42,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
     onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
   >
     <div style={{
-      width: '40px', height: '40px', borderRadius: '12px',
-      background: accent || '#f1f5f9', border: '1px solid #e2e8f0',
-      display: 'grid', placeItems: 'center', flexShrink: 0
+      position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+      background: accentBorder ? `linear-gradient(90deg, ${accentBorder}, transparent)` : 'transparent',
+      borderRadius: '16px 16px 0 0'
+    }} />
+    <div style={{
+      width: '42px', height: '42px', borderRadius: '12px',
+      background: accent || '#f1f5f9', border: `1px solid ${accentBorder || '#e2e8f0'}`,
+      display: 'grid', placeItems: 'center', flexShrink: 0,
+      boxShadow: `0 4px 12px ${accentBorder ? accentBorder + '30' : 'rgba(15,23,42,0.06)'}`
     }}>
       {icon}
     </div>
     <div>
-      <div style={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 800, color: '#64748b' }}>
+      <div style={{ fontSize: '0.68rem', letterSpacing: '0.09em', textTransform: 'uppercase', fontWeight: 800, color: '#94a3b8' }}>
         {label}
       </div>
-      <div style={{ marginTop: '0.25rem', fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
+      <div style={{ marginTop: '0.22rem', fontSize: '1.7rem', fontWeight: 800, color: '#0f172a', lineHeight: 1, letterSpacing: '-0.02em' }}>
         {value}
       </div>
     </div>
@@ -356,6 +364,8 @@ const ProjectCard = ({ project, summary, onOpen, isPhone, globalFilter }) => {
     return allTasks;
   }, [globalFilter, allTasks, completedTasks, pendingTasks]);
 
+  const completionColor = completion >= 100 ? '#10b981' : completion >= 60 ? '#6366f1' : completion >= 30 ? '#f59e0b' : '#94a3b8';
+
   return (
     <div
       style={{
@@ -363,10 +373,10 @@ const ProjectCard = ({ project, summary, onOpen, isPhone, globalFilter }) => {
         borderRadius: '16px',
         background: '#ffffff',
         overflow: 'hidden',
-        transition: 'box-shadow 0.2s ease'
+        transition: 'box-shadow 0.2s ease, border-color 0.2s ease'
       }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.07)'}
-      onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(15,23,42,0.09)'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
     >
       {/* Project Header */}
       <div style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: isPhone ? 'column' : 'row', gap: '0.65rem', alignItems: isPhone ? 'stretch' : 'center' }}>
@@ -405,10 +415,7 @@ const ProjectCard = ({ project, summary, onOpen, isPhone, globalFilter }) => {
           justifyContent: isPhone ? 'space-between' : 'flex-end',
           flexShrink: 0
         }}>
-          <div style={{
-            fontSize: '1.1rem', fontWeight: 800,
-            color: completion >= 100 ? '#16a34a' : completion >= 50 ? '#2563eb' : '#0f172a'
-          }}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: completionColor }}>
             {percentLabel(completion)}
           </div>
           <button
@@ -450,9 +457,14 @@ const ProjectCard = ({ project, summary, onOpen, isPhone, globalFilter }) => {
             minWidth: completion > 0 ? '8px' : 0,
             borderRadius: '999px',
             background: completion >= 100
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-              : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            transition: 'width 0.4s ease'
+              ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+              : completion >= 60
+              ? 'linear-gradient(90deg, #6366f1 0%, #4f46e5 100%)'
+              : completion >= 30
+              ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+              : 'linear-gradient(90deg, #94a3b8 0%, #64748b 100%)',
+            transition: 'width 0.5s ease',
+            boxShadow: completion > 0 ? `0 2px 8px ${completionColor}40` : 'none'
           }} />
         </div>
       </div>
@@ -668,24 +680,28 @@ export default function DashboardView({
           label="Overall"
           value={percentLabel(safeOverall)}
           accent="#eef2ff"
+          accentBorder="#c7d2fe"
         />
         <StatCard
           icon={<FolderOpen size={18} style={{ color: '#0ea5e9' }} />}
           label="Projects"
           value={totalProjects}
           accent="#f0f9ff"
+          accentBorder="#bae6fd"
         />
         <StatCard
           icon={<CheckCircle2 size={18} style={{ color: '#10b981' }} />}
           label="Completed"
           value={completedProjects}
           accent="#f0fdf4"
+          accentBorder="#86efac"
         />
         <StatCard
           icon={<Clock size={18} style={{ color: '#f59e0b' }} />}
           label="In Progress"
           value={inProgressProjects}
           accent="#fffbeb"
+          accentBorder="#fde68a"
         />
       </div>
 

@@ -965,12 +965,12 @@ export default function GanttChart() {
       {
         id: 'reminders',
         title: 'Reminder center',
-        body: 'Set reminders from rows, monitor due alerts, and control sound or tab-flash preferences.',
-        cue: `${actionWord} the bell to open reminders and recent alerts.`,
+        body: 'Set reminders from task rows, monitor due alerts, and manage sound and tab-flash preferences with enterprise-grade toggle controls.',
+        cue: `${actionWord} the bell to open the Reminder Center panel.`,
         icon: <Bell size={14} />,
         tone: 'linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)',
         border: '#a5f3fc',
-        bullets: ['Task + sub-task reminders', 'Due today counters', 'Manual + auto alerts']
+        bullets: ['Upcoming & due-today stats', 'Toggle sound & tab-flash', 'Manual + auto alert feed']
       },
       {
         id: 'planner',
@@ -4488,180 +4488,168 @@ export default function GanttChart() {
                       top: '110%',
                       right: isPhoneLayout ? 'auto' : 0,
                       left: isPhoneLayout ? 0 : 'auto',
-                      width: isPhoneLayout ? '100%' : 'min(470px, calc(100vw - 3rem))',
-                      maxHeight: isPhoneLayout ? 'min(70vh, 620px)' : 'min(78vh, 700px)',
+                      width: isPhoneLayout ? '100%' : 'min(480px, calc(100vw - 3rem))',
+                      maxHeight: isPhoneLayout ? 'min(70vh, 640px)' : 'min(80vh, 720px)',
                       overflowY: 'auto',
-                      background: 'linear-gradient(165deg, #ffffff 0%, #f8fafc 68%, #f1f5f9 100%)',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '18px',
-                      boxShadow: '0 26px 54px rgba(15, 23, 42, 0.24)',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '20px',
+                      boxShadow: '0 24px 60px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.08)',
                       zIndex: 85,
-                      padding: '0.9rem',
-                      display: 'grid',
-                      gap: '0.75rem',
-                      animation: 'popIn 0.16s ease-out both'
+                      animation: 'popIn 0.16s ease-out both',
+                      overflow: 'hidden'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: '800', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                          <BellRing size={14} />
-                          Reminder Center
+                    {/* Panel Header */}
+                    <div style={{
+                      padding: '1rem 1.1rem 0.75rem',
+                      borderBottom: '1px solid #f1f5f9',
+                      background: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <div style={{
+                          width: '34px', height: '34px', borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                          border: '1px solid #c7d2fe',
+                          display: 'grid', placeItems: 'center', flexShrink: 0
+                        }}>
+                          <BellRing size={16} style={{ color: '#4f46e5' }} />
                         </div>
-                        <div style={{ marginTop: '0.24rem', fontSize: '0.8rem', color: '#475569', fontWeight: '700', lineHeight: 1.35 }}>
-                          {pendingReminderCount} scheduled reminders • {activeNotificationCount} live alerts
+                        <div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
+                            Reminder Center
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '600', marginTop: '0.1rem' }}>
+                            {pendingReminderCount} scheduled &nbsp;·&nbsp; {activeNotificationCount} live alert{activeNotificationCount !== 1 ? 's' : ''}
+                          </div>
                         </div>
                       </div>
-
                       <button
                         type="button"
                         onClick={() => setShowNotificationPanel(false)}
                         style={{
-                          width: '30px',
-                          height: '30px',
-                          borderRadius: '9px',
-                          border: '1px solid #cbd5e1',
-                          background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                          color: '#64748b',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer'
+                          width: '32px', height: '32px', borderRadius: '9px',
+                          border: '1px solid #e2e8f0', background: '#f8fafc',
+                          color: '#64748b', display: 'inline-flex',
+                          alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          flexShrink: 0, transition: 'all 0.15s ease'
                         }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#334155'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
                         aria-label="Close reminder center"
                       >
                         <X size={14} />
                       </button>
                     </div>
 
-                    <div style={{
-                      borderRadius: '12px',
-                      border: '1px solid #c7d2fe',
-                      background: 'linear-gradient(135deg, #eef2ff 0%, #f0f9ff 100%)',
-                      padding: '0.68rem 0.72rem',
-                      display: 'grid',
-                      gap: '0.22rem'
-                    }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.42rem', fontSize: '0.72rem', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                        <Clock size={13} />
-                        Precision delivery
-                      </div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#1e3a8a', lineHeight: 1.35 }}>
-                        Manual reminders fire only at the exact scheduled time window. Missed times are skipped automatically so alerts do not pile up.
-                      </div>
+                    <div style={{ padding: '0.85rem 1.1rem', display: 'grid', gap: '1rem', overflowY: 'auto', maxHeight: isPhoneLayout ? 'calc(min(70vh, 640px) - 72px)' : 'calc(min(80vh, 720px) - 72px)' }}>
+
+                    {/* Stats Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.55rem' }}>
+                      {[
+                        { label: 'Upcoming', value: pendingReminderCount, bg: '#eef2ff', border: '#c7d2fe', valueColor: '#3730a3', dotColor: '#6366f1' },
+                        { label: 'Due Today', value: dueTodayReminderCount, bg: '#fffbeb', border: '#fde68a', valueColor: '#92400e', dotColor: '#f59e0b' },
+                        { label: 'Live Alerts', value: activeNotificationCount, bg: '#fef2f2', border: '#fecaca', valueColor: '#991b1b', dotColor: '#ef4444' }
+                      ].map((item) => (
+                        <div key={item.label} style={{
+                          borderRadius: '12px', border: `1px solid ${item.border}`,
+                          background: item.bg, padding: '0.62rem 0.7rem',
+                          display: 'flex', flexDirection: 'column', gap: '0.25rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '999px', background: item.dotColor, flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.62rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
+                              {item.label}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '1.45rem', fontWeight: '800', color: item.valueColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
+                    {/* Next Reminder Highlight */}
                     <div style={{
-                      borderRadius: '12px',
-                      border: '1px solid #dbe4ef',
-                      background: '#ffffff',
-                      padding: '0.62rem 0.68rem',
-                      display: 'grid',
-                      gap: '0.55rem'
+                      borderRadius: '12px', border: '1px solid #e2e8f0',
+                      background: '#f8fafc', padding: '0.75rem 0.85rem',
+                      display: 'flex', alignItems: 'flex-start', gap: '0.65rem'
                     }}>
                       <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                        gap: '0.42rem'
+                        width: '30px', height: '30px', borderRadius: '8px',
+                        background: nextPendingReminder ? 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' : '#f1f5f9',
+                        border: nextPendingReminder ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                        display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: '1px'
                       }}>
-                        {[
-                          { label: 'Upcoming', value: pendingReminderCount, tone: '#eef2ff', border: '#c7d2fe', color: '#3730a3' },
-                          { label: 'Due Today', value: dueTodayReminderCount, tone: '#fffbeb', border: '#fde68a', color: '#92400e' },
-                          { label: 'Alerts', value: activeNotificationCount, tone: '#fef2f2', border: '#fecaca', color: '#991b1b' }
-                        ].map((item) => (
-                          <div
-                            key={item.label}
-                            style={{
-                              borderRadius: '10px',
-                              border: `1px solid ${item.border}`,
-                              background: item.tone,
-                              padding: '0.42rem 0.5rem',
-                              display: 'grid',
-                              gap: '0.12rem',
-                              textAlign: 'center'
-                            }}
-                          >
-                            <div style={{ fontSize: '0.62rem', fontWeight: '800', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b' }}>
-                              {item.label}
-                            </div>
-                            <div style={{ fontSize: '1rem', fontWeight: '800', color: item.color, lineHeight: 1.1 }}>
-                              {item.value}
-                            </div>
-                          </div>
-                        ))}
+                        <Clock size={14} style={{ color: nextPendingReminder ? '#1d4ed8' : '#94a3b8' }} />
                       </div>
-
-                      <div style={{
-                        borderRadius: '10px',
-                        border: '1px solid #e2e8f0',
-                        background: '#f8fafc',
-                        padding: '0.48rem 0.58rem',
-                        display: 'grid',
-                        gap: '0.24rem'
-                      }}>
-                        <div style={{ fontSize: '0.66rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
-                          Next reminder
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
+                          Next Scheduled
                         </div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.25 }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
                           {nextReminderLabel}
                         </div>
-                        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.73rem', fontWeight: '600', color: '#64748b', marginTop: '0.18rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {nextReminderDetail}
                         </div>
                       </div>
+                    </div>
 
+                    {/* Preferences */}
+                    <div style={{
+                      borderRadius: '12px', border: '1px solid #e2e8f0',
+                      background: '#ffffff', overflow: 'hidden'
+                    }}>
                       <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr',
-                        gap: '0.48rem'
+                        padding: '0.55rem 0.85rem',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: '#f8fafc',
+                        fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8',
+                        textTransform: 'uppercase', letterSpacing: '0.1em'
                       }}>
+                        Preferences
+                      </div>
+                      <div style={{ padding: '0.15rem 0' }}>
+                        {/* Browser Notifications Row */}
                         <div style={{
-                          borderRadius: '10px',
-                          border: '1px solid #e2e8f0',
-                          background: '#ffffff',
-                          padding: '0.5rem 0.58rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.55rem',
-                          fontSize: '0.74rem',
-                          fontWeight: '700',
-                          color: '#475569'
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '0.75rem', padding: '0.6rem 0.85rem',
+                          borderBottom: '1px solid #f8fafc'
                         }}>
-                          <span>Browser notifications</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>Browser Notifications</div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600', marginTop: '0.06rem' }}>
+                              System alerts when tab is inactive
+                            </div>
+                          </div>
                           <span style={{
-                            padding: '0.12rem 0.42rem',
-                            borderRadius: '999px',
-                            border: '1px solid #cbd5e1',
-                            background: browserNotificationPermission === 'granted' ? '#ecfdf5' : '#f8fafc',
-                            color: browserNotificationPermission === 'granted' ? '#166534' : '#475569',
-                            textTransform: 'capitalize',
-                            fontSize: '0.67rem',
-                            fontWeight: '800'
+                            padding: '0.22rem 0.6rem', borderRadius: '999px',
+                            border: browserNotificationPermission === 'granted' ? '1px solid #86efac' : '1px solid #e2e8f0',
+                            background: browserNotificationPermission === 'granted' ? '#f0fdf4' : '#f8fafc',
+                            color: browserNotificationPermission === 'granted' ? '#166534' : '#64748b',
+                            textTransform: 'capitalize', fontSize: '0.68rem', fontWeight: '800', flexShrink: 0
                           }}>
                             {browserNotificationPermission === 'unsupported' ? 'Not Supported' : browserNotificationPermission}
                           </span>
                         </div>
-
+                        {/* Sound Toggle */}
                         <div style={{
-                          borderRadius: '10px',
-                          border: '1px solid #e2e8f0',
-                          background: '#ffffff',
-                          padding: '0.5rem 0.58rem',
-                          display: 'grid',
-                          gap: '0.36rem'
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '0.75rem', padding: '0.6rem 0.85rem',
+                          borderBottom: '1px solid #f8fafc'
                         }}>
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.6rem',
-                            fontSize: '0.72rem',
-                            color: '#334155',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                          }}>
-                            <span>Reminder sound</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>Reminder Sound</div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600', marginTop: '0.06rem' }}>
+                              Play audio cue when reminders fire
+                            </div>
+                          </div>
+                          <label className="ent-toggle" aria-label="Toggle reminder sound">
                             <input
                               type="checkbox"
                               checked={reminderNotificationPrefs.soundEnabled}
@@ -4669,26 +4657,22 @@ export default function GanttChart() {
                                 const checked = e.target.checked;
                                 setReminderNotificationPrefs((prev) => ({ ...prev, soundEnabled: checked }));
                               }}
-                              style={{
-                                width: '1rem',
-                                height: '1rem',
-                                cursor: 'pointer',
-                                accentColor: '#2563eb'
-                              }}
                             />
+                            <span className="ent-toggle-track" />
                           </label>
-
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.6rem',
-                            fontSize: '0.72rem',
-                            color: '#334155',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                          }}>
-                            <span>Tab title flashing</span>
+                        </div>
+                        {/* Tab Flash Toggle */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '0.75rem', padding: '0.6rem 0.85rem'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>Tab Title Flashing</div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600', marginTop: '0.06rem' }}>
+                              Flash browser tab on new alerts
+                            </div>
+                          </div>
+                          <label className="ent-toggle" aria-label="Toggle tab title flashing">
                             <input
                               type="checkbox"
                               checked={reminderNotificationPrefs.tabTitleFlashEnabled}
@@ -4696,76 +4680,90 @@ export default function GanttChart() {
                                 const checked = e.target.checked;
                                 setReminderNotificationPrefs((prev) => ({ ...prev, tabTitleFlashEnabled: checked }));
                               }}
-                              style={{
-                                width: '1rem',
-                                height: '1rem',
-                                cursor: 'pointer',
-                                accentColor: '#2563eb'
-                              }}
                             />
+                            <span className="ent-toggle-track" />
                           </label>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: '0.48rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                          Upcoming reminders
+                    {/* Upcoming Reminders */}
+                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          Upcoming Reminders
                         </div>
                         {pendingReminderCount > upcomingReminders.length && (
-                          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#64748b' }}>
+                          <div style={{
+                            fontSize: '0.65rem', fontWeight: '800', color: '#6366f1',
+                            background: '#eef2ff', border: '1px solid #c7d2fe',
+                            borderRadius: '999px', padding: '0.1rem 0.42rem'
+                          }}>
                             +{pendingReminderCount - upcomingReminders.length} more
                           </div>
                         )}
                       </div>
 
-                      <div style={{ maxHeight: '210px', overflowY: 'auto', display: 'grid', gap: '0.42rem' }}>
+                      <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'grid', gap: '0.38rem' }}>
                         {upcomingReminders.length === 0 ? (
-                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.68rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
-                            No scheduled reminders yet. Use the bell icon on any task row.
+                          <div style={{
+                            border: '1.5px dashed #e2e8f0', borderRadius: '12px',
+                            padding: '1rem', textAlign: 'center',
+                            display: 'grid', gap: '0.35rem', placeItems: 'center'
+                          }}>
+                            <Clock size={20} style={{ color: '#cbd5e1' }} />
+                            <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#94a3b8' }}>
+                              No scheduled reminders yet
+                            </div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#cbd5e1' }}>
+                              Use the bell icon on any task row
+                            </div>
                           </div>
                         ) : upcomingReminders.map((reminder) => (
-                          <div key={reminder.id} style={{ border: '1px solid #dbe4ef', borderRadius: '11px', background: '#ffffff', padding: '0.58rem', display: 'grid', gap: '0.24rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div key={reminder.id} style={{
+                            borderRadius: '12px', border: '1px solid #f1f5f9',
+                            background: '#ffffff', padding: '0.7rem 0.8rem',
+                            display: 'grid', gap: '0.3rem',
+                            boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
+                            transition: 'box-shadow 0.15s ease'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.08)'}
+                          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 4px rgba(15,23,42,0.04)'}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {reminder.itemName}
                                 </div>
-                                <div style={{ fontSize: '0.71rem', color: '#64748b', fontWeight: '700' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '600', marginTop: '0.1rem' }}>
                                   {reminder.projectName}
                                 </div>
                               </div>
-
                               <button
                                 type="button"
                                 onClick={() => deleteReminder(reminder.id)}
                                 style={{
-                                  width: '24px',
-                                  height: '24px',
-                                  borderRadius: '7px',
-                                  border: '1px solid #fecaca',
-                                  background: '#fff1f2',
-                                  color: '#dc2626',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer',
-                                  flex: '0 0 auto'
+                                  width: '26px', height: '26px', borderRadius: '8px',
+                                  border: '1px solid #fee2e2', background: '#fff5f5',
+                                  color: '#ef4444', display: 'inline-flex',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  cursor: 'pointer', flex: '0 0 auto', transition: 'all 0.15s ease'
                                 }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; e.currentTarget.style.color = '#ef4444'; }}
                                 title="Delete reminder"
                               >
                                 <X size={12} />
                               </button>
                             </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.73rem', color: '#334155', fontWeight: '700' }}>
-                              <Clock size={12} />
-                              {formatReminderDateTimeLabel(reminder.date, reminder.time)}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.32rem' }}>
+                              <Clock size={11} style={{ color: '#6366f1', flexShrink: 0 }} />
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#4f46e5', fontFamily: '"JetBrains Mono", monospace' }}>
+                                {formatReminderDateTimeLabel(reminder.date, reminder.time)}
+                              </span>
                             </div>
-
                             {reminder.note && (
-                              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '600', lineHeight: 1.3 }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '600', lineHeight: 1.35, borderTop: '1px solid #f8fafc', paddingTop: '0.28rem' }}>
                                 {reminder.note}
                               </div>
                             )}
@@ -4774,94 +4772,114 @@ export default function GanttChart() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: '0.48rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                          Recent alerts
+                    {/* Recent Alerts */}
+                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            Recent Alerts
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.28rem' }}>
+                            <span style={{ fontSize: '0.63rem', fontWeight: '800', color: '#6366f1', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '999px', padding: '0.08rem 0.38rem' }}>
+                              Manual {manualNotificationCount}
+                            </span>
+                            <span style={{ fontSize: '0.63rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '999px', padding: '0.08rem 0.38rem' }}>
+                              Auto {autoNotificationCount}
+                            </span>
+                          </div>
                         </div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569' }}>
-                            Manual {manualNotificationCount} • Auto {autoNotificationCount}
-                          </span>
-                          {recentNotifications.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={clearAllNotifications}
-                              style={{
-                                border: '1px solid #cbd5e1',
-                                background: '#ffffff',
-                                borderRadius: '8px',
-                                height: '26px',
-                                padding: '0 0.55rem',
-                                fontSize: '0.68rem',
-                                fontWeight: '800',
-                                color: '#334155',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
+                        {recentNotifications.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={clearAllNotifications}
+                            style={{
+                              border: '1px solid #e2e8f0', background: '#f8fafc',
+                              borderRadius: '8px', height: '26px', padding: '0 0.6rem',
+                              fontSize: '0.68rem', fontWeight: '800', color: '#64748b',
+                              cursor: 'pointer', transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#334155'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
+                          >
+                            Clear all
+                          </button>
+                        )}
                       </div>
 
-                      <div style={{ maxHeight: '190px', overflowY: 'auto', display: 'grid', gap: '0.42rem' }}>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'grid', gap: '0.38rem' }}>
                         {recentNotifications.length === 0 ? (
-                          <div style={{ border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '0.68rem', fontSize: '0.78rem', color: '#94a3b8', fontWeight: '700' }}>
-                            Alerts appear here only when reminders fire in their scheduled window.
+                          <div style={{
+                            border: '1.5px dashed #e2e8f0', borderRadius: '12px',
+                            padding: '1rem', textAlign: 'center',
+                            display: 'grid', gap: '0.35rem', placeItems: 'center'
+                          }}>
+                            <BellRing size={20} style={{ color: '#cbd5e1' }} />
+                            <div style={{ fontSize: '0.78rem', fontWeight: '700', color: '#94a3b8' }}>
+                              No alerts yet
+                            </div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#cbd5e1' }}>
+                              Alerts appear when reminders fire in their scheduled window
+                            </div>
                           </div>
                         ) : recentNotifications.slice(0, 8).map((notification) => (
-                          <div key={notification.id} style={{ border: '1px solid #dbe4ef', borderRadius: '10px', background: '#f8fafc', padding: '0.55rem 0.6rem', display: 'grid', gap: '0.2rem' }}>
+                          <div key={notification.id} style={{
+                            borderRadius: '12px', border: '1px solid #f1f5f9',
+                            background: '#ffffff', padding: '0.65rem 0.8rem',
+                            display: 'grid', gap: '0.22rem',
+                            boxShadow: '0 1px 4px rgba(15,23,42,0.04)'
+                          }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.45rem' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
                                 <span style={{
-                                  padding: '0.1rem 0.38rem',
-                                  borderRadius: '999px',
-                                  border: notification.kind === 'auto' ? '1px solid #bfdbfe' : '1px solid #fdba74',
-                                  background: notification.kind === 'auto' ? '#eff6ff' : '#fffbeb',
-                                  color: notification.kind === 'auto' ? '#1e40af' : '#92400e',
-                                  fontSize: '0.64rem',
-                                  fontWeight: '800',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.08em',
-                                  flexShrink: 0
+                                  padding: '0.14rem 0.42rem', borderRadius: '999px', flexShrink: 0,
+                                  border: notification.kind === 'auto' ? '1px solid #bae6fd' : '1px solid #c7d2fe',
+                                  background: notification.kind === 'auto' ? '#e0f2fe' : '#eef2ff',
+                                  color: notification.kind === 'auto' ? '#0369a1' : '#4f46e5',
+                                  fontSize: '0.62rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em'
                                 }}>
                                   {notification.kind === 'auto' ? 'Auto' : 'Manual'}
                                 </span>
-                                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {notification.title}
                                 </div>
                               </div>
-
                               <button
                                 type="button"
                                 onClick={() => dismissNotification(notification.id)}
                                 style={{
-                                  width: '22px',
-                                  height: '22px',
-                                  borderRadius: '7px',
-                                  border: '1px solid #dbe4ef',
-                                  background: '#ffffff',
-                                  color: '#64748b',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer',
-                                  flex: '0 0 auto'
+                                  width: '24px', height: '24px', borderRadius: '7px',
+                                  border: '1px solid #e2e8f0', background: '#f8fafc',
+                                  color: '#94a3b8', display: 'inline-flex',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  cursor: 'pointer', flex: '0 0 auto', transition: 'all 0.15s ease'
                                 }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#94a3b8'; }}
                                 title="Dismiss alert"
                               >
                                 <X size={11} />
                               </button>
                             </div>
-
-                            <div style={{ fontSize: '0.73rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>{notification.body}</div>
-                            <div style={{ fontSize: '0.67rem', color: '#94a3b8', fontWeight: '700' }}>
+                            <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.4 }}>{notification.body}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#cbd5e1', fontWeight: '700', fontFamily: '"JetBrains Mono", monospace' }}>
                               {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Precision delivery note */}
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.38rem',
+                      padding: '0.5rem 0.7rem', borderRadius: '10px',
+                      background: '#f8fafc', border: '1px solid #f1f5f9',
+                      fontSize: '0.69rem', fontWeight: '600', color: '#94a3b8', lineHeight: 1.35
+                    }}>
+                      <Clock size={12} style={{ color: '#cbd5e1', flexShrink: 0 }} />
+                      Reminders fire at the exact scheduled window — missed times are skipped to prevent alert pile-up.
+                    </div>
+
                     </div>
                   </div>
                 )}
@@ -8535,6 +8553,66 @@ export default function GanttChart() {
         @keyframes overlayFade {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+
+        /* ── Enterprise Toggle Switch ──────────────────────────────── */
+        .ent-toggle {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .ent-toggle input {
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+          pointer-events: none;
+        }
+        .ent-toggle-track {
+          display: inline-block;
+          width: 40px;
+          height: 22px;
+          border-radius: 999px;
+          background: #cbd5e1;
+          transition: background 0.22s ease, box-shadow 0.22s ease;
+          position: relative;
+          box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.14);
+        }
+        .ent-toggle input:checked + .ent-toggle-track {
+          background: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18), inset 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+        .ent-toggle-track::after {
+          content: '';
+          position: absolute;
+          top: 3px;
+          left: 3px;
+          width: 16px;
+          height: 16px;
+          border-radius: 999px;
+          background: #ffffff;
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+          transition: transform 0.22s ease;
+        }
+        .ent-toggle input:checked + .ent-toggle-track::after {
+          transform: translateX(18px);
+        }
+        .ent-toggle:hover .ent-toggle-track {
+          filter: brightness(0.95);
+        }
+
+        /* ── Notification panel scrollbar ─────────────────────────── */
+        .notif-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .notif-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .notif-scroll::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 999px;
         }
 
         @keyframes drawerIn {
