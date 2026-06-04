@@ -7769,727 +7769,185 @@ export default function GanttChart() {
                   minWidth: chartGridMinWidth ? `${chartGridMinWidth}px` : '100%'
                 }}
               >
-                {/* Tasks Column */}
-                <div style={{
-                  background: '#f8fafc',
-                  borderRight: '1px solid #e2e8f0'
-                }}>
-                  <div style={{
-                    height: '70px',
-                    borderBottom: '1px solid #e2e8f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 1.5rem',
-                    background: '#f1f5f9'
-                  }}>
-                    <h3 style={{
-                      fontSize: '0.85rem',
-                      fontWeight: '800',
-                      color: '#000000',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      margin: 0,
-                      textAlign: 'center'
-                    }}>
-                      Tasks
-                    </h3>
+
+                {/* -------------------- HEADERS ROW -------------------- */}
+                <div style={{ display: 'contents' }}>
+                  <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1.5rem', background: '#f1f5f9' }}>
+                    <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Tasks</h3>
                   </div>
 
-                  {/* Task Names */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0',
-                    padding: '1rem 0 0 0'
-                  }}>
-                    {tasks.map((task, index) => {
-                      const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
-                      const taskStatus = getTaskCompletionStatus(task);
-
-                      return (
-                      <div key={task.id}>
-                        {/* Main Task Name */}
-                        <div
-                          style={{
-                            minHeight: '56px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0.5rem 1.5rem',
-                            background: '#ffffff',
-                            borderBottom: '1px solid #e2e8f0',
-                            opacity: taskCompleted ? 0.78 : 1,
-                            animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#ffffff';
-                          }}
-                        >
-                          <div style={{
-                            width: '4px',
-                            minHeight: '24px',
-                            background: `linear-gradient(to bottom, ${task.color}, ${task.color}dd)`,
-                            borderRadius: '2px',
-                            marginRight: '1rem',
-                            boxShadow: `0 2px 8px ${task.color}40`,
-                            alignSelf: 'flex-start',
-                            marginTop: '0.25rem'
-                          }}></div>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.75rem',
-                            flex: 1,
-                            minWidth: 0
-                          }}>
-                            <div style={{
-                              fontSize: '0.95rem',
-                              fontWeight: '800',
-                              color: '#000000',
-                              textDecoration: taskCompleted ? 'line-through' : 'none',
-                              flex: 1,
-                              minWidth: 0,
-                              whiteSpace: 'normal',
-                              wordBreak: 'break-word',
-                              lineHeight: '1.4'
-                            }}>
-                              {task.name}
-                            </div>
-
-                            {showStatus && (
-                            <div
-                              style={{
-                                height: '28px',
-                                borderRadius: '999px',
-                                border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
-                                background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
-                                color: taskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
-                                padding: '0 0.55rem',
-                                fontSize: '0.66rem',
-                                fontWeight: '800',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                whiteSpace: 'nowrap',
-                                flex: '0 0 auto'
-                              }}
-                              aria-label={`Status badge for ${task.name}`}
-                            >
-                              {getStatusLabel(taskStatus)}
-                            </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Sub-task Names */}
-                        {task.expanded && task.subTasks.map((subTask, subIndex) => {
-                          const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
-                          const subTaskStatus = normalizeStatus(subTask.status);
-
-                          return (
-                          <div
-                            key={subTask.id}
-                            style={{
-                              minHeight: '44px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              padding: '0.5rem 1.5rem 0.5rem 3.5rem',
-                              background: '#f8fafc',
-                              borderBottom: '1px solid #e2e8f0',
-                              opacity: subTaskCompleted ? 0.78 : 1,
-                              animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f1f5f9';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#f8fafc';
-                            }}
-                          >
-                            <div style={{
-                              width: '3px',
-                              minHeight: '18px',
-                              background: `linear-gradient(to bottom, ${subTask.color}, ${subTask.color}cc)`,
-                              borderRadius: '1.5px',
-                              marginRight: '0.75rem',
-                              opacity: 0.8,
-                              alignSelf: 'flex-start',
-                              marginTop: '0.25rem'
-                            }}></div>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '0.65rem',
-                              flex: 1,
-                              minWidth: 0
-                            }}>
-                              <div style={{
-                                fontSize: '0.85rem',
-                                fontWeight: '700',
-                                color: '#0f172a',
-                                textDecoration: subTaskCompleted ? 'line-through' : 'none',
-                                flex: 1,
-                                minWidth: 0,
-                                whiteSpace: 'normal',
-                                wordBreak: 'break-word',
-                                lineHeight: '1.4'
-                              }}>
-                                {subTask.name}
-                              </div>
-
-                              {showStatus && (
-                              <div
-                                style={{
-                                  height: '24px',
-                                  borderRadius: '999px',
-                                  border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1',
-                                  background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff',
-                                  color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#334155',
-                                  padding: '0 0.45rem',
-                                  fontSize: '0.62rem',
-                                  fontWeight: '800',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  whiteSpace: 'nowrap',
-                                  flex: '0 0 auto'
-                                }}
-                                aria-label={`Status badge for ${subTask.name}`}
-                              >
-                                {getStatusLabel(subTaskStatus)}
-                              </div>
-                              )}
-                            </div>
-                          </div>
-                          );
-                        })}
-                      </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Dates Column */}
-                {showDatesInChart && (
-                  <div style={{
-                    background: '#f8fafc',
-                    borderRight: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{
-                      height: '70px',
-                      borderBottom: '1px solid #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 1rem',
-                      background: '#f1f5f9'
-                    }}>
-                      <h3 style={{
-                        fontSize: '0.85rem',
-                        fontWeight: '800',
-                        color: '#000000',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        margin: 0,
-                        textAlign: 'center'
-                      }}>
-                        Dates
-                      </h3>
+                  {showDatesInChart && (
+                    <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', background: '#f1f5f9' }}>
+                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Dates</h3>
                     </div>
+                  )}
 
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0',
-                      padding: '1rem 0 0 0'
-                    }}>
-                      {tasks.map((task, index) => (
-                        <div key={task.id}>
-                          {/* Main Task Dates */}
-                          <div
-                            style={{
-                              minHeight: '56px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '0.5rem 1rem',
-                              background: '#ffffff',
-                              borderBottom: '1px solid #e2e8f0',
-                              animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                              transition: 'all 0.2s',
-                              fontSize: '0.85rem',
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontWeight: '600',
-                              color: '#0f172a'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f1f5f9';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#ffffff';
-                            }}
-                          >
-                            {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </div>
-
-                          {/* Sub-task Dates */}
-                          {task.expanded && task.subTasks.map((subTask, subIndex) => (
-                            <div
-                              key={subTask.id}
-                              style={{
-                                minHeight: '44px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '0.5rem 1rem',
-                                background: '#f8fafc',
-                                borderBottom: '1px solid #e2e8f0',
-                                animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                                transition: 'all 0.2s',
-                                fontSize: '0.8rem',
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontWeight: '500',
-                                color: '#475569'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#f1f5f9';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#f8fafc';
-                              }}
-                            >
-                              {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
+                  {showCostInChart && (
+                    <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', background: '#f1f5f9' }}>
+                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Cost</h3>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Cost Column */}
-                {showCostInChart && (
-                  <div style={{
-                    background: '#f8fafc',
-                    borderRight: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{
-                      height: '70px',
-                      borderBottom: '1px solid #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 1rem',
-                      background: '#f1f5f9'
-                    }}>
-                      <h3 style={{
-                        fontSize: '0.85rem',
-                        fontWeight: '800',
-                        color: '#000000',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        margin: 0,
-                        textAlign: 'center'
-                      }}>
-                        Cost
-                      </h3>
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0',
-                      padding: '1rem 0 0 0'
-                    }}>
-                      {tasks.map((task, index) => (
-                        <div key={task.id}>
-                          {/* Main Task Cost */}
-                          <div
-                            style={{
-                              minHeight: '56px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '0.5rem 1rem',
-                              background: '#ffffff',
-                              borderBottom: '1px solid #e2e8f0',
-                              animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                              transition: 'all 0.2s',
-                              fontSize: '0.85rem',
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontWeight: '600',
-                              color: '#0f172a'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f1f5f9';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#ffffff';
-                            }}
-                          >
-                            {task.cost > 0 ? `${currency}${Number(task.cost).toLocaleString()}` : '-'}
-                          </div>
-
-                          {/* Sub-task Cost */}
-                          {task.expanded && task.subTasks.map((subTask, subIndex) => (
-                            <div
-                              key={subTask.id}
-                              style={{
-                                minHeight: '44px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '0.5rem 1rem',
-                                background: '#f8fafc',
-                                borderBottom: '1px solid #e2e8f0',
-                                animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                                transition: 'all 0.2s',
-                                fontSize: '0.8rem',
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontWeight: '500',
-                                color: '#475569'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#f1f5f9';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#f8fafc';
-                              }}
-                            >
-                              {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Timeline Column */}
-                <div style={{ position: 'relative', overflow: 'hidden' }}>
-                  {/* Timeline Header */}
-                  <div style={{
-                    position: 'relative',
-                    height: '70px',
-                    borderBottom: '1px solid #e2e8f0',
-                    background: '#f1f5f9',
-                    overflow: 'hidden',
-                    paddingLeft: '0'
-                  }}>
+                  <div style={{ position: 'relative', height: '70px', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9', overflow: 'hidden' }}>
                     {timelineMarkers.map((marker, idx) => {
                       const nextMarker = timelineMarkers[idx + 1];
                       const nextPosition = nextMarker ? nextMarker.position : 100;
                       const width = nextPosition - marker.position;
-
                       return (
-                        <div
-                          key={idx}
-                          style={{
-                            position: 'absolute',
-                            left: `${marker.position}%`,
-                            width: `${width}%`,
-                            top: 0,
-                            bottom: 0,
-                            borderLeft: idx === 0 ? 'none' : '1px solid #cbd5e1',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          <div style={{
-                            color: '#000000',
-                            fontSize: '0.85rem',
-                            fontWeight: '900',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
-                            textAlign: 'center'
-                          }}>
+                        <div key={idx} style={{ position: 'absolute', left: `${marker.position}%`, width: `${width}%`, top: 0, bottom: 0, borderLeft: idx === 0 ? 'none' : '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                          <div style={{ color: '#000000', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center' }}>
                             {showQuarters ? `Q${Math.floor(marker.date.getMonth() / 3) + 1}` : marker.date.toLocaleDateString('en', { month: 'short' })}
                           </div>
-                          <div style={{
-                            color: '#000000',
-                            fontSize: '0.9rem',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontWeight: '800',
-                            marginTop: '0.15rem',
-                            textAlign: 'center'
-                          }}>
+                          <div style={{ color: '#000000', fontSize: '0.9rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '800', marginTop: '0.15rem', textAlign: 'center' }}>
                             {marker.date.getFullYear()}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                </div>
 
-                  {/* Vertical Grid Lines */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '70px',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    pointerEvents: 'none',
-                    overflow: 'hidden'
-                  }}>
-                    {timelineMarkers.map((marker, idx) => {
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            position: 'absolute',
-                            left: `${marker.position}%`,
-                            top: 0,
-                            bottom: 0,
-                            borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0'
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
+                {/* -------------------- BODY ROWS -------------------- */}
+                {tasks.map((task, index) => {
+                  const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
+                  const taskStatus = getTaskCompletionStatus(task);
+                  const position = getTaskPosition(task);
+                  const duration = getBusinessDays(task.startDate, task.endDate, holidays);
 
-                  {/* Gantt Bars */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0',
-                    padding: '1rem 0 0 0',
-                    position: 'relative'
-                  }}>
-                    {tasks.map((task, index) => {
-                      const position = getTaskPosition(task);
-                      const duration = getBusinessDays(task.startDate, task.endDate, holidays);
-                      const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
+                  return (
+                    <React.Fragment key={task.id}>
+                      <div style={{ display: 'contents' }}>
+                        {/* Task Cell */}
+                        <div style={{ minHeight: '56px', display: 'flex', alignItems: 'center', padding: '0.5rem 1.5rem', background: '#ffffff', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', opacity: taskCompleted ? 0.78 : 1, animation: `slideIn 0.4s ease-out ${index * 0.1}s both`, transition: 'background 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}>
+                          <div style={{ width: '4px', minHeight: '24px', background: `linear-gradient(to bottom, ${task.color}, ${task.color}dd)`, borderRadius: '2px', marginRight: '1rem', boxShadow: `0 2px 8px ${task.color}40`, alignSelf: 'flex-start', marginTop: '0.25rem' }}></div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#000000', textDecoration: taskCompleted ? 'line-through' : 'none', flex: 1, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                              {task.name}
+                            </div>
+                            {showStatus && (
+                              <div style={{ height: '28px', borderRadius: '999px', border: taskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1', background: taskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff', color: taskStatus === STATUS_COMPLETED ? '#166534' : '#334155', padding: '0 0.55rem', fontSize: '0.66rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+                                {getStatusLabel(taskStatus)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
-                      return (
-                        <div key={task.id}>
-                          {/* Main Task Bar */}
-                          <div
-                            style={{
-                              position: 'relative',
-                              width: '100%',
-                              minHeight: '56px',
-                              background: '#ffffff',
-                              borderBottom: '1px solid #e2e8f0',
-                              opacity: taskCompleted ? 0.76 : 1,
-                              animation: `slideIn 0.4s ease-out ${index * 0.1}s both`,
-                              display: 'flex',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <div
-                              title={`${task.name} (${duration} days)`}
-                              style={{
-                                position: 'absolute',
-                                left: position.left,
-                                width: position.width,
-                                height: '36px',
-                                background: taskCompleted
-                                  ? `linear-gradient(135deg, ${task.color}b3 0%, ${task.color}80 100%)`
-                                  : `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`,
-                                borderRadius: '12px',
-                                boxShadow: taskCompleted ? 'none' : `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`,
-                                border: `1.5px solid ${task.color}`,
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                cursor: 'default',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'visible'
-                              }}
-                              onMouseEnter={(e) => {
-                                if (taskCompleted) return;
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                                e.currentTarget.style.boxShadow = `0 8px 24px ${task.color}45, 0 4px 8px ${task.color}30`;
-                                e.currentTarget.style.zIndex = '10';
-                              }}
-                              onMouseLeave={(e) => {
-                                if (taskCompleted) return;
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.boxShadow = `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`;
-                                e.currentTarget.style.zIndex = '1';
-                              }}
-                            >
+                        {/* Date Cell */}
+                        {showDatesInChart && (
+                          <div style={{ minHeight: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#ffffff', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.4s ease-out ${index * 0.1}s both`, transition: 'background 0.2s', fontSize: '0.85rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '600', color: '#0f172a' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}>
+                            {new Date(task.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(task.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        )}
 
-                              <div style={getDurationBadgeStyle(task.color, 'main')}>
-                                {duration}d
+                        {/* Cost Cell */}
+                        {showCostInChart && (
+                          <div style={{ minHeight: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#ffffff', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.4s ease-out ${index * 0.1}s both`, transition: 'background 0.2s', fontSize: '0.85rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '600', color: '#0f172a' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}>
+                            {task.cost > 0 ? `${currency}${Number(task.cost).toLocaleString()}` : '-'}
+                          </div>
+                        )}
+
+                        {/* Timeline Cell */}
+                        <div style={{ position: 'relative', width: '100%', minHeight: '56px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', opacity: taskCompleted ? 0.76 : 1, animation: `slideIn 0.4s ease-out ${index * 0.1}s both`, display: 'flex', alignItems: 'center' }}>
+                          {/* Grid Lines for this row */}
+                          {timelineMarkers.map((marker, idx) => (
+                            <div key={idx} style={{ position: 'absolute', left: `${marker.position}%`, top: 0, bottom: 0, borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0', pointerEvents: 'none' }} />
+                          ))}
+                          
+                          {/* Bar */}
+                          <div title={`${task.name} (${duration} days)`} style={{ position: 'absolute', left: position.left, width: position.width, height: '36px', background: taskCompleted ? `linear-gradient(135deg, ${task.color}b3 0%, ${task.color}80 100%)` : `linear-gradient(135deg, ${task.color} 0%, ${task.color}dd 100%)`, borderRadius: '12px', boxShadow: taskCompleted ? 'none' : `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`, border: `1.5px solid ${task.color}`, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 1 }} onMouseEnter={(e) => { if (taskCompleted) return; e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = `0 8px 24px ${task.color}45, 0 4px 8px ${task.color}30`; e.currentTarget.style.zIndex = '10'; }} onMouseLeave={(e) => { if (taskCompleted) return; e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = `0 4px 16px ${task.color}35, 0 2px 4px ${task.color}20`; e.currentTarget.style.zIndex = '1'; }}>
+                            <div style={getDurationBadgeStyle(task.color, 'main')}>{duration}d</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subtasks */}
+                      {task.expanded && task.subTasks.map((subTask, subIndex) => {
+                        const subPosition = getTaskPosition(subTask);
+                        const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
+                        const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
+                        const subTaskStatus = normalizeStatus(subTask.status);
+
+                        return (
+                          <div key={subTask.id} style={{ display: 'contents' }}>
+                            {/* SubTask Cell */}
+                            <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', padding: '0.5rem 1.5rem 0.5rem 3.5rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', opacity: subTaskCompleted ? 0.78 : 1, animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
+                              <div style={{ width: '3px', minHeight: '18px', background: `linear-gradient(to bottom, ${subTask.color}, ${subTask.color}cc)`, borderRadius: '1.5px', marginRight: '0.75rem', opacity: 0.8, alignSelf: 'flex-start', marginTop: '0.25rem' }}></div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem', flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a', textDecoration: subTaskCompleted ? 'line-through' : 'none', flex: 1, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                                  {subTask.name}
+                                </div>
+                                {showStatus && (
+                                  <div style={{ height: '24px', borderRadius: '999px', border: subTaskStatus === STATUS_COMPLETED ? '1px solid #86efac' : '1px solid #cbd5e1', background: subTaskStatus === STATUS_COMPLETED ? '#f0fdf4' : '#ffffff', color: subTaskStatus === STATUS_COMPLETED ? '#166534' : '#334155', padding: '0 0.45rem', fontSize: '0.62rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+                                    {getStatusLabel(subTaskStatus)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* SubDate Cell */}
+                            {showDatesInChart && (
+                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#475569' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
+                                {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </div>
+                            )}
+
+                            {/* SubCost Cell */}
+                            {showCostInChart && (
+                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#475569' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
+                                {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
+                              </div>
+                            )}
+
+                            {/* SubTimeline Cell */}
+                            <div style={{ position: 'relative', width: '100%', minHeight: '44px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', opacity: subTaskCompleted ? 0.76 : 1, animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, display: 'flex', alignItems: 'center' }}>
+                              {/* Grid Lines for this row */}
+                              {timelineMarkers.map((marker, idx) => (
+                                <div key={idx} style={{ position: 'absolute', left: `${marker.position}%`, top: 0, bottom: 0, borderLeft: idx === 0 ? 'none' : '1px solid #e2e8f0', pointerEvents: 'none' }} />
+                              ))}
+                              
+                              {/* Sub Bar */}
+                              <div title={`${subTask.name} (${subDuration} days)`} style={{ position: 'absolute', left: subPosition.left, width: subPosition.width, height: '28px', background: subTaskCompleted ? `linear-gradient(135deg, ${subTask.color}aa 0%, ${subTask.color}78 100%)` : `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`, borderRadius: '10px', boxShadow: subTaskCompleted ? 'none' : `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`, border: `1.5px solid ${subTask.color}cc`, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 1 }} onMouseEnter={(e) => { if (subTaskCompleted) return; e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = `0 6px 18px ${subTask.color}40, 0 2px 6px ${subTask.color}25`; e.currentTarget.style.zIndex = '10'; }} onMouseLeave={(e) => { if (subTaskCompleted) return; e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`; e.currentTarget.style.zIndex = '1'; }}>
+                                <div style={getDurationBadgeStyle(subTask.color, 'sub')}>{subDuration}d</div>
                               </div>
                             </div>
                           </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
 
-                          {/* Sub-task Bars */}
-                          {task.expanded && task.subTasks.map((subTask, subIndex) => {
-                            const subPosition = getTaskPosition(subTask);
-                            const subDuration = getBusinessDays(subTask.startDate, subTask.endDate, holidays);
-                            const subTaskCompleted = normalizeStatus(subTask.status) === STATUS_COMPLETED;
-
-                            return (
-                              <div
-                                key={subTask.id}
-                                style={{
-                                  position: 'relative',
-                                  width: '100%',
-                                  minHeight: '44px',
-                                  background: '#f8fafc',
-                                  borderBottom: '1px solid #e2e8f0',
-                                  opacity: subTaskCompleted ? 0.76 : 1,
-                                  animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`,
-                                  display: 'flex',
-                                  alignItems: 'center'
-                                }}
-                              >
-                                <div
-                                  title={`${subTask.name} (${subDuration} days)`}
-                                  style={{
-                                    position: 'absolute',
-                                    left: subPosition.left,
-                                    width: subPosition.width,
-                                    height: '28px',
-                                    background: subTaskCompleted
-                                      ? `linear-gradient(135deg, ${subTask.color}aa 0%, ${subTask.color}78 100%)`
-                                      : `linear-gradient(135deg, ${subTask.color}dd 0%, ${subTask.color}bb 100%)`,
-                                    borderRadius: '10px',
-                                    boxShadow: subTaskCompleted ? 'none' : `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`,
-                                    border: `1.5px solid ${subTask.color}cc`,
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    cursor: 'default',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    overflow: 'visible'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    if (subTaskCompleted) return;
-                                    e.currentTarget.style.transform = 'scale(1.08)';
-                                    e.currentTarget.style.boxShadow = `0 6px 18px ${subTask.color}40, 0 2px 6px ${subTask.color}25`;
-                                    e.currentTarget.style.zIndex = '10';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    if (subTaskCompleted) return;
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.boxShadow = `0 3px 12px ${subTask.color}30, 0 1px 3px ${subTask.color}20`;
-                                    e.currentTarget.style.zIndex = '1';
-                                  }}
-                                >
-                                  <div style={getDurationBadgeStyle(subTask.color, 'sub')}>
-                                    {subDuration}d
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
+                {/* -------------------- TOTALS FOOTER -------------------- */}
                 {showTotals && (
-                  <div style={{
-                    gridColumn: '1 / -1',
-                    display: 'flex',
-                    background: '#ffffff',
-                    borderTop: '2px solid #e2e8f0',
-                    fontWeight: '800',
-                    zIndex: 50,
-                    position: 'relative'
-                  }}>
-                    {/* Label Column - Matches Task Column Width (320px) */}
-                    <div style={{
-                      flex: `0 0 ${taskLabelColumnWidth}px`,
-                      padding: '1rem 1.5rem',
-                      color: '#0f172a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      borderRight: '1px solid #e2e8f0',
-                      background: '#f8fafc',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', background: '#ffffff', borderTop: '2px solid #e2e8f0', fontWeight: '800', zIndex: 50, position: 'relative' }}>
+                    <div style={{ flex: `0 0 ${taskLabelColumnWidth}px`, padding: '1rem 1.5rem', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderRight: '1px solid #e2e8f0', background: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Total
                     </div>
-
-                    {/* Duration Column - Matches Date Column Width (200px) */}
                     {showDatesInChart && (
-                      <div style={{
-                        flex: '0 0 200px',
-                        padding: '1rem',
-                        textAlign: 'center',
-                        color: '#64748b',
-                        borderRight: '1px solid #e2e8f0',
-                        fontSize: '0.9rem',
-                        background: '#f8fafc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
+                      <div style={{ flex: '0 0 200px', padding: '1rem', textAlign: 'center', color: '#64748b', borderRight: '1px solid #e2e8f0', fontSize: '0.9rem', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {totalTopLevelTaskDaysLabel}
                       </div>
                     )}
-
-                    {/* Cost Column - Matches Cost Column Width (100px) */}
                     {showCostInChart && (
-                      <div style={{
-                        flex: '0 0 100px',
-                        padding: '1rem',
-                        textAlign: 'center',
-                        color: '#0f172a',
-                        borderRight: '1px solid #e2e8f0',
-                        background: '#f8fafc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {currency}
-                        {tasks.reduce((acc, t) => acc + (Number(t.cost) || 0), 0).toLocaleString()}
+                      <div style={{ flex: '0 0 100px', padding: '1rem', textAlign: 'center', color: '#0f172a', borderRight: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {currency}{tasks.reduce((acc, t) => acc + (Number(t.cost) || 0), 0).toLocaleString()}
                       </div>
                     )}
-
-                    {/* Spacer for Timeline */}
-                    <div style={{
-                      flex: 1,
-                      background: '#f8fafc',
-                      borderBottom: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 1rem',
-                      color: '#64748b',
-                      fontSize: '0.9rem'
-                    }}>
+                    <div style={{ flex: 1, background: '#f8fafc', borderBottom: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', color: '#64748b', fontSize: '0.9rem' }}>
                       {!showDatesInChart && totalTopLevelTaskDaysLabel}
                     </div>
                   </div>
                 )}
 
-                {/* Footer Note - Now inside the grid at the very bottom */}
-                <div style={{
-                  gridColumn: '1 / -1',
-                  textAlign: 'center',
-                  borderTop: '1px solid #e2e8f0',
-                  padding: '1rem',
-                  background: '#ffffff'
-                }}>
-                  <p style={{
-                    fontSize: '0.85rem',
-                    color: '#94a3b8',
-                    fontWeight: '800',
-                    margin: 0
-                  }}>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', background: '#ffffff' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '800', margin: 0 }}>
                     Note: Prepared by Tag Sales Operations team
                   </p>
                 </div>
               </div>
             </div>
           )}
+
         </div>
           </>
         )}
