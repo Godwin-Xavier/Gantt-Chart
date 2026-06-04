@@ -18,13 +18,21 @@ const NOTIFICATION_RETENTION_MS = 12 * 60 * 60 * 1000;
 const MAX_ACTIVE_NOTIFICATIONS = 40;
 const WELCOME_PREVIEW_INTERVAL_MS = 3400;
 
+const STATUS_NOT_STARTED = 'not_started';
 const STATUS_IN_PROGRESS = 'in_progress';
 const STATUS_COMPLETED = 'completed';
 
 const STATUS_OPTIONS = [
+  { value: STATUS_NOT_STARTED, label: 'Yet to Start' },
   { value: STATUS_IN_PROGRESS, label: 'In Progress' },
   { value: STATUS_COMPLETED, label: 'Completed' }
 ];
+
+const STATUS_LABELS = {
+  [STATUS_NOT_STARTED]: 'Yet to Start',
+  [STATUS_IN_PROGRESS]: 'In Progress',
+  [STATUS_COMPLETED]: 'Completed'
+};
 
 const TUTORIAL_TARGET_PANEL_MAP = {
   commandCenter: 'workspace',
@@ -234,11 +242,30 @@ const writeStorageFlag = (key, value) => {
   }
 };
 
-const normalizeStatus = (value) => (value === STATUS_COMPLETED ? STATUS_COMPLETED : STATUS_IN_PROGRESS);
+const normalizeStatus = (value) => (
+  value === STATUS_COMPLETED
+    ? STATUS_COMPLETED
+    : value === STATUS_NOT_STARTED
+      ? STATUS_NOT_STARTED
+      : STATUS_IN_PROGRESS
+);
+
+const getStatusLabel = (status) => STATUS_LABELS[normalizeStatus(status)] || 'In Progress';
 
 const areAllSubTasksCompleted = (subTasks = []) => (
   subTasks.length > 0 && subTasks.every((subTask) => normalizeStatus(subTask.status) === STATUS_COMPLETED)
 );
+
+const areAllSubTasksNotStarted = (subTasks = []) => (
+  subTasks.length > 0 && subTasks.every((subTask) => normalizeStatus(subTask.status) === STATUS_NOT_STARTED)
+);
+
+// Parent task status is derived: all done -> Completed, all unstarted -> Yet to Start, else In Progress.
+const deriveStatusFromSubTasks = (subTasks = []) => {
+  if (areAllSubTasksCompleted(subTasks)) return STATUS_COMPLETED;
+  if (areAllSubTasksNotStarted(subTasks)) return STATUS_NOT_STARTED;
+  return STATUS_IN_PROGRESS;
+};
 
 const normalizeTaskTree = (tasks = []) => {
   if (!Array.isArray(tasks)) return [];
@@ -252,7 +279,7 @@ const normalizeTaskTree = (tasks = []) => {
       : [];
 
     const normalizedTaskStatus = normalizedSubTasks.length > 0
-      ? (areAllSubTasksCompleted(normalizedSubTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS)
+      ? deriveStatusFromSubTasks(normalizedSubTasks)
       : normalizeStatus(task.status);
 
     return {
@@ -266,7 +293,7 @@ const normalizeTaskTree = (tasks = []) => {
 const getTaskCompletionStatus = (task) => {
   if (!task) return STATUS_IN_PROGRESS;
   if (Array.isArray(task.subTasks) && task.subTasks.length > 0) {
-    return areAllSubTasksCompleted(task.subTasks) ? STATUS_COMPLETED : STATUS_IN_PROGRESS;
+    return deriveStatusFromSubTasks(task.subTasks);
   }
   return normalizeStatus(task.status);
 };
@@ -681,6 +708,7 @@ export default function GanttChart() {
       showQuarters: typeof overrides.showQuarters === 'boolean' ? overrides.showQuarters : false,
       showCost: typeof overrides.showCost === 'boolean' ? overrides.showCost : false,
       showTotals: typeof overrides.showTotals === 'boolean' ? overrides.showTotals : true,
+      showStatus: typeof overrides.showStatus === 'boolean' ? overrides.showStatus : true,
       currency: typeof overrides.currency === 'string' && overrides.currency.length > 0 ? overrides.currency : '$',
       loginDateSeed: projectLoginSeed,
       updatedAt: typeof overrides.updatedAt === 'string' ? overrides.updatedAt : new Date().toISOString()
@@ -698,7 +726,14 @@ export default function GanttChart() {
   const [showQuarters, setShowQuarters] = useState(false);
   const [showCost, setShowCost] = useState(false);
   const [showTotals, setShowTotals] = useState(true);
+  const [showStatus, setShowStatus] = useState(true);
   const [currency, setCurrency] = useState('$');
+  const [statusVisibility, setStatusVisibility] = useState({
+    [STATUS_NOT_STARTED]: true,
+    [STATUS_IN_PROGRESS]: true,
+    [STATUS_COMPLETED]: true
+  });
+  const [copyToast, setCopyToast] = useState('');
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState('');
@@ -1440,6 +1475,7 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
+    showStatus,
     currency,
     loginDateSeed,
     updatedAt: new Date().toISOString()
@@ -1570,6 +1606,7 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
+    showStatus,
     currency,
     loginDateSeed
   ]);
@@ -1593,6 +1630,7 @@ export default function GanttChart() {
     setShowQuarters(typeof selectedProject.showQuarters === 'boolean' ? selectedProject.showQuarters : false);
     setShowCost(typeof selectedProject.showCost === 'boolean' ? selectedProject.showCost : false);
     setShowTotals(typeof selectedProject.showTotals === 'boolean' ? selectedProject.showTotals : true);
+    setShowStatus(typeof selectedProject.showStatus === 'boolean' ? selectedProject.showStatus : true);
     setCurrency(typeof selectedProject.currency === 'string' && selectedProject.currency.length > 0 ? selectedProject.currency : '$');
     setNewHoliday('');
     setShowHolidayManager(false);
@@ -1662,6 +1700,7 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
+    showStatus,
     currency,
     loginDateSeed,
     authSession.isAuthenticated,
@@ -1914,6 +1953,7 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
+    showStatus,
     currency,
     loginDateSeed
   ]);
@@ -2931,6 +2971,7 @@ export default function GanttChart() {
         if (typeof data.showQuarters === 'boolean') setShowQuarters(data.showQuarters);
         if (typeof data.showCost === 'boolean') setShowCost(data.showCost);
         if (typeof data.showTotals === 'boolean') setShowTotals(data.showTotals);
+        if (typeof data.showStatus === 'boolean') setShowStatus(data.showStatus);
         if (typeof data.currency === 'string' && data.currency.length > 0) setCurrency(data.currency);
         if (Array.isArray(data.reminders)) setReminders(data.reminders);
         if (Array.isArray(data.dismissedAutoAlerts)) setDismissedAutoAlerts(data.dismissedAutoAlerts);
@@ -3016,6 +3057,7 @@ export default function GanttChart() {
           showQuarters: activeProject ? activeProject.showQuarters : showQuarters,
           showCost: activeProject ? activeProject.showCost : showCost,
           showTotals: activeProject ? activeProject.showTotals : showTotals,
+          showStatus: activeProject ? activeProject.showStatus : showStatus,
           currency: activeProject ? activeProject.currency : currency,
           reminders,
           dismissedAutoAlerts,
@@ -3077,6 +3119,29 @@ export default function GanttChart() {
         }
 
         doc.save(`${projectTitle.replace(/\s+/g, '_')}_gantt_chart.pdf`);
+      } else if (format === 'copy') {
+        const copied = await new Promise((resolve) => {
+          if (typeof ClipboardItem === 'undefined' || !navigator.clipboard || !navigator.clipboard.write) {
+            resolve(false);
+            return;
+          }
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(false);
+              return;
+            }
+            navigator.clipboard
+              .write([new ClipboardItem({ 'image/png': blob })])
+              .then(() => resolve(true))
+              .catch(() => resolve(false));
+          }, 'image/png');
+        });
+        setCopyToast(
+          copied
+            ? 'Chart image copied — paste it into your email.'
+            : 'Copy not available here — use Image (PNG) instead.'
+        );
+        window.setTimeout(() => setCopyToast(''), 2800);
       } else {
         const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
         const dataUrl = canvas.toDataURL(mimeType, 1.0);
@@ -3128,6 +3193,12 @@ export default function GanttChart() {
   const timelineRange = useMemo(() => getTimelineRange(), [tasks]);
   const timelineStart = timelineRange.start;
   const timelineEnd = timelineRange.end;
+
+  // Tasks shown in the chart/output, filtered by the Modify Graph status toggles.
+  const chartTasks = useMemo(
+    () => tasks.filter((task) => statusVisibility[getTaskCompletionStatus(task)] !== false),
+    [tasks, statusVisibility]
+  );
 
   const totalDays = useMemo(() => {
     const days = Math.ceil((timelineEnd - timelineStart) / msPerDay) + 1;
@@ -3238,6 +3309,7 @@ export default function GanttChart() {
         showQuarters,
         showCost,
         showTotals,
+        showStatus,
         currency,
         loginDateSeed
       };
@@ -3256,6 +3328,7 @@ export default function GanttChart() {
     showQuarters,
     showCost,
     showTotals,
+    showStatus,
     currency,
     loginDateSeed
   ]);
@@ -5043,7 +5116,8 @@ export default function GanttChart() {
                   {[
                     { id: 'menuShowDates', label: 'Show Dates', checked: showDates, onChange: (v) => setShowDates(v) },
                     { id: 'menuShowQuarters', label: 'Show in Quarters', checked: showQuarters, onChange: (v) => setShowQuarters(v) },
-                    { id: 'menuShowTotals', label: 'Show Total', checked: showTotals, onChange: (v) => setShowTotals(v) }
+                    { id: 'menuShowTotals', label: 'Show Total', checked: showTotals, onChange: (v) => setShowTotals(v) },
+                    { id: 'menuShowStatus', label: 'Show Status', checked: showStatus, onChange: (v) => setShowStatus(v) }
                   ].map((item) => (
                     <label
                       key={item.id}
@@ -5161,6 +5235,7 @@ export default function GanttChart() {
                   </div>
 
                   {[
+                    { type: 'copy', label: 'Copy image', icon: <ImageIcon size={16} /> },
                     { type: 'png', label: 'Image (PNG)', icon: <ImageIcon size={16} /> },
                     { type: 'jpeg', label: 'Image (JPEG)', icon: <ImageIcon size={16} /> },
                     { type: 'pdf', label: 'Document (PDF)', icon: <FileType size={16} /> },
@@ -7457,7 +7532,7 @@ export default function GanttChart() {
                               }}
                               aria-label={`Status badge for ${task.name}`}
                             >
-                              {taskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                              {getStatusLabel(taskStatus)}
                             </div>
                           )}
 
@@ -7609,7 +7684,7 @@ export default function GanttChart() {
                                         }}
                                         aria-label={`Status badge for ${subTask.name}`}
                                       >
-                                        {subTaskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                                        {getStatusLabel(subTaskStatus)}
                                       </div>
                                     )}
 
@@ -7779,14 +7854,14 @@ export default function GanttChart() {
                               textDecoration: taskCompleted ? 'line-through' : 'none',
                               flex: 1,
                               minWidth: 0,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
                               lineHeight: '1.4'
                             }}>
                               {task.name}
                             </div>
 
+                            {showStatus && (
                             <div
                               style={{
                                 height: '28px',
@@ -7804,8 +7879,9 @@ export default function GanttChart() {
                               }}
                               aria-label={`Status badge for ${task.name}`}
                             >
-                              {taskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                              {getStatusLabel(taskStatus)}
                             </div>
+                            )}
                           </div>
                         </div>
 
@@ -7860,14 +7936,14 @@ export default function GanttChart() {
                                 textDecoration: subTaskCompleted ? 'line-through' : 'none',
                                 flex: 1,
                                 minWidth: 0,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
                                 lineHeight: '1.4'
                               }}>
                                 {subTask.name}
                               </div>
 
+                              {showStatus && (
                               <div
                                 style={{
                                   height: '24px',
@@ -7885,8 +7961,9 @@ export default function GanttChart() {
                                 }}
                                 aria-label={`Status badge for ${subTask.name}`}
                               >
-                                {subTaskStatus === STATUS_COMPLETED ? 'Completed' : 'In Progress'}
+                                {getStatusLabel(subTaskStatus)}
                               </div>
+                              )}
                             </div>
                           </div>
                           );
