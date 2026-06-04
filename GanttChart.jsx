@@ -7330,7 +7330,7 @@ export default function GanttChart() {
             timelineChartRef.current = node;
             chartRef.current = node;
           }}
-          className={`chart-card ${activeTutorialTarget === 'timeline' ? 'tutorial-target-active' : ''}`}
+          className={`chart-card ${activeTutorialTarget === 'timeline' ? 'tutorial-target-active' : ''} ${isDownloading ? 'is-downloading' : ''}`}
           data-chart-export="true"
           style={{
             background: '#ffffff',

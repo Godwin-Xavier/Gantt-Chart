@@ -103,3 +103,9 @@ button {
 button:active:not(:disabled) {
   transform: translateY(1px);
 }
+
+/* Disable animations during PNG export */
+.is-downloading * {
+  animation: none !important;
+  transition: none !important;
+}
