@@ -3617,7 +3617,7 @@ export default function GanttChart() {
     fontWeight: '800',
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
-    color: '#475569'
+    color: '#0f172a'
   };
 
   const toolbarSectionLabelIconStyle = {
@@ -3651,7 +3651,7 @@ export default function GanttChart() {
   const syncPillStyle = {
     fontSize: '0.72rem',
     fontWeight: '700',
-    color: '#475569',
+    color: '#0f172a',
     padding: '0.42rem 0.75rem',
     borderRadius: '999px',
     border: '1px solid rgba(203, 213, 225, 0.95)',
@@ -4933,7 +4933,7 @@ export default function GanttChart() {
                                 <X size={11} />
                               </button>
                             </div>
-                            <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.4 }}>{notification.body}</div>
+                            <div style={{ fontSize: '0.74rem', color: '#0f172a', fontWeight: '600', lineHeight: 1.4 }}>{notification.body}</div>
                             <div style={{ fontSize: '0.65rem', color: '#cbd5e1', fontWeight: '700', fontFamily: '"JetBrains Mono", monospace' }}>
                               {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
@@ -5635,7 +5635,7 @@ export default function GanttChart() {
               }}>
                 <div style={{ display: 'grid', gridTemplateColumns: isPhoneLayout ? '1fr' : '1fr 1fr', gap: '0.7rem' }}>
                   <label style={{ display: 'grid', gap: '0.35rem' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Date
                     </span>
                     <input
@@ -5657,7 +5657,7 @@ export default function GanttChart() {
                   </label>
 
                   <label style={{ display: 'grid', gap: '0.35rem' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Time
                     </span>
                     <input
@@ -5679,7 +5679,7 @@ export default function GanttChart() {
                 </div>
 
                 <label style={{ display: 'grid', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Note (Optional)
                   </span>
                   <textarea
@@ -6223,7 +6223,7 @@ export default function GanttChart() {
           <h2 style={{
             fontSize: '1.25rem',
             fontWeight: '700',
-            color: '#000000',
+            color: '#0f172a',
             marginBottom: '1.5rem',
             opacity: 1
           }}>
@@ -6352,7 +6352,7 @@ export default function GanttChart() {
                             border: '1px solid #cbd5e1',
                             borderRadius: '8px',
                             padding: isPhoneLayout ? '0.62rem 0.68rem' : (isCompactLayout ? '0.65rem 0.7rem' : '0.75rem 1rem'),
-                            color: '#000000',
+                            color: '#0f172a',
                             fontSize: isPhoneLayout ? '0.9rem' : (isCompactLayout ? '0.95rem' : '1rem'),
                             fontWeight: '700',
                             textDecoration: isTaskCompleted ? 'line-through' : 'none',
@@ -6554,7 +6554,7 @@ export default function GanttChart() {
                                 borderRadius: '8px',
                                 padding: '0.65rem',
                                 cursor: 'pointer',
-                                color: taskReminderCount > 0 ? '#166534' : '#475569',
+                                color: taskReminderCount > 0 ? '#166534' : '#0f172a',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -7040,7 +7040,7 @@ export default function GanttChart() {
                                           borderRadius: '6px',
                                           padding: '0.55rem',
                                           cursor: 'pointer',
-                                          color: subTaskReminderCount > 0 ? '#166534' : '#475569',
+                                          color: subTaskReminderCount > 0 ? '#166534' : '#0f172a',
                                           display: 'inline-flex',
                                           alignItems: 'center',
                                           justifyContent: 'center',
@@ -7386,7 +7386,7 @@ export default function GanttChart() {
               <h2 style={{
                 fontSize: '1.75rem',
                 fontWeight: '800',
-                color: '#000000',
+                color: '#0f172a',
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
@@ -7688,7 +7688,7 @@ export default function GanttChart() {
                                       </div>
                                     )}
 
-                                    <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#475569', fontFamily: '"JetBrains Mono", monospace' }}>{subDuration}d</div>
+                                    <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#0f172a', fontFamily: '"JetBrains Mono", monospace' }}>{subDuration}d</div>
                                   </div>
                                 </div>
                                 <div style={{
@@ -7773,18 +7773,18 @@ export default function GanttChart() {
                 {/* -------------------- HEADERS ROW -------------------- */}
                 <div style={{ display: 'contents' }}>
                   <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1.5rem', background: '#f1f5f9' }}>
-                    <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Tasks</h3>
+                    <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Tasks</h3>
                   </div>
 
                   {showDatesInChart && (
                     <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', background: '#f1f5f9' }}>
-                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Dates</h3>
+                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Dates</h3>
                     </div>
                   )}
 
                   {showCostInChart && (
                     <div style={{ height: '70px', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', background: '#f1f5f9' }}>
-                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Cost</h3>
+                      <h3 style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0, textAlign: 'center' }}>Cost</h3>
                     </div>
                   )}
 
@@ -7795,10 +7795,10 @@ export default function GanttChart() {
                       const width = nextPosition - marker.position;
                       return (
                         <div key={idx} style={{ position: 'absolute', left: `${marker.position}%`, width: `${width}%`, top: 0, bottom: 0, borderLeft: idx === 0 ? 'none' : '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                          <div style={{ color: '#000000', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center' }}>
+                          <div style={{ color: '#0f172a', fontSize: '0.85rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center' }}>
                             {showQuarters ? `Q${Math.floor(marker.date.getMonth() / 3) + 1}` : marker.date.toLocaleDateString('en', { month: 'short' })}
                           </div>
-                          <div style={{ color: '#000000', fontSize: '0.9rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '800', marginTop: '0.15rem', textAlign: 'center' }}>
+                          <div style={{ color: '#0f172a', fontSize: '0.9rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '800', marginTop: '0.15rem', textAlign: 'center' }}>
                             {marker.date.getFullYear()}
                           </div>
                         </div>
@@ -7821,7 +7821,7 @@ export default function GanttChart() {
                         <div style={{ minHeight: '56px', display: 'flex', alignItems: 'center', padding: '0.5rem 1.5rem', background: '#ffffff', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', opacity: taskCompleted ? 0.78 : 1, animation: `slideIn 0.4s ease-out ${index * 0.1}s both`, transition: 'background 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}>
                           <div style={{ width: '4px', minHeight: '24px', background: `linear-gradient(to bottom, ${task.color}, ${task.color}dd)`, borderRadius: '2px', marginRight: '1rem', boxShadow: `0 2px 8px ${task.color}40`, alignSelf: 'flex-start', marginTop: '0.25rem' }}></div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#000000', textDecoration: taskCompleted ? 'line-through' : 'none', flex: 1, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', textDecoration: taskCompleted ? 'line-through' : 'none', flex: 1, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.4' }}>
                               {task.name}
                             </div>
                             {showStatus && (
@@ -7886,14 +7886,14 @@ export default function GanttChart() {
 
                             {/* SubDate Cell */}
                             {showDatesInChart && (
-                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#475569' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
+                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#0f172a' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
                                 {new Date(subTask.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(subTask.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </div>
                             )}
 
                             {/* SubCost Cell */}
                             {showCostInChart && (
-                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#475569' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
+                              <div style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', animation: `slideIn 0.3s ease-out ${subIndex * 0.05}s both`, transition: 'background 0.2s', fontSize: '0.8rem', fontFamily: '"JetBrains Mono", monospace', fontWeight: '500', color: '#0f172a' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}>
                                 {subTask.cost > 0 ? `${currency}${Number(subTask.cost).toLocaleString()}` : '-'}
                               </div>
                             )}
@@ -8020,7 +8020,7 @@ export default function GanttChart() {
                     <X size={11} />
                   </button>
                 </div>
-                <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600', lineHeight: 1.35 }}>
+                <div style={{ fontSize: '0.74rem', color: '#0f172a', fontWeight: '600', lineHeight: 1.35 }}>
                   {notification.body}
                 </div>
                 <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700' }}>
