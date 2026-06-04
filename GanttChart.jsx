@@ -7749,7 +7749,7 @@ export default function GanttChart() {
                   fontWeight: '800',
                   margin: 0
                 }}>
-                  Note: Prepared by Zoho SMBS Team
+                  Note: Prepared by Tag Sales Operations team
                 </p>
               </div>
             </div>
@@ -8484,7 +8484,7 @@ export default function GanttChart() {
                     fontWeight: '800',
                     margin: 0
                   }}>
-                    Note: Prepared by Zoho SMBS Team
+                    Note: Prepared by Tag Sales Operations team
                   </p>
                 </div>
               </div>
