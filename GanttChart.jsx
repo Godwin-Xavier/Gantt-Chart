@@ -3745,6 +3745,31 @@ export default function GanttChart() {
       fontFamily: '"Outfit", sans-serif',
       color: '#0f172a'
     }}>
+      {copyToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: '30px',
+            transform: 'translateX(-50%)',
+            zIndex: 4000,
+            padding: '0.8rem 1.4rem',
+            borderRadius: '999px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#ffffff',
+            fontSize: '0.9rem',
+            fontWeight: '700',
+            boxShadow: '0 14px 34px rgba(15, 23, 42, 0.4)',
+            whiteSpace: 'nowrap',
+            animation: 'popIn 0.18s ease-out both'
+          }}
+        >
+          {copyToast}
+        </div>
+      )}
+
       <div className="app-main" style={{
         maxWidth: '1400px',
         margin: '0 auto',
@@ -5144,6 +5169,54 @@ export default function GanttChart() {
                         type="checkbox"
                         checked={item.checked}
                         onChange={(e) => item.onChange(e.target.checked)}
+                        style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#6366f1' }}
+                      />
+                    </label>
+                  ))}
+
+                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
+
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em'
+                  }}>
+                    Status
+                  </div>
+
+                  {[
+                    { id: 'menuStatusNotStarted', label: 'Show Yet to Start', value: STATUS_NOT_STARTED },
+                    { id: 'menuStatusInProgress', label: 'Show In Progress', value: STATUS_IN_PROGRESS },
+                    { id: 'menuStatusCompleted', label: 'Show Completed', value: STATUS_COMPLETED }
+                  ].map((item) => (
+                    <label
+                      key={item.id}
+                      htmlFor={item.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        padding: '0.7rem 0.75rem',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                        {item.label}
+                      </span>
+                      <input
+                        id={item.id}
+                        type="checkbox"
+                        checked={statusVisibility[item.value]}
+                        onChange={(e) => setStatusVisibility((prev) => ({ ...prev, [item.value]: e.target.checked }))}
                         style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#6366f1' }}
                       />
                     </label>
@@ -7410,7 +7483,7 @@ export default function GanttChart() {
               border: '1px solid #e2e8f0',
               boxShadow: 'none'
             }}>
-              {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
+              {chartTasks.length} {chartTasks.length === 1 ? 'Task' : 'Tasks'}
             </div>
           </div>
 
@@ -7440,7 +7513,7 @@ export default function GanttChart() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {tasks.map((task, index) => {
+                {chartTasks.map((task, index) => {
                   const position = getTaskPosition(task);
                   const duration = getBusinessDays(task.startDate, task.endDate, holidays);
                   const taskStatus = getTaskCompletionStatus(task);
@@ -7808,7 +7881,7 @@ export default function GanttChart() {
                 </div>
 
                 {/* -------------------- BODY ROWS -------------------- */}
-                {tasks.map((task, index) => {
+                {chartTasks.map((task, index) => {
                   const taskCompleted = getTaskCompletionStatus(task) === STATUS_COMPLETED;
                   const taskStatus = getTaskCompletionStatus(task);
                   const position = getTaskPosition(task);
